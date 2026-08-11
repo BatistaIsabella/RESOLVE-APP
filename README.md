@@ -10,23 +10,23 @@
 </p>
 
 <p align="center">
-  Uma aplicação web para centralizar o registro de demandas urbanas, facilitar o acompanhamento das solicitações e oferecer mais visibilidade para os gestores, responsáveis por executar a resolução de problemas públicos.
+  O RESOLVE Mobile é a extensão nativa/híbrida da plataforma RESOLVE, desenvolvida para aproximar o cidadão da gestão pública através de dispositivos móveis. A aplicação permite a abertura rápida de ocorrências com uso de recursos do smartphone (Câmera, GPS) e o acompanhamento em tempo real das demandas da cidade.
 </p>
 
 ---
 
 ## 🌍 Visão Geral
 
-A plataforma busca melhorar a comunicação entre o cidadão e a gestão responsável, reduzindo a dispersão de informações e apoiando a tomada de decisão com dados operacionais em tempo real.
+A aplicação mobile simplifica o ciclo de vida de uma ocorrência urbana. O cidadão pode reportar um problema diretamente do local onde ele se encontra em poucos toques, enquanto gestores e equipes de campo podem visualizar, triar e atualizar o status das solicitações em tempo real.
 
 ### 🎯 O Problema Central
-A ausência de uma plataforma centralizada para registro, rastreabilidade e priorização de demandas urbanas dificulta a tomada de decisão por parte da gestão e reduz a eficiência no atendimento à população.
+A burocracia e a falta de acessibilidade em canais tradicionais dificultam o reporte imediato de problemas urbanos (como buracos na via, falta de iluminação ou acúmulo de lixo). A versão mobile resolve o gap de proximidade, permitindo a captura imediata do contexto (foto e geolocalização precisa).
 
 ### 🏛️ Alinhamento com Políticas Públicas
-A proposta dialoga com as diretrizes de transformação digital no setor público, em especial a **Lei nº 14.129/2021 (Lei do Governo Digital)**, estabelecendo princípios como:
-- Eficiência administrativa e desburocratização;
-- Transparência;
-- Uso de soluções digitais para melhorar os serviços públicos.
+O RESOLVE Mobile está em total conformidade com a Lei nº 14.129/2021 (Lei do Governo Digital) e a Estratégia Nacional de Governo Digital, promovendo:
+- Inclusão digital: Acesso simples a serviços públicos na palma da mão.
+- Eficiência e agilidade: Captura de dados estruturados (latitude, longitude, fotos) na origem da demanda.
+- Transparência e acompanhamento: Notificações push sobre a evolução do chamado.
 
 Relaciona-se também com a **Estratégia Nacional de Governo Digital**, incentivando o uso de tecnologias para melhorar a relação entre o governo e o cidadão.
 
@@ -54,7 +54,7 @@ Responsável por:
 Responsável por:
 - [x] Visualizar demandas registradas de forma global.
 - [x] Filtrar solicitações e atualizar o status manualmente.
-- [x] Acessar o painel administrativo (Dashboard).
+- [x] Acessar o painel administrativo (painéis).
 - [x] Acompanhar indicadores operacionais cruciais.
 
 ---
@@ -83,37 +83,42 @@ O painel administrativo acompanha, no mínimo:
 ## 🖥️ Telas do Projeto
 
 ### 🥇 Prioridade Alta
+
 | Tela | Descrição |
-|---|---|
-| **Página Inicial (Cidadão)** | Destaque para o fluxo do cidadão, listagem de demandas, sistema de filtros e acesso à área do gestor. |
-| **Página Inicial (Gestor)** | Listagem geral, filtros avançados, acesso ao painel administrativo e ações de edição/atualização de status. |
-| **Formulário de Demanda** | Coleta de dados da ocorrência (local, descrição, categoria, imagem, etc.). |
-| **Detalhes da Demanda** | Visualização completa de todos os dados de um registro específico. |
-| **Painel Administrativo** | Dashboard focado em métricas operacionais para os gestores. |
-| **Sistema de Filtros** | Combinação de filtros por categoria, região, status e prioridade. |
+| :--- | :--- |
+| **Feed / Home** | Lista de ocorrências com suporte a pull-to-refresh. |
+| **Novo Registro (Câmera + GPS)** | Fluxo em passos simples: Foto $\rightarrow$ Categoria $\rightarrow$ Localização (GPS) $\rightarrow$ Descrição. |
+| **Detalhes da Demanda** | Exibição de histórico, foto em alta resolução, localização no mapa e status atual. |
+| **Mapa Operacional** | Visualização geográfica de demandas com marcadores categorizados. |
 
 ### 🥈 Prioridade Secundária
-| Tela | Descrição |
-|---|---|
-| **Login e Cadastro** | Acesso segmentado (`Sou cidadão` ou `Sou gestor`) com email e senha. |
 
+| Tela | Descrição |
+| :--- | :--- |
+| **Autenticação (Login/Cadastro)** | Acesso com login social ou credenciais nativas com suporte a persistência segura. |
+| **Perfil / Configurações** | Gerenciamento de dados da conta e preferências de notificação push. |
 ---
 
 ## ⚙️ Stack Tecnológica
 
-| Camada | Tecnologias Utilizadas |
-| :--- | :--- |
-| **Front-end** | `TypeScript`, `Next.js`, `Chakra UI`, `Tailwind CSS`, `Zustand` |
-| **Back-end & Integração** | `Node.js`, `Express`, `Prisma ORM` |
-| **Autenticação & Dados** | `JWT`, `Cookies`, `Redis`, `Cron Jobs`, `API Fake` |
+### Mobile Frontend
+- **Framework:** React Native / Expo (com TypeScript) ou Flutter
+- **Gerenciamento de Estado:** Zustand / Redux Toolkit
+- **Estilização:** NativeWind (Tailwind CSS para React Native) ou Restyle
+- **Recursos Nativos:** Expo Location (GPS), Expo Camera / ImagePicker, Expo Notifications (Push)
+- **Consumo de API:** Axios / React Query (TanStack Query) com suporte a cache local
 
+### Back-end & Infraestrutura
+- **API Gateway:** Node.js / Express (Porta 8080)
+- **Microsserviços:** Auth Service, Demand Service, Metrics Service
+- **Banco de Dados & Cache:** PostgreSQL (Supabase/Prisma ORM) e Redis
 ---
 
 #### 📡 Documentação da API
 A plataforma RESOLVE utiliza um API Gateway como ponto central de entrada (Porta 8080), que gerencia o tráfego e a segurança entre o frontend e os microsserviços internos.
 
-* **Ponto Único de Entrada:** `http://localhost:8080`
-* **Padronização:** Todas as trocas de dados são realizadas via JSON.
+* **Endpoint Base:** `http://localhost:8080`
+* **Formato de Payload:** Todas as trocas de dados são realizadas via JSON.
 
 | Serviço | Método | Endpoint | Descrição |
 | :--- | :--- | :--- | :--- |
@@ -125,45 +130,13 @@ A plataforma RESOLVE utiliza um API Gateway como ponto central de entrada (Porta
 
 ---
 
-##  Arquitetura Avançada: Concorrência, Paralelismo e Otimização
+## 🏛️ Arquitetura, Desempenho e Resiliência Mobile
 
-A arquitetura da plataforma **RESOLVE** foi desenhada para operar como um sistema distribuído de alta disponibilidade e resiliência. Abaixo estão mapeados os padrões implementados na infraestrutura e no código:
-
-###  Concorrência (Event-Driven & Background Jobs)
-A aplicação tira proveito do Event Loop do Node.js e de uma arquitetura orientada a eventos para não bloquear a thread principal durante processamentos pesados:
-
-* **Mensageria e Filas (Redis):** O `demand-service` não trava a requisição aguardando a atualização das métricas. Ao alterar um status, ele delega a tarefa disparando eventos de forma assíncrona (`lPush` na fila `smartcity:event-queue` e `publish` no canal `smartcity:denuncia-status`) e devolve a resposta imediatamente ao gestor.
-* **Workers em Segundo Plano:** O `metrics-service` possui *workers* dedicados (`startEventSubscriber` e `startQueueWorker`) que escutam ativamente o Redis. Eles processam as atualizações de KPIs em background, lidando com falhas através de políticas de *retry* (`withRetry`).
-* **Agregação Assíncrona (`Promise.all`):** No cálculo de métricas, múltiplas consultas de leitura (total, categorias, regiões e status) são disparadas simultaneamente. O Node.js gerencia essas requisições concorrentemente, reduzindo o tempo de carregamento do dashboard.
-* **Timeout no Publish do Redis (`Promise.race`):** Ao publicar um evento de mudança de status no Redis, o `demand-service` disputa a operação contra um temporizador de 3 segundos. Caso o Redis demore ou falhe, a corrida rejeita a promise e loga o erro — sem travar a thread que já devolveu a resposta HTTP ao gestor.
-* **Controle de Concorrência com Transações (`prisma.$transaction`):** As operações de atualização de status e de prioridade de uma demanda são executadas dentro de uma transação atômica. A gravação na tabela `denuncias` e a criação do registro em `historicos` acontecem como uma unidade indivisível — se qualquer etapa falhar, tudo é revertido, prevenindo inconsistências quando múltiplas requisições concorrentes chegam ao mesmo tempo.
-* **Limite de Reconexão do Redis com Backoff Progressivo:** A configuração do cliente Redis define uma estratégia de reconexão com no máximo 3 tentativas, aplicando um atraso progressivo entre elas (`retries * 200ms` — ou seja, 200ms, 400ms e 600ms). Após esgotar as tentativas, a conexão é encerrada em vez de tentar indefinidamente. Isso evita rajadas de reconexão que sobrecarregariam o servidor Redis em caso de falha.
-* **Nível de Isolamento de Transação (Read Committed)** Por padrão, as transações do Prisma (prisma.$transaction) no PostgreSQL operam sob o nível de isolamento Read Committed. Isso garante concorrência segura que se, por exemplo, dois gestores tentarem atualizar o status da mesma denúncia ao mesmo tempo, o banco garante que a segunda transação só lerá os dados após a primeira dar commit, evitando o Dirty Reads. 
-* **Mecanismo de Lock Implícito:** Durante a execução de um prisma.denuncia.update dentro do bloco de transação, o PostgreSQL aplica um bloqueio exclusivo de linha. Isso impede que requisições concorrentes alterem o registro da denúncia no exato milissegundo em que o histórico está sendo gerado, blindando o sistema contra Race Conditions. 
-
-###  Paralelismo (Processamento Distribuído)
-O paralelismo real do sistema é alcançado através da sua infraestrutura, tirando proveito de múltiplos recursos computacionais:
-
-* **Ecossistema de Microsserviços (Docker):** O `api-gateway` (porta 8080), `auth-service` (3001), `demand-service` (3002) e `metrics-service` (3003) operam como processos independentes. Eles rodam simultaneamente, dividindo a carga de CPU do servidor host.
-* **Execução no Banco de Dados:** Quando o back-end dispara as requisições concorrentes de métricas, o PostgreSQL executa essas queries de leitura pesada paralelamente em seus próprios processos internos.
-* **Listagens Paginadas com Contagem Paralela (`Promise.all`):** Nas funções `listDenunciasByCidadao` e `listAllDenuncias` do `demand-service`, a contagem total de registros (`COUNT`) e a busca paginada (`findMany`) são disparadas simultaneamente com `Promise.all`. O banco executa ambas as queries em paralelo, reduzindo o tempo de resposta de cada listagem em comparação com execução sequencial.
-* **Aquecimento de Serviços Não-Bloqueante (`Promise.allSettled`):** O `api-gateway` expõe um endpoint `/warmup` que dispara pings simultâneos para os três microsserviços sem aguardar nenhuma resposta (*fire-and-forget*). O uso de `Promise.allSettled` garante que a falha de um serviço não impeça o retorno imediato do gateway — o cliente recebe `200` enquanto os processos são acordados em paralelo.
-* **Workers Paralelos do PostgreSQL:** O PostgreSQL do Supabase é configurado para alocar múltiplos Background Workers para executar varreduras e agregações paralelas na CPU do servidor de banco de dados. Quando o metrics-service dispara as queries analíticas, o banco pode dividir a tabela denuncias em blocos e processar a contagem por categorias em paralelo, utilizando múltiplos núcleos de processamento do servidor.
-
-###  Otimização, Resiliência e Segurança
-Técnicas rigorosas foram implementadas para proteger a memória, o tempo de resposta e a estabilidade do servidor:
-
-* **Camada de Cache (Redis):** KPIs processados são cacheados com um *Time To Live* (TTL) de 5 minutos. Isso blinda o banco de dados contra centenas de consultas analíticas repetitivas quando múltiplos gestores acessam o painel ao mesmo tempo.
-* **Rate Limiting (API Gateway):** O proxy de entrada (porta 8080) possui um limitador estrito de **200 requisições a cada 15 minutos por IP**. Essa barreira previne que picos de uso repentinos ou ataques de negação de serviço (DDoS) saturem os microsserviços.
-* **Mecanismos de Fail-Safe e Timeout:** A renovação do cache de métricas utiliza um `Promise.race` com um limite de 5 segundos. Isso garante que a aplicação rejeite a operação rapidamente caso o banco de dados trave, evitando que o sistema inteiro congele esperando uma resposta infinita.
-* **Health Checks Ativos:** O Gateway possui uma rota `/health` que realiza chamadas concorrentes (`Promise.all`) para validar o status de todos os microsserviços, reportando a integridade da infraestrutura em tempo real.
-* **Índices no Banco de Dados:** O schema Prisma do `demand-service` define índices explícitos (`@@index`) nos campos `categoria`, `status`, `prioridade` e `regiao` da tabela `denuncias`. Isso acelera diretamente as queries de filtragem do painel do gestor, evitando varreduras completas na tabela a cada requisição.
-* **Paginação com `skip/limit`:** Todas as listagens de demandas utilizam paginação (`skip` + `take` no Prisma), garantindo que apenas o subconjunto de dados solicitado seja carregado na memória e trafegado entre banco e serviço — sem trazer registros desnecessários independentemente do volume total de demandas.
-* **`upsert` Atômico para Resolução de Identidade:** As funções `resolveCidadaoId` e `resolveGestorId` utilizam `prisma.upsert` ao invés de `SELECT + INSERT` em operações separadas. Isso elimina a *race condition* onde duas requisições simultâneas do mesmo usuário tentariam inserir o mesmo registro no banco, causando violação de chave única.
-* **Atualização Local sem Re-fetch Total:** Ao alterar o status ou a prioridade de uma demanda, a interface atualiza apenas o registro afetado no estado local (Zustand) com base na resposta da API, sem disparar um novo carregamento de todas as demandas. Isso reduz o número de requisições desnecessárias e mantém a interface responsiva.
-* **Persistência Seletiva no Frontend (`partialize`):** O estado global do Zustand utiliza a opção `partialize` para persistir no `localStorage` apenas os dados essenciais de sessão (`token`, `role`, `userEmail`, `userName`). Dados volumosos e potencialmente desatualizados como `demands`, `filters` e `apiMetrics` são **excluídos da persistência**, evitando leitura de cache obsoleto e consumo desnecessário de armazenamento local.
-* **Monitoramento Ativo contra Cold Start (UptimeRobot + `/warmup`):** Um monitor externo (UptimeRobot) acessa o endpoint `/warmup` do gateway a cada 5 minutos, mantendo todos os microsserviços do Render em execução contínua. Sem esse mecanismo, o plano gratuito hiberna os serviços após 15 minutos de inatividade, causando cold starts de aproximadamente 30 segundos para o próximo usuário que acessar a plataforma.
-* **Minimização de Escrita via Enums Nativos:** A otimização do armazenamento e da paginação no banco é impulsionada pelo uso de CREATE TYPE ... AS ENUM nas tabelas. Ao invés de trafegar strings longas de texto (como 'REGIAO_METROPOLITANA_DO_RECIFE'), o PostgreSQL armazena internamente esses valores como identificadores numéricos de 4 bytes, reduzindo drasticamente o tamanho do índice em memória e acelerando o tempo de varredura das listagens paginadas.
+- **Cache First & Offline Tolerance:** Uso do **React Query** com suporte a persistência no **AsyncStorage**, permitindo visualização de demandas mesmo em conexões instáveis.
+- **Otimização de Upload de Imagens:** Compressão automática da imagem no dispositivo client-side antes do envio para a API, reduzindo o tráfego de dados móveis (3G/4G/5G).
+- **Consumo Eficiente de Bateria e GPS:** Consulta à geolocalização nativa ativada apenas na abertura do formulário de criação de demanda.
+- **Comunicação por Eventos & Filas:** Atualizações de status acionam eventos no Redis que disparam notificações push em background para os dispositivos dos cidadãos.
+---
 
 ## 🔗 Links Úteis
 
@@ -177,14 +150,13 @@ Técnicas rigorosas foram implementadas para proteger a memória, o tempo de res
 | **BRmodelo** | Modelagem lógica - Demand | [Acesse aqui](public/images/ModeloLogicoDemandv2.png) |
 | **LucidChart** | Desenho da Arquitetura em Microsserviços | [Acesse aqui](public/images/Arquitetura_microsservicos.png) |
 
-
 ---
 
 ## 🚀 Como Rodar
 
 ### Frontend
 ```bash
-cd Smart-City
+cd RESOLVE_APP
 npm install
 npm run dev
 ```
@@ -208,8 +180,13 @@ docker compose --env-file .env.local exec demand-service npx prisma migrate depl
 
 ## 👩‍💻 Equipe de Desenvolvimento
 
+- Arthur Estevaum
+- Álvaro Silva
 - Beatriz Paredes
 - Cecília Medeiros
+- Icaro Silva
 - Isabella Batista
 - Jose Leandro De Morais
+- Melissa Filgueiras
 - Gabriel Souza
+- Thays Barbosa
