@@ -177,7 +177,7 @@ docker compose --env-file .env.local exec demand-service npx prisma migrate depl
 > Disponível em http://localhost:8080
 
 ---
-
+.
 ## 👩‍💻 Equipe de Desenvolvimento
 
 - Arthur Estevaum
