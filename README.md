@@ -143,6 +143,7 @@ A plataforma RESOLVE utiliza um API Gateway como ponto central de entrada (Porta
 | Ferramenta Utilizada | Material | Links |
 | :--- | :--- | :---
 | **Figma** | Protótipo | [Acesse aqui](https://www.figma.com/design/5qGAuNGrMKdG7AgXjG77YX/Smart-City?node-id=0-1&t=ew4wGee8wgaJ4qCo-1) |
+| **Miro** | Model Canvas - Negócios | [Acesse aqui](https://miro.com/app/board/uXjVHve12_I=/?share_link_id=87968926356) |
 | **Postman** | Documentação Pública da API | [Acesse aqui](https://documenter.getpostman.com/view/40719566/2sBXwtrADd) |
 | **BRmodelo** | Modelagem conceitual - Auth | [Acesse aqui](public/images/modeloConceitualAuth.png) |
 | **BRmodelo** | Modelagem lógica - Auth | [Acesse aqui](public/images/modeloLogicoAuth.png) |
