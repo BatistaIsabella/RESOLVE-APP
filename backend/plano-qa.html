@@ -1,0 +1,1294 @@
+<title>RESOLVE — Plano de QA</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* ── Tokens ─────────────────────────────────────────────── */
+:root {
+  --bg:           #F7F8FC;
+  --surface:      #FFFFFF;
+  --surface2:     #EEF2F8;
+  --border:       #DDE3EE;
+  --text:         #0F1923;
+  --muted:        #637085;
+  --accent:       #2057E3;
+  --accent-soft:  #EBF0FD;
+  --accent-text:  #1544C0;
+  --success:      #0E7D55;
+  --success-soft: #E8F8F1;
+  --warn:         #B56A00;
+  --warn-soft:    #FEF3E2;
+  --danger:       #C41F1F;
+  --danger-soft:  #FDECEC;
+  --purple:       #6D28D9;
+  --purple-soft:  #F3EFFE;
+  --cyan:         #0369A1;
+  --cyan-soft:    #E0F2FE;
+  --sidebar-w:    240px;
+  --content-max:  880px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:           #0C1017;
+    --surface:      #141B2D;
+    --surface2:     #1C2539;
+    --border:       #252F44;
+    --text:         #E8EDF5;
+    --muted:        #8494A8;
+    --accent:       #4479F5;
+    --accent-soft:  #192340;
+    --accent-text:  #7BA8FF;
+    --success:      #10A870;
+    --success-soft: #0A2E22;
+    --warn:         #F09B20;
+    --warn-soft:    #2A1F05;
+    --danger:       #F04040;
+    --danger-soft:  #2A0A0A;
+    --purple:       #9F6EFF;
+    --purple-soft:  #1F1033;
+    --cyan:         #38BDF8;
+    --cyan-soft:    #082533;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:           #0C1017;
+  --surface:      #141B2D;
+  --surface2:     #1C2539;
+  --border:       #252F44;
+  --text:         #E8EDF5;
+  --muted:        #8494A8;
+  --accent:       #4479F5;
+  --accent-soft:  #192340;
+  --accent-text:  #7BA8FF;
+  --success:      #10A870;
+  --success-soft: #0A2E22;
+  --warn:         #F09B20;
+  --warn-soft:    #2A1F05;
+  --danger:       #F04040;
+  --danger-soft:  #2A0A0A;
+  --purple:       #9F6EFF;
+  --purple-soft:  #1F1033;
+  --cyan:         #38BDF8;
+  --cyan-soft:    #082533;
+}
+
+/* ── Reset / Base ────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg);
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────── */
+.sidebar {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  flex-shrink: 0;
+}
+.sidebar-brand {
+  padding: 20px 16px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-brand .brand-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 2px;
+}
+.sidebar-brand .brand-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.2;
+}
+.sidebar-brand .brand-sub {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.sidebar-meta {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.meta-row { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; }
+.meta-row .mk { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.meta-row .mv { font-size: 11px; color: var(--text); font-weight: 500; }
+
+nav { padding: 8px 0; flex: 1; }
+.nav-group { margin-bottom: 2px; }
+.nav-group-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 8px 16px 4px;
+  display: block;
+}
+nav a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 16px;
+  font-size: 12.5px;
+  color: var(--muted);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  transition: color .15s, border-color .15s, background .15s;
+}
+nav a:hover { color: var(--text); background: var(--surface2); }
+nav a.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-soft); font-weight: 500; }
+.nav-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; opacity: .6; }
+
+/* ── Main content ────────────────────────────────────────── */
+main {
+  flex: 1;
+  overflow-x: hidden;
+  padding: 0 32px 64px;
+}
+.content-inner { max-width: var(--content-max); margin: 0 auto; }
+
+/* ── Doc header ──────────────────────────────────────────── */
+.doc-header {
+  padding: 40px 0 32px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 36px;
+}
+.doc-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: var(--accent);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.doc-eyebrow::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.doc-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.1;
+  text-wrap: balance;
+  margin-bottom: 10px;
+}
+.doc-subtitle { font-size: 15px; color: var(--muted); max-width: 560px; line-height: 1.5; margin-bottom: 24px; }
+.doc-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.doc-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 500;
+  background: var(--surface2); color: var(--muted); border: 1px solid var(--border);
+}
+.doc-pill.blue { background: var(--accent-soft); color: var(--accent-text); border-color: transparent; }
+.doc-pill.green { background: var(--success-soft); color: var(--success); border-color: transparent; }
+.doc-pill.purple { background: var(--purple-soft); color: var(--purple); border-color: transparent; }
+
+/* ── Stats bar ───────────────────────────────────────────── */
+.stats-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 40px;
+}
+.stat {
+  background: var(--surface);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stat-val {
+  font-family: 'Syne', sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.stat-val.accent { color: var(--accent); }
+.stat-val.green  { color: var(--success); }
+.stat-val.warn   { color: var(--warn); }
+.stat-val.purple { color: var(--purple); }
+.stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+
+/* ── Sections ────────────────────────────────────────────── */
+section { margin-bottom: 48px; scroll-margin-top: 24px; }
+.section-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 500;
+  padding: 2px 6px;
+  background: var(--surface2);
+  border-radius: 4px;
+  letter-spacing: .05em;
+}
+.section-desc { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+.section-divider { height: 1px; background: var(--border); margin-bottom: 20px; }
+
+/* ── Info grid ───────────────────────────────────────────── */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.info-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.info-card h4 { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; font-weight: 600; }
+.info-card ul { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.info-card ul li { font-size: 13px; color: var(--text); display: flex; align-items: flex-start; gap: 6px; }
+.info-card ul li::before { content: '›'; color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+
+/* ── Strategy layers ─────────────────────────────────────── */
+.strategy-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+.layer-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.layer-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+}
+.layer-card.l1::before { background: var(--accent); }
+.layer-card.l2::before { background: var(--success); }
+.layer-card.l3::before { background: var(--purple); }
+.layer-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  display: block;
+}
+.l1 .layer-tag { color: var(--accent); }
+.l2 .layer-tag { color: var(--success); }
+.l3 .layer-tag { color: var(--purple); }
+.layer-card h3 { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.layer-card p { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 8px; }
+.tool-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.tool-chip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+/* ── Risk table ──────────────────────────────────────────── */
+.risk-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-bottom: 8px; }
+.risk-table th {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.risk-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: top; }
+.risk-table tr:last-child td { border-bottom: none; }
+.risk-table tr:hover td { background: var(--surface2); }
+
+/* ── Criteria boxes ──────────────────────────────────────── */
+.criteria-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.criteria-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+.criteria-box h4 { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; margin-bottom: 10px; color: var(--text); }
+.criteria-box.entry h4 { color: var(--success); }
+.criteria-box.exit  h4 { color: var(--danger); }
+.criteria-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+.criteria-list li { font-size: 12.5px; color: var(--text); display: flex; gap: 8px; align-items: flex-start; }
+.ci { width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8px; flex-shrink: 0; margin-top: 2px; }
+.ci.ok  { background: var(--success-soft); color: var(--success); }
+.ci.no  { background: var(--danger-soft);  color: var(--danger); }
+
+/* ── Test module header ──────────────────────────────────── */
+.module-block { margin-bottom: 32px; }
+.module-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.module-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+.module-id.mob { background: var(--purple-soft); color: var(--purple); }
+.module-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); }
+.module-desc { font-size: 12px; color: var(--muted); margin-left: auto; white-space: nowrap; }
+
+/* ── Test table ──────────────────────────────────────────── */
+.test-table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 8px; }
+.test-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.test-table th {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 8px 12px;
+  text-align: left;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.test-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: top; }
+.test-table tr:last-child td { border-bottom: none; }
+.test-table tr:hover td { background: var(--surface2); }
+
+.tc-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--accent-text);
+  white-space: nowrap;
+}
+.tc-id.mob { color: var(--purple); }
+.tc-scenario { color: var(--text); line-height: 1.4; }
+.tc-http {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.http-200 { color: var(--success); }
+.http-201 { color: var(--success); }
+.http-204 { color: var(--cyan); }
+.http-400 { color: var(--warn); }
+.http-401 { color: var(--danger); }
+.http-403 { color: var(--danger); }
+.http-404 { color: var(--muted); }
+.http-409 { color: var(--warn); }
+.http-503 { color: var(--danger); }
+
+/* ── Badges ──────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+.badge-alta    { background: var(--danger-soft);  color: var(--danger); }
+.badge-media   { background: var(--warn-soft);    color: var(--warn); }
+.badge-baixa   { background: var(--success-soft); color: var(--success); }
+.badge-auto    { background: var(--accent-soft);  color: var(--accent-text); }
+.badge-manual  { background: var(--purple-soft);  color: var(--purple); }
+.badge-skip    { background: var(--surface2);     color: var(--muted); }
+.badge-api     { background: var(--cyan-soft);    color: var(--cyan); }
+.badge-e2e     { background: var(--purple-soft);  color: var(--purple); }
+.badge-unit    { background: var(--success-soft); color: var(--success); }
+.badge-integ   { background: var(--warn-soft);    color: var(--warn); }
+
+/* ── Coverage bars ───────────────────────────────────────── */
+.cov-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cov-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+.cov-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
+.cov-label span { font-weight: 600; color: var(--text); }
+.cov-bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.cov-fill { height: 100%; border-radius: 3px; }
+.cov-fill.blue   { background: var(--accent); }
+.cov-fill.green  { background: var(--success); }
+.cov-fill.purple { background: var(--purple); }
+.cov-fill.warn   { background: var(--warn); }
+
+/* ── Bug callout ─────────────────────────────────────────── */
+.callout {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.callout.warn  { background: var(--warn-soft);   border-left: 3px solid var(--warn);   color: var(--text); }
+.callout.info  { background: var(--accent-soft); border-left: 3px solid var(--accent); color: var(--text); }
+.callout.danger{ background: var(--danger-soft); border-left: 3px solid var(--danger); color: var(--text); }
+.callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+/* ── Squad table ─────────────────────────────────────────── */
+.squad-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.squad-table th {
+  font-size: 10px; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--muted); padding: 8px 12px; text-align: left;
+  background: var(--surface2); border-bottom: 1px solid var(--border);
+}
+.squad-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+.squad-table tr:last-child td { border-bottom: none; }
+.avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--accent-soft); color: var(--accent-text);
+  font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center;
+  vertical-align: middle; margin-right: 8px;
+}
+
+/* ── Footer ──────────────────────────────────────────────── */
+.doc-footer {
+  margin-top: 48px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 11.5px;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 720px) {
+  body { flex-direction: column; }
+  .sidebar { width: 100%; min-width: 0; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--border); }
+  nav { display: flex; flex-wrap: wrap; padding: 4px 8px; }
+  nav a { padding: 4px 8px; font-size: 11px; border-left: none; border-bottom: 2px solid transparent; }
+  nav a.active { border-bottom-color: var(--accent); border-left-color: transparent; }
+  .nav-group-label { display: none; }
+  main { padding: 0 16px 40px; }
+  .stats-bar { grid-template-columns: 1fr 1fr; }
+  .strategy-row, .info-grid, .criteria-row, .cov-grid { grid-template-columns: 1fr; }
+  .doc-title { font-size: 24px; }
+}
+</style>
+
+<body>
+
+<!-- ── Sidebar ──────────────────────────────────────────── -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <span class="brand-label">Plano de QA</span>
+    <div class="brand-title">RESOLVE APP</div>
+    <div class="brand-sub">v1.0 · Setembro 2026</div>
+  </div>
+  <div class="sidebar-meta">
+    <div class="meta-row"><span class="mk">Versão</span><span class="mv">1.0.0</span></div>
+    <div class="meta-row"><span class="mk">Status</span><span class="mv" style="color:var(--warn)">Em andamento</span></div>
+    <div class="meta-row"><span class="mk">Casos API</span><span class="mv" style="font-family:monospace">103</span></div>
+    <div class="meta-row"><span class="mk">Casos Mobile</span><span class="mv" style="font-family:monospace">10</span></div>
+  </div>
+  <nav>
+    <div class="nav-group">
+      <span class="nav-group-label">Documento</span>
+      <a href="#visao"><span class="nav-dot"></span>Visão Geral</a>
+      <a href="#escopo"><span class="nav-dot"></span>Escopo</a>
+      <a href="#estrategia"><span class="nav-dot"></span>Estratégia</a>
+      <a href="#ambiente"><span class="nav-dot"></span>Ambiente</a>
+      <a href="#riscos"><span class="nav-dot"></span>Riscos</a>
+      <a href="#criterios"><span class="nav-dot"></span>Critérios</a>
+    </div>
+    <div class="nav-group">
+      <span class="nav-group-label">Backlog API</span>
+      <a href="#ts01"><span class="nav-dot"></span>TS01 · Autenticação</a>
+      <a href="#ts02"><span class="nav-dot"></span>TS02 · Criar Demanda</a>
+      <a href="#ts03"><span class="nav-dot"></span>TS03 · Registro</a>
+      <a href="#ts04"><span class="nav-dot"></span>TS04 · Filtros</a>
+      <a href="#ts05"><span class="nav-dot"></span>TS05 · Gestor</a>
+      <a href="#ts06"><span class="nav-dot"></span>TS06 · Acesso</a>
+      <a href="#ts07"><span class="nav-dot"></span>TS07 · Contrato Auth</a>
+      <a href="#ts08"><span class="nav-dot"></span>TS08 · Contrato Demand</a>
+    </div>
+    <div class="nav-group">
+      <span class="nav-group-label">Backlog Mobile</span>
+      <a href="#mob-auth"><span class="nav-dot"></span>MOB01–05 · Auth</a>
+      <a href="#mob-chamados"><span class="nav-dot"></span>MOB06–10 · Chamados</a>
+    </div>
+    <div class="nav-group">
+      <span class="nav-group-label">Fechamento</span>
+      <a href="#cobertura"><span class="nav-dot"></span>Cobertura</a>
+      <a href="#bugs"><span class="nav-dot"></span>Bugs Encontrados</a>
+      <a href="#squad"><span class="nav-dot"></span>Squad</a>
+    </div>
+  </nav>
+</aside>
+
+<!-- ── Main ─────────────────────────────────────────────── -->
+<main>
+<div class="content-inner">
+
+<!-- Doc Header -->
+<header class="doc-header">
+  <div class="doc-eyebrow">RESOLVE-APP · Squad QA · 2026</div>
+  <h1 class="doc-title">Plano de Testes e<br>Backlog de Automação</h1>
+  <p class="doc-subtitle">Estratégia completa de testes em todas as fases do desenvolvimento (Shift-Left ao Shift-Right) cobrindo automação de API e testes mobile Android.</p>
+  <div class="doc-pills">
+    <span class="doc-pill blue">API Automation · Vitest + Supertest</span>
+    <span class="doc-pill purple">Mobile E2E · Appium / Detox</span>
+    <span class="doc-pill green">Node.js · Express · PostgreSQL</span>
+    <span class="doc-pill">auth-service · demand-service</span>
+  </div>
+</header>
+
+<!-- Stats -->
+<div class="stats-bar">
+  <div class="stat"><span class="stat-val accent">103</span><span class="stat-label">Casos de Teste API</span></div>
+  <div class="stat"><span class="stat-val purple">10</span><span class="stat-label">Casos Mobile</span></div>
+  <div class="stat"><span class="stat-val green">86</span><span class="stat-label">Automatizados</span></div>
+  <div class="stat"><span class="stat-val warn">17</span><span class="stat-label">Pendentes / Skipped</span></div>
+</div>
+
+<!-- 1. Visão Geral -->
+<section id="visao">
+  <div class="section-title"><span class="section-num">01</span>Visão Geral</div>
+  <p class="section-desc">Identificação do sistema sob teste e dos objetivos de qualidade desta iteração.</p>
+  <div class="section-divider"></div>
+  <div class="info-grid">
+    <div class="info-card">
+      <h4>SUT — Sistema sob Teste</h4>
+      <ul>
+        <li><strong>RESOLVE APP</strong> — Plataforma de registro eletrônico de solicitações e ocorrências urbanas</li>
+        <li>Conecta cidadãos à administração pública municipal</li>
+        <li>Backend: Node.js/Express · Microserviços · PostgreSQL · Redis</li>
+        <li>Mobile: React Native / Expo · Android</li>
+        <li>Repositório: <span style="font-family:monospace;font-size:11px">BatistaIsabella/RESOLVE-APP</span></li>
+      </ul>
+    </div>
+    <div class="info-card">
+      <h4>Objetivos desta suíte</h4>
+      <ul>
+        <li>Verificar sistematicamente os contratos de API expostos pelos microserviços</li>
+        <li>Validar regras de negócio, autenticação e controle de acesso por perfil</li>
+        <li>Mapear cenários mobile E2E para futura automação com Appium/Detox</li>
+        <li>Identificar falhas, limitações e comportamentos inesperados no SUT</li>
+        <li>Fornecer base reproduzível de feedback contínuo de qualidade</li>
+      </ul>
+    </div>
+    <div class="info-card">
+      <h4>Serviços em Escopo</h4>
+      <ul>
+        <li><strong>auth-service</strong> · porta 3001 · Registro e login JWT</li>
+        <li><strong>demand-service</strong> · porta 3002 · CRUD de denúncias</li>
+        <li><strong>App mobile Android</strong> · React Native/Expo</li>
+      </ul>
+    </div>
+    <div class="info-card">
+      <h4>Fora de Escopo (esta iteração)</h4>
+      <ul>
+        <li>metrics-service (porta 3003)</li>
+        <li>api-gateway (porta 8080)</li>
+        <li>Frontend web (Next.js)</li>
+        <li>iOS / dispositivos Apple</li>
+        <li>Testes de carga e performance</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 2. Escopo -->
+<section id="escopo">
+  <div class="section-title"><span class="section-num">02</span>Escopo dos Endpoints</div>
+  <p class="section-desc">Endpoints contemplados pela automação de API nesta entrega.</p>
+  <div class="section-divider"></div>
+  <div class="test-table-wrap">
+    <table class="test-table">
+      <thead><tr>
+        <th>Método</th><th>Endpoint</th><th>Descrição</th><th>Perfil</th><th>Suite</th>
+      </tr></thead>
+      <tbody>
+        <tr><td><span class="tc-http http-201">POST</span></td><td><code>/auth/register</code></td><td>Cadastro de novo usuário</td><td>Público</td><td><span class="badge badge-auto">TS03</span></td></tr>
+        <tr><td><span class="tc-http http-200">POST</span></td><td><code>/auth/login</code></td><td>Autenticação e geração de JWT</td><td>Público</td><td><span class="badge badge-auto">TS01</span></td></tr>
+        <tr><td><span class="tc-http http-200">GET</span></td><td><code>/health</code> (auth)</td><td>Health check do auth-service</td><td>Público</td><td><span class="badge badge-auto">TS07</span></td></tr>
+        <tr><td><span class="tc-http http-201">POST</span></td><td><code>/demandas</code></td><td>Criar nova denúncia</td><td>Cidadão</td><td><span class="badge badge-auto">TS02</span></td></tr>
+        <tr><td><span class="tc-http http-200">GET</span></td><td><code>/demandas/my-demands</code></td><td>Listar minhas denúncias</td><td>Cidadão</td><td><span class="badge badge-auto">TS08</span></td></tr>
+        <tr><td><span class="tc-http http-200">GET</span></td><td><code>/demandas/feed</code></td><td>Feed geral de denúncias</td><td>Cidadão</td><td><span class="badge badge-auto">TS08</span></td></tr>
+        <tr><td><span class="tc-http http-200">GET</span></td><td><code>/demandas/:id</code></td><td>Detalhes de uma denúncia</td><td>Cidadão</td><td><span class="badge badge-auto">TS06</span></td></tr>
+        <tr><td><span class="tc-http http-200">GET</span></td><td><code>/demandas/gestor</code></td><td>Listar todas as denúncias</td><td>Gestor</td><td><span class="badge badge-auto">TS05</span></td></tr>
+        <tr><td><span class="tc-http http-200">GET</span></td><td><code>/demandas/gestor/:id</code></td><td>Detalhes de denúncia (gestor)</td><td>Gestor</td><td><span class="badge badge-auto">TS05</span></td></tr>
+        <tr><td><span class="tc-http http-200">PATCH</span></td><td><code>/demandas/gestor/:id/status</code></td><td>Atualizar status da denúncia</td><td>Gestor</td><td><span class="badge badge-auto">TS05</span></td></tr>
+        <tr><td><span class="tc-http http-200">PATCH</span></td><td><code>/demandas/gestor/:id/prioridade</code></td><td>Atualizar prioridade</td><td>Gestor</td><td><span class="badge badge-auto">TS05</span></td></tr>
+        <tr><td><span class="tc-http http-200">GET</span></td><td><code>/health</code> (demand)</td><td>Health check do demand-service</td><td>Público</td><td><span class="badge badge-auto">TS08</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 3. Estratégia -->
+<section id="estrategia">
+  <div class="section-title"><span class="section-num">03</span>Estratégia de Testes</div>
+  <p class="section-desc">Abordagem Shift-Left → Shift-Right cobrindo todas as camadas do desenvolvimento.</p>
+  <div class="section-divider"></div>
+  <div class="strategy-row">
+    <div class="layer-card l1">
+      <span class="layer-tag">Shift-Left · Camada 1</span>
+      <h3>Unitário & Estático</h3>
+      <p>Testes de regras de negócio isoladas, validações de campo e análise estática integrada ao repositório.</p>
+      <div class="tool-list">
+        <span class="tool-chip">Vitest</span>
+        <span class="tool-chip">ESLint</span>
+        <span class="tool-chip">KtLint</span>
+        <span class="tool-chip">SAST</span>
+      </div>
+    </div>
+    <div class="layer-card l2">
+      <span class="layer-tag">Integração · Camada 2</span>
+      <h3>API & Integração</h3>
+      <p>Testes de integração entre componentes, validação de contratos REST, autenticação JWT e controle de acesso.</p>
+      <div class="tool-list">
+        <span class="tool-chip">Vitest</span>
+        <span class="tool-chip">Supertest</span>
+        <span class="tool-chip">Prisma</span>
+        <span class="tool-chip">jsonwebtoken</span>
+      </div>
+    </div>
+    <div class="layer-card l3">
+      <span class="layer-tag">Shift-Right · Camada 3</span>
+      <h3>E2E Mobile</h3>
+      <p>Automação de ponta a ponta em emuladores e dispositivos reais Android, validação visual e de fluxo completo.</p>
+      <div class="tool-list">
+        <span class="tool-chip">Appium</span>
+        <span class="tool-chip">Detox</span>
+        <span class="tool-chip">GitHub Actions</span>
+        <span class="tool-chip">Firebase</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. Ambiente -->
+<section id="ambiente">
+  <div class="section-title"><span class="section-num">04</span>Ambiente e Pré-requisitos</div>
+  <p class="section-desc">Configuração necessária para execução local dos testes automatizados.</p>
+  <div class="section-divider"></div>
+  <div class="info-grid">
+    <div class="info-card">
+      <h4>Infraestrutura</h4>
+      <ul>
+        <li>Node.js ≥ 18.x</li>
+        <li>PostgreSQL rodando (schemas: public, demand)</li>
+        <li>Redis rodando em localhost:6379</li>
+        <li>Migrations aplicadas em ambos os serviços</li>
+      </ul>
+    </div>
+    <div class="info-card">
+      <h4>Variáveis de Ambiente</h4>
+      <ul>
+        <li><code>DATABASE_URL_AUTH</code> — conexão auth-service</li>
+        <li><code>DATABASE_URL_DEMAND</code> — conexão demand-service</li>
+        <li><code>JWT_SECRET</code> — deve ser idêntico nos dois serviços</li>
+        <li><code>REDIS_URL</code> — demand-service</li>
+      </ul>
+    </div>
+    <div class="info-card">
+      <h4>Execução — auth-service</h4>
+      <ul>
+        <li><code>cd backend/auth-service</code></li>
+        <li><code>npm install</code></li>
+        <li><code>npx prisma migrate deploy</code></li>
+        <li><code>npx vitest run</code></li>
+        <li><code>npx vitest run --reporter=verbose</code></li>
+      </ul>
+    </div>
+    <div class="info-card">
+      <h4>Execução — demand-service</h4>
+      <ul>
+        <li><code>cd backend/demand-service</code></li>
+        <li><code>npm install</code></li>
+        <li><code>npx prisma migrate deploy</code></li>
+        <li><code>npx vitest run</code></li>
+        <li><code>npx vitest run src/tests/TS05_operacoes_gestor.test.ts</code></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 5. Riscos -->
+<section id="riscos">
+  <div class="section-title"><span class="section-num">05</span>Análise de Riscos</div>
+  <p class="section-desc">Riscos identificados e estratégias de mitigação para o ciclo de testes.</p>
+  <div class="section-divider"></div>
+  <div class="test-table-wrap">
+    <table class="risk-table">
+      <thead><tr><th>ID</th><th>Risco</th><th>Probabilidade</th><th>Impacto</th><th>Mitigação</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span style="font-family:monospace;font-size:11px;color:var(--danger)">R01</span></td>
+          <td>JWT_SECRET diferente entre serviços invalida tokens nos testes</td>
+          <td><span class="badge badge-alta">Alta</span></td>
+          <td><span class="badge badge-alta">Alta</span></td>
+          <td>Configurar JWT_SECRET idêntico via .env ou docker-compose</td>
+        </tr>
+        <tr>
+          <td><span style="font-family:monospace;font-size:11px;color:var(--warn)">R02</span></td>
+          <td>Redis indisponível causa falha em testes do demand-service</td>
+          <td><span class="badge badge-media">Média</span></td>
+          <td><span class="badge badge-media">Média</span></td>
+          <td>Subir Redis via Docker antes de rodar os testes; timeout de 3s já implementado</td>
+        </tr>
+        <tr>
+          <td><span style="font-family:monospace;font-size:11px;color:var(--warn)">R03</span></td>
+          <td>Dados de teste deixados no banco após falha intermediária</td>
+          <td><span class="badge badge-media">Média</span></td>
+          <td><span class="badge badge-baixa">Baixa</span></td>
+          <td>Todos os testes possuem afterAll com cleanup; usar banco dedicado para testes</td>
+        </tr>
+        <tr>
+          <td><span style="font-family:monospace;font-size:11px;color:var(--muted)">R04</span></td>
+          <td>Filtros avançados (categoria/status/região) não implementados no backend</td>
+          <td><span class="badge badge-alta">Alta</span></td>
+          <td><span class="badge badge-media">Média</span></td>
+          <td>Cenários marcados como it.skip() até implementação; documentado no TS04</td>
+        </tr>
+        <tr>
+          <td><span style="font-family:monospace;font-size:11px;color:var(--muted)">R05</span></td>
+          <td>Testes E2E mobile dependem de emulador/dispositivo configurado</td>
+          <td><span class="badge badge-media">Média</span></td>
+          <td><span class="badge badge-alta">Alta</span></td>
+          <td>Documentar pré-requisitos do emulador Android; usar Device Farm no CI/CD</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 6. Critérios -->
+<section id="criterios">
+  <div class="section-title"><span class="section-num">06</span>Critérios de Entrada e Saída</div>
+  <div class="section-divider"></div>
+  <div class="criteria-row">
+    <div class="criteria-box entry">
+      <h4>✓ Critérios de Entrada</h4>
+      <ul class="criteria-list">
+        <li><span class="ci ok">✓</span>Banco de dados PostgreSQL acessível com migrations aplicadas</li>
+        <li><span class="ci ok">✓</span>Redis rodando e acessível pelo demand-service</li>
+        <li><span class="ci ok">✓</span>JWT_SECRET configurado e igual nos dois serviços</li>
+        <li><span class="ci ok">✓</span>Dependências instaladas (npm install) em cada serviço</li>
+        <li><span class="ci ok">✓</span>Branch main sincronizada com o repositório remoto</li>
+      </ul>
+    </div>
+    <div class="criteria-box exit">
+      <h4>✗ Critérios de Saída</h4>
+      <ul class="criteria-list">
+        <li><span class="ci no">✗</span>Nenhum teste obrigatório (prioridade Alta) falhando</li>
+        <li><span class="ci no">✗</span>Cobertura de endpoints ≥ 85% dos casos planejados executados</li>
+        <li><span class="ci no">✗</span>Todos os cenários de segurança (TS06) passando</li>
+        <li><span class="ci no">✗</span>Relatório de execução gerado e revisado pelo squad</li>
+        <li><span class="ci no">✗</span>Bugs críticos documentados e reportados no repositório</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ── API BACKLOG ──────────────────────────────────────── -->
+<section id="backlog-api">
+  <div class="section-title"><span class="section-num">07</span>Backlog de Testes — API</div>
+  <p class="section-desc">Cenários automatizados com Vitest + Supertest contra o auth-service e demand-service.</p>
+  <div class="section-divider"></div>
+
+  <!-- TS01 -->
+  <div class="module-block" id="ts01">
+    <div class="module-header">
+      <span class="module-id">TS01</span>
+      <span class="module-title">Autenticação real e perfil JWT</span>
+      <span class="module-desc"><span class="badge badge-auto">5 casos · Automatizado</span></span>
+    </div>
+    <div class="test-table-wrap">
+      <table class="test-table">
+        <thead><tr><th>ID</th><th>Cenário</th><th>Resultado Esperado</th><th>HTTP</th><th>Prioridade</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="tc-id">TS01-01</td><td>Login com credenciais válidas de cidadão</td><td>Retorna token JWT, papel: "cidadao", nome do usuário</td><td class="tc-http http-200">200</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS01-02</td><td>Login com credenciais válidas de gestor</td><td>Retorna token JWT, papel: "gestor"</td><td class="tc-http http-200">200</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS01-03</td><td>Login com senha incorreta</td><td>Retorna "Credenciais inválidas"</td><td class="tc-http http-401">401</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS01-04</td><td>Login com e-mail inexistente</td><td>Retorna "Credenciais inválidas" (não revela ausência)</td><td class="tc-http http-401">401</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS01-05</td><td>JWT do cidadão carrega papel correto para redirecionamento</td><td>body.papel === "cidadao"</td><td class="tc-http http-200">200</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TS02 -->
+  <div class="module-block" id="ts02">
+    <div class="module-header">
+      <span class="module-id">TS02</span>
+      <span class="module-title">Persistência de nova demanda urbana</span>
+      <span class="module-desc"><span class="badge badge-auto">9 casos · Automatizado</span></span>
+    </div>
+    <div class="test-table-wrap">
+      <table class="test-table">
+        <thead><tr><th>ID</th><th>Cenário</th><th>Resultado Esperado</th><th>HTTP</th><th>Prioridade</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="tc-id">TS02-01</td><td>POST /demandas sem token de autenticação</td><td>Acesso negado</td><td class="tc-http http-401">401</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS02-02</td><td>Gestor tenta criar demanda (apenas cidadão pode)</td><td>Retorna "Acesso restrito a cidadãos"</td><td class="tc-http http-403">403</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS02-03</td><td>Body completamente vazio</td><td>Campos obrigatórios ausentes</td><td class="tc-http http-400">400</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS02-04</td><td>Categoria com valor inexistente no enum</td><td>Mensagem "categoria inválida"</td><td class="tc-http http-400">400</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS02-05</td><td>Região com valor inexistente no enum</td><td>Mensagem "regiao inválida"</td><td class="tc-http http-400">400</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS02-06</td><td>Cidadão envia dados válidos completos</td><td>Denúncia criada com id_denuncia, titulo, categoria, status: ABERTA</td><td class="tc-http http-201">201</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS02-07</td><td>Verifica status padrão da denúncia criada</td><td>body.status === "ABERTA"</td><td class="tc-http http-201">201</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS02-08</td><td>Prioridade não informada aplica padrão MEDIA</td><td>body.prioridade === "MEDIA"</td><td class="tc-http http-201">201</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS02-09</td><td>Dois POSTs simultâneos do mesmo cidadão (concorrência)</td><td>Ambos retornam 201; cidadão não duplicado no banco</td><td class="tc-http http-201">201</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TS03 -->
+  <div class="module-block" id="ts03">
+    <div class="module-header">
+      <span class="module-id">TS03</span>
+      <span class="module-title">Registro de usuário</span>
+      <span class="module-desc"><span class="badge badge-auto">13 casos · Automatizado</span></span>
+    </div>
+    <div class="test-table-wrap">
+      <table class="test-table">
+        <thead><tr><th>ID</th><th>Cenário</th><th>Resultado Esperado</th><th>HTTP</th><th>Prioridade</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="tc-id">TS03-01</td><td>Registro de cidadão com dados válidos</td><td>Retorna id, nome, email, papel: "cidadao"</td><td class="tc-http http-201">201</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS03-02</td><td>Registro de gestor com dados válidos</td><td>Retorna papel: "gestor"</td><td class="tc-http http-201">201</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS03-03</td><td>Tentativa com e-mail já cadastrado</td><td>Retorna "E-mail já cadastrado"</td><td class="tc-http http-409">409</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS03-04</td><td>Sem campo nome</td><td>Informa campo obrigatório faltando</td><td class="tc-http http-400">400</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS03-05</td><td>Sem campo email</td><td>Informa campo obrigatório faltando</td><td class="tc-http http-400">400</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS03-06</td><td>Sem campo senha</td><td>Informa campo obrigatório faltando</td><td class="tc-http http-400">400</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS03-07</td><td>Sem campo papel</td><td>Informa campo obrigatório faltando</td><td class="tc-http http-400">400</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS03-08</td><td>Body completamente vazio</td><td>Rejeita com erro de validação</td><td class="tc-http http-400">400</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS03-09</td><td>Papel com valor "admin" (inválido)</td><td>Rejeita com mensagem sobre campo papel</td><td class="tc-http http-400">400</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS03-10</td><td>Papel em maiúsculas "CIDADAO" (case-sensitive)</td><td>Rejeita — API aceita apenas minúsculas</td><td class="tc-http http-400">400</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS03-11</td><td>Segurança: resposta não expõe campo senha</td><td>body.senha === undefined</td><td class="tc-http http-201">201</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS03-12</td><td>Content-Type da resposta de registro</td><td>Content-Type: application/json</td><td class="tc-http http-201">201</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS03-13</td><td>Contrato: tipos dos campos retornados</td><td>id(number), nome(string), email(string), papel(string)</td><td class="tc-http http-201">201</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TS04 -->
+  <div class="module-block" id="ts04">
+    <div class="module-header">
+      <span class="module-id">TS04</span>
+      <span class="module-title">Filtros avançados e paginação</span>
+      <span class="module-desc"><span class="badge badge-auto">4 ativos</span> <span class="badge badge-skip">6 skipped</span></span>
+    </div>
+    <div class="callout warn">
+      <span class="callout-icon">⚠</span>
+      <div>Filtros por <code>categoria</code>, <code>status</code>, <code>regiao</code> e <code>prioridade</code> <strong>não estão implementados</strong> no backend. Os query params são aceitos mas ignorados. Cenários marcados como <code>it.skip()</code> até a implementação.</div>
+    </div>
+    <div class="test-table-wrap">
+      <table class="test-table">
+        <thead><tr><th>ID</th><th>Cenário</th><th>Resultado Esperado</th><th>HTTP</th><th>Prioridade</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="tc-id">TS04-01</td><td>GET /my-demands com ?page=1&amp;limit=2</td><td>Retorna 2 registros, pagination.totalPages correto</td><td class="tc-http http-200">200</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS04-02</td><td>Página fora do range (?page=999)</td><td>data vazio; pagination.total mantém count real</td><td class="tc-http http-200">200</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS04-03</td><td>Paginação no feed geral (?page=1&amp;limit=2)</td><td>Retorna 2 registros com pagination correto</td><td class="tc-http http-200">200</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS04-04</td><td>Cidadão sem demandas: GET /my-demands</td><td>data: [], pagination.total: 0</td><td class="tc-http http-200">200</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS04-05</td><td>[SKIP] Filtro por ?categoria=ILUMINACAO_PUBLICA</td><td>Retorna apenas registros da categoria filtrada</td><td class="tc-http http-200">200</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-skip">Pendente</span></td></tr>
+          <tr><td class="tc-id">TS04-06</td><td>[SKIP] Filtro por ?status=ABERTA</td><td>Retorna apenas denúncias abertas</td><td class="tc-http http-200">200</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-skip">Pendente</span></td></tr>
+          <tr><td class="tc-id">TS04-07</td><td>[SKIP] Filtro por ?regiao=AGRESTE</td><td>Retorna apenas do Agreste</td><td class="tc-http http-200">200</td><td><span class="badge badge-baixa">Baixa</span></td><td><span class="badge badge-skip">Pendente</span></td></tr>
+          <tr><td class="tc-id">TS04-08</td><td>[SKIP] Filtro por ?prioridade=ALTA</td><td>Retorna apenas prioridade ALTA</td><td class="tc-http http-200">200</td><td><span class="badge badge-baixa">Baixa</span></td><td><span class="badge badge-skip">Pendente</span></td></tr>
+          <tr><td class="tc-id">TS04-09</td><td>[SKIP] Múltiplos filtros: categoria + status</td><td>Retorna apenas registros que atendem ambos</td><td class="tc-http http-200">200</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-skip">Pendente</span></td></tr>
+          <tr><td class="tc-id">TS04-10</td><td>[SKIP] Filtro sem nenhum resultado</td><td>data: [], pagination.total: 0</td><td class="tc-http http-200">200</td><td><span class="badge badge-baixa">Baixa</span></td><td><span class="badge badge-skip">Pendente</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TS05 -->
+  <div class="module-block" id="ts05">
+    <div class="module-header">
+      <span class="module-id">TS05</span>
+      <span class="module-title">Operações do gestor</span>
+      <span class="module-desc"><span class="badge badge-auto">18 casos · Automatizado</span></span>
+    </div>
+    <div class="test-table-wrap">
+      <table class="test-table">
+        <thead><tr><th>ID</th><th>Cenário</th><th>Resultado Esperado</th><th>HTTP</th><th>Prioridade</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="tc-id">TS05-01</td><td>Gestor lista todas as denúncias</td><td>data (array) + pagination</td><td class="tc-http http-200">200</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS05-02</td><td>Cidadão tenta GET /gestor</td><td>Acesso negado para este perfil</td><td class="tc-http http-403">403</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS05-03</td><td>Sem token em GET /gestor</td><td>Token não fornecido</td><td class="tc-http http-401">401</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS05-04</td><td>Gestor obtém detalhes de denúncia existente</td><td>id_denuncia correto + imagens[] + historicos[]</td><td class="tc-http http-200">200</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS05-05</td><td>Gestor busca denúncia com ID inexistente</td><td>"Denúncia não encontrada"</td><td class="tc-http http-404">404</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS05-06</td><td>GET /gestor/:id com ID não numérico ("abc")</td><td>"ID da denúncia inválido"</td><td class="tc-http http-400">400</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS05-07</td><td>PATCH status: ABERTA → EM_ANALISE</td><td>denuncia.status: EM_ANALISE + historico criado</td><td class="tc-http http-200">200</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS05-08</td><td>PATCH status: EM_ANALISE → RESOLVIDA</td><td>denuncia.status: RESOLVIDA</td><td class="tc-http http-200">200</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS05-09</td><td>PATCH status com valor inválido ("PENDENTE")</td><td>Informa valores aceitos: ABERTA, EM_ANALISE, RESOLVIDA</td><td class="tc-http http-400">400</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS05-10</td><td>PATCH status sem campo status no body</td><td>Erro de validação</td><td class="tc-http http-400">400</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS05-11</td><td>PATCH status com valor igual ao atual</td><td>"A denúncia já possui este status"</td><td class="tc-http http-400">400</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS05-12</td><td>PATCH /gestor/999999/status (inexistente)</td><td>"Denúncia não encontrada"</td><td class="tc-http http-404">404</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS05-13</td><td>Cidadão tenta PATCH /gestor/:id/status</td><td>Acesso negado</td><td class="tc-http http-403">403</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS05-14</td><td>PATCH prioridade: MEDIA → ALTA</td><td>denuncia.prioridade: ALTA + historico criado</td><td class="tc-http http-200">200</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS05-15</td><td>PATCH prioridade: ALTA → BAIXA</td><td>denuncia.prioridade: BAIXA</td><td class="tc-http http-200">200</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS05-16</td><td>PATCH prioridade com valor inválido ("URGENTE")</td><td>Informa valores aceitos: Alta, Média, Baixa</td><td class="tc-http http-400">400</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS05-17</td><td>PATCH prioridade com valor igual ao atual</td><td>"A denúncia já possui este nível de prioridade"</td><td class="tc-http http-400">400</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS05-18</td><td>Cidadão tenta PATCH /gestor/:id/prioridade</td><td>Acesso negado</td><td class="tc-http http-403">403</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TS06 -->
+  <div class="module-block" id="ts06">
+    <div class="module-header">
+      <span class="module-id">TS06</span>
+      <span class="module-title">Controle de acesso e autenticação</span>
+      <span class="module-desc"><span class="badge badge-auto">20 casos · Automatizado</span></span>
+    </div>
+    <div class="test-table-wrap">
+      <table class="test-table">
+        <thead><tr><th>ID</th><th>Cenário</th><th>Resultado Esperado</th><th>HTTP</th><th>Prioridade</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="tc-id">TS06-01</td><td>POST /demandas sem header Authorization</td><td>"Token não fornecido"</td><td class="tc-http http-401">401</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS06-02</td><td>GET /my-demands sem token</td><td>Rejeita sem autenticação</td><td class="tc-http http-401">401</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS06-03</td><td>GET /feed sem token</td><td>Rejeita sem autenticação</td><td class="tc-http http-401">401</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS06-04</td><td>GET /gestor sem token</td><td>Rejeita sem autenticação</td><td class="tc-http http-401">401</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS06-05</td><td>PATCH /gestor/:id/status sem token</td><td>Rejeita sem autenticação</td><td class="tc-http http-401">401</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS06-06</td><td>PATCH /gestor/:id/prioridade sem token</td><td>Rejeita sem autenticação</td><td class="tc-http http-401">401</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS06-07</td><td>Authorization sem prefixo "Bearer "</td><td>"Token não fornecido"</td><td class="tc-http http-401">401</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS06-08</td><td>Token com assinatura corrompida</td><td>"Token inválido ou expirado"</td><td class="tc-http http-401">401</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS06-09</td><td>String aleatória (não-JWT) no header</td><td>Rejeita por token inválido</td><td class="tc-http http-401">401</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS06-10</td><td>Token expirado (expiresIn: -1)</td><td>"Token inválido ou expirado"</td><td class="tc-http http-401">401</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS06-11</td><td>Token assinado com secret diferente</td><td>Rejeita por assinatura inválida</td><td class="tc-http http-401">401</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS06-12</td><td>Cidadão → GET /demandas/gestor</td><td>"Acesso negado para este perfil"</td><td class="tc-http http-403">403</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS06-13</td><td>Cidadão → GET /demandas/gestor/:id</td><td>Acesso negado</td><td class="tc-http http-403">403</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS06-14</td><td>Cidadão → PATCH /gestor/:id/status</td><td>Acesso negado</td><td class="tc-http http-403">403</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS06-15</td><td>Cidadão → PATCH /gestor/:id/prioridade</td><td>Acesso negado</td><td class="tc-http http-403">403</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS06-16</td><td>Gestor → POST /demandas (criar denúncia)</td><td>"Acesso restrito a cidadãos"</td><td class="tc-http http-403">403</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS06-17</td><td>Gestor → GET /demandas/my-demands</td><td>Acesso negado</td><td class="tc-http http-403">403</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS06-18</td><td>Gestor → GET /demandas/feed</td><td>Acesso negado</td><td class="tc-http http-403">403</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS06-19</td><td>GET /demandas/nao-e-numero (ID inválido)</td><td>"ID da denúncia inválido"</td><td class="tc-http http-400">400</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS06-20</td><td>GET /demandas/999999 (ID inexistente)</td><td>"Denúncia não encontrada"</td><td class="tc-http http-404">404</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TS07 -->
+  <div class="module-block" id="ts07">
+    <div class="module-header">
+      <span class="module-id">TS07</span>
+      <span class="module-title">Health check e contrato — auth-service</span>
+      <span class="module-desc"><span class="badge badge-auto">12 casos · Automatizado</span></span>
+    </div>
+    <div class="test-table-wrap">
+      <table class="test-table">
+        <thead><tr><th>ID</th><th>Cenário</th><th>Resultado Esperado</th><th>HTTP</th><th>Prioridade</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="tc-id">TS07-01</td><td>GET /health com serviço online</td><td>status: 200</td><td class="tc-http http-200">200</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS07-02</td><td>Health: body.status === "ok"</td><td>Campo status presente</td><td class="tc-http http-200">200</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS07-03</td><td>Health: body.service === "auth-service"</td><td>Identifica o serviço corretamente</td><td class="tc-http http-200">200</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS07-04</td><td>Health: Content-Type application/json</td><td>Header correto</td><td class="tc-http http-200">200</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS07-05</td><td>CORS: Access-Control-Allow-Origin presente em respostas</td><td>Header CORS configurado</td><td class="tc-http http-200">200</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS07-06</td><td>OPTIONS /auth/register (CORS preflight)</td><td>Preflight aceito</td><td class="tc-http http-204">204</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS07-07</td><td>Contrato registro: campos id, nome, email, papel</td><td>Todos presentes com tipos corretos</td><td class="tc-http http-201">201</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS07-08</td><td>Contrato registro: campo senha ausente</td><td>body.senha === undefined (não vaza hash)</td><td class="tc-http http-201">201</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS07-09</td><td>Contrato login: campos token, papel, userId, nome</td><td>Todos presentes</td><td class="tc-http http-200">200</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS07-10</td><td>Token retornado tem formato JWT (3 segmentos)</td><td>token.split(".").length === 3</td><td class="tc-http http-200">200</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS07-11</td><td>Login: Content-Type application/json</td><td>Header correto</td><td class="tc-http http-200">200</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS07-12</td><td>Erro 401: body.error definido, body.message ausente</td><td>Padrão de erro consistente</td><td class="tc-http http-401">401</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TS08 -->
+  <div class="module-block" id="ts08">
+    <div class="module-header">
+      <span class="module-id">TS08</span>
+      <span class="module-title">Health check e contrato — demand-service</span>
+      <span class="module-desc"><span class="badge badge-auto">16 casos · Automatizado</span></span>
+    </div>
+    <div class="test-table-wrap">
+      <table class="test-table">
+        <thead><tr><th>ID</th><th>Cenário</th><th>Resultado Esperado</th><th>HTTP</th><th>Prioridade</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="tc-id">TS08-01</td><td>GET /health com serviço online</td><td>status: 200</td><td class="tc-http http-200">200</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS08-02</td><td>Health: body.status === "ok"</td><td>Campo status presente</td><td class="tc-http http-200">200</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS08-03</td><td>Health: body.service definido</td><td>Nome do serviço identificado</td><td class="tc-http http-200">200</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS08-04</td><td>Health: Content-Type application/json</td><td>Header correto</td><td class="tc-http http-200">200</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS08-05</td><td>Criação: body contém campos obrigatórios</td><td>id_denuncia, titulo, categoria, regiao, status, prioridade, descricao, endereco, data_registro, imagens[]</td><td class="tc-http http-201">201</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS08-06</td><td>Criação: Content-Type application/json</td><td>Header correto</td><td class="tc-http http-201">201</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS08-07</td><td>Criação: status padrão é "ABERTA"</td><td>body.status === "ABERTA"</td><td class="tc-http http-201">201</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS08-08</td><td>GET /my-demands: resposta contém "data" e "pagination"</td><td>Estrutura paginada presente</td><td class="tc-http http-200">200</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS08-09</td><td>pagination contém: page, limit, total, totalPages</td><td>Todos os campos do contrato paginado</td><td class="tc-http http-200">200</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS08-10</td><td>GET /feed: resposta contém "data" e "pagination"</td><td>Estrutura paginada presente</td><td class="tc-http http-200">200</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS08-11</td><td>GET /gestor: resposta contém "data" e "pagination"</td><td>Estrutura paginada presente</td><td class="tc-http http-200">200</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS08-12</td><td>pagination.limit padrão é 20</td><td>Quando não informado, limit === 20</td><td class="tc-http http-200">200</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS08-13</td><td>Erro sem token: body.error definido</td><td>body.message ausente</td><td class="tc-http http-401">401</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS08-14</td><td>Erro de validação: body.error definido</td><td>Padrão de erro consistente</td><td class="tc-http http-400">400</td><td><span class="badge badge-alta">Alta</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS08-15</td><td>Erro 404: body.error definido</td><td>Mensagem descritiva presente</td><td class="tc-http http-404">404</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+          <tr><td class="tc-id">TS08-16</td><td>Nenhuma resposta de erro expõe campo "message"</td><td>Padrão único é "error"</td><td>—</td><td><span class="badge badge-media">Média</span></td><td><span class="badge badge-auto">Auto</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ── MOBILE BACKLOG ──────────────────────────────────── -->
+<section id="backlog-mobile">
+  <div class="section-title"><span class="section-num">08</span>Backlog de Testes — Mobile</div>
+  <p class="section-desc">Cenários Android mapeados para automação com Appium/Detox em emuladores e dispositivos reais.</p>
+  <div class="section-divider"></div>
+
+  <!-- MOB Auth -->
+  <div class="module-block" id="mob-auth">
+    <div class="module-header">
+      <span class="module-id mob">MOB01–05</span>
+      <span class="module-title">Módulo de Autenticação</span>
+      <span class="module-desc"><span class="badge badge-manual">5 casos · Manual/E2E Pendente</span></span>
+    </div>
+    <div class="test-table-wrap">
+      <table class="test-table">
+        <thead><tr><th>ID</th><th>Cenário / História de Usuário</th><th>Pré-condição</th><th>Camada</th><th>Prioridade</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="tc-id mob">MOB01</td>
+            <td>Validação local de formato de e-mail e força de senha no formulário de login</td>
+            <td>App instalado, usuário na tela de login</td>
+            <td><span class="badge badge-unit">Unitário/UI</span></td>
+            <td><span class="badge badge-alta">Alta</span></td>
+            <td><span class="badge badge-manual">Pendente</span></td>
+          </tr>
+          <tr>
+            <td class="tc-id mob">MOB02</td>
+            <td>Login com credenciais válidas e persistência segura do estado de sessão localmente (AsyncStorage)</td>
+            <td>Usuário cadastrado no backend; app instalado</td>
+            <td><span class="badge badge-e2e">E2E Mobile</span></td>
+            <td><span class="badge badge-alta">Alta</span></td>
+            <td><span class="badge badge-manual">Pendente</span></td>
+          </tr>
+          <tr>
+            <td class="tc-id mob">MOB03</td>
+            <td>Exibição de mensagem de erro amigável em caso de senha incorreta ou falha de conexão</td>
+            <td>App online e offline; credenciais inválidas</td>
+            <td><span class="badge badge-e2e">E2E Mobile</span></td>
+            <td><span class="badge badge-alta">Alta</span></td>
+            <td><span class="badge badge-manual">Pendente</span></td>
+          </tr>
+          <tr>
+            <td class="tc-id mob">MOB04</td>
+            <td>Cadastro de novo usuário com validação de e-mail duplicado e mensagens de retorno do servidor</td>
+            <td>Backend rodando; e-mail de teste disponível e já cadastrado</td>
+            <td><span class="badge badge-integ">Integração</span></td>
+            <td><span class="badge badge-media">Média</span></td>
+            <td><span class="badge badge-manual">Pendente</span></td>
+          </tr>
+          <tr>
+            <td class="tc-id mob">MOB05</td>
+            <td>Recuperação de sessão expirada e redirecionamento para tela de login</td>
+            <td>Usuário logado; token expirado (simular via mock ou aguardar 24h)</td>
+            <td><span class="badge badge-e2e">E2E Mobile</span></td>
+            <td><span class="badge badge-media">Média</span></td>
+            <td><span class="badge badge-manual">Pendente</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MOB Chamados -->
+  <div class="module-block" id="mob-chamados">
+    <div class="module-header">
+      <span class="module-id mob">MOB06–10</span>
+      <span class="module-title">Módulo de Gestão de Chamados</span>
+      <span class="module-desc"><span class="badge badge-manual">5 casos · Manual/E2E Pendente</span></span>
+    </div>
+    <div class="test-table-wrap">
+      <table class="test-table">
+        <thead><tr><th>ID</th><th>Cenário / História de Usuário</th><th>Pré-condição</th><th>Camada</th><th>Prioridade</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="tc-id mob">MOB06</td>
+            <td>Abertura de novo chamado preenchendo título, descrição e anexando foto da câmera</td>
+            <td>Cidadão logado; câmera disponível no emulador</td>
+            <td><span class="badge badge-e2e">E2E Mobile</span></td>
+            <td><span class="badge badge-alta">Alta</span></td>
+            <td><span class="badge badge-manual">Pendente</span></td>
+          </tr>
+          <tr>
+            <td class="tc-id mob">MOB07</td>
+            <td>Solicitação e concessão de permissões nativas do dispositivo (Câmera e Galeria)</td>
+            <td>App instalado sem permissões concedidas; Android 10+</td>
+            <td><span class="badge badge-e2e">E2E Nativo</span></td>
+            <td><span class="badge badge-alta">Alta</span></td>
+            <td><span class="badge badge-manual">Pendente</span></td>
+          </tr>
+          <tr>
+            <td class="tc-id mob">MOB08</td>
+            <td>Atualização e transição de status do chamado: Aberto → Em Andamento → Finalizado</td>
+            <td>Gestor logado; chamado existente com status ABERTA</td>
+            <td><span class="badge badge-integ">Integração/E2E</span></td>
+            <td><span class="badge badge-alta">Alta</span></td>
+            <td><span class="badge badge-manual">Pendente</span></td>
+          </tr>
+          <tr>
+            <td class="tc-id mob">MOB09</td>
+            <td>Funcionamento do rascunho offline: criação sem rede e sincronização ao reconectar</td>
+            <td>Cidadão logado; modo avião ativado durante a criação</td>
+            <td><span class="badge badge-integ">E2E Mocking</span></td>
+            <td><span class="badge badge-media">Média</span></td>
+            <td><span class="badge badge-manual">Pendente</span></td>
+          </tr>
+          <tr>
+            <td class="tc-id mob">MOB10</td>
+            <td>Filtragem e busca dinâmica de chamados por categoria e status no Dashboard</td>
+            <td>Gestor logado; chamados de categorias e status variados presentes</td>
+            <td><span class="badge badge-e2e">E2E Mobile</span></td>
+            <td><span class="badge badge-media">Média</span></td>
+            <td><span class="badge badge-manual">Pendente</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- 9. Cobertura -->
+<section id="cobertura">
+  <div class="section-title"><span class="section-num">09</span>Cobertura e Métricas</div>
+  <div class="section-divider"></div>
+  <div class="cov-grid">
+    <div class="cov-item">
+      <div class="cov-label">Autenticação <span>100%</span></div>
+      <div class="cov-bar"><div class="cov-fill blue" style="width:100%"></div></div>
+    </div>
+    <div class="cov-item">
+      <div class="cov-label">Controle de Acesso <span>100%</span></div>
+      <div class="cov-bar"><div class="cov-fill blue" style="width:100%"></div></div>
+    </div>
+    <div class="cov-item">
+      <div class="cov-label">Operações do Gestor <span>95%</span></div>
+      <div class="cov-bar"><div class="cov-fill green" style="width:95%"></div></div>
+    </div>
+    <div class="cov-item">
+      <div class="cov-label">Contrato da API <span>90%</span></div>
+      <div class="cov-bar"><div class="cov-fill green" style="width:90%"></div></div>
+    </div>
+    <div class="cov-item">
+      <div class="cov-label">Filtros Avançados <span>40%</span></div>
+      <div class="cov-bar"><div class="cov-fill warn" style="width:40%"></div></div>
+    </div>
+    <div class="cov-item">
+      <div class="cov-label">Mobile E2E <span>0%</span></div>
+      <div class="cov-bar"><div class="cov-fill purple" style="width:0%"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 10. Bugs -->
+<section id="bugs">
+  <div class="section-title"><span class="section-num">10</span>Bugs e Achados</div>
+  <p class="section-desc">Comportamentos inesperados identificados durante a análise e automação do SUT.</p>
+  <div class="section-divider"></div>
+
+  <div class="callout danger">
+    <span class="callout-icon">🔴</span>
+    <div><strong>BUG-01 — Rotas incorretas no TS04 (testes existentes).</strong> O arquivo <code>TS04_filtros_avancados.test.ts</code> usa <code>/demandas/demands</code>, <code>/demandas/demands/feed</code> e <code>/demandas/gestor/demands</code>. As rotas corretas são <code>/demandas/my-demands</code>, <code>/demandas/feed</code> e <code>/demandas/gestor</code>. Os testes de paginação estão testando endpoints 404 silenciosamente.</div>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-icon">🟡</span>
+    <div><strong>BUG-02 — JWT_SECRET padrão inconsistente.</strong> O <code>authMiddleware.ts</code> do demand-service usa fallback <code>'change-me'</code>, enquanto os testes existentes (TS02, TS04) usam <code>'smartcity-dev-secret'</code>. Sem <code>JWT_SECRET</code> definido no <code>.env</code>, todos os testes que geram tokens manualmente falharão por assinatura inválida.</div>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-icon">🟡</span>
+    <div><strong>BUG-03 — Filtros de query ignorados silenciosamente.</strong> Os parâmetros <code>?categoria=</code>, <code>?status=</code>, <code>?regiao=</code> e <code>?prioridade=</code> são aceitos mas não produzem efeito. A API retorna todos os registros sem filtrar, e nenhum erro ou aviso é retornado ao cliente.</div>
+  </div>
+
+  <div class="callout info">
+    <span class="callout-icon">🔵</span>
+    <div><strong>OBS-01 — Console.log de debug em produção.</strong> O método <code>updateDenunciaPrioridade</code> em <code>denunciaService.ts</code> contém múltiplos <code>console.log</code> de debug (incluindo emojis) que devem ser removidos antes de ir para produção.</div>
+  </div>
+</section>
+
+<!-- 11. Squad -->
+<section id="squad">
+  <div class="section-title"><span class="section-num">11</span>Squad e Contribuições</div>
+  <div class="section-divider"></div>
+  <div class="test-table-wrap">
+    <table class="squad-table">
+      <thead><tr><th>Membro</th><th>Papel no Squad</th><th>Contribuição nesta entrega</th></tr></thead>
+      <tbody>
+        <tr><td><span class="avatar">?</span>Preencher</td><td>—</td><td>—</td></tr>
+        <tr><td><span class="avatar">?</span>Preencher</td><td>—</td><td>—</td></tr>
+        <tr><td><span class="avatar">?</span>Preencher</td><td>—</td><td>—</td></tr>
+        <tr><td><span class="avatar">?</span>Preencher</td><td>—</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Footer -->
+<div class="doc-footer">
+  <span>RESOLVE APP · Plano de QA v1.0 · Setembro 2026</span>
+  <span>103 casos API · 10 casos Mobile · Vitest + Supertest</span>
+</div>
+
+</div>
+</main>
+
+<script>
+// Sidebar active link on scroll
+const sections = document.querySelectorAll('section[id], .module-block[id]');
+const links = document.querySelectorAll('nav a');
+
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const a = document.querySelector(`nav a[href="#${e.target.id}"]`);
+      if (a) a.classList.add('active');
+    }
+  });
+}, { rootMargin: '-30% 0px -65% 0px' });
+
+sections.forEach(s => obs.observe(s));
+</script>
+</body>

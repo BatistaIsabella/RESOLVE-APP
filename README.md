@@ -179,7 +179,17 @@ docker compose --env-file .env.local exec demand-service npx prisma migrate depl
 > Disponível em http://localhost:8080
 
 ---
-.
+
+## 🧪 Suíte de Testes de API
+
+A documentação completa da suíte de testes automatizados está disponível em:
+
+**[backend/SUITE_TESTES_README.md](backend/SUITE_TESTES_README.md)**
+
+Inclui cenários testados (TS01–TS08), configuração do ambiente, análise dos resultados obtidos e evidências de execução.
+
+---
+
 ## 👩‍💻 Equipe de Desenvolvimento
 
 - Arthur Estevaum
