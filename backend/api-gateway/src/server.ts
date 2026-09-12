@@ -73,7 +73,6 @@ app.use(
   createProxyMiddleware({
     target: AUTH_URL,
     changeOrigin: true,
-    xfwd: true, // repassa X-Forwarded-For com o IP real do cliente, necessário pro rate limit do login
   })
 );
 
