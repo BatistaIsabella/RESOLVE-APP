@@ -8,8 +8,11 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
+import { useRouter } from 'expo-router';
 
 export default function HomeScreen() {
+  const router = useRouter();
+
   console.log('ESTOU NO INDEX DA SMART CITY');
 
   return (
@@ -61,9 +64,7 @@ export default function HomeScreen() {
                 styles.denunciaButton,
                 pressed && styles.buttonPressed,
               ]}
-              onPress={() => {
-                console.log('Faça sua denúncia');
-              }}
+              onPress={() => router.push('/login')}
             >
               <Text style={styles.buttonText}>
                 Faça sua denúncia
@@ -76,9 +77,7 @@ export default function HomeScreen() {
                 styles.gestorButton,
                 pressed && styles.buttonPressed,
               ]}
-              onPress={() => {
-                console.log('Sou gestor');
-              }}
+              onPress={() => router.push('/login')}
             >
               <Text style={styles.buttonText}>
                 Sou gestor
