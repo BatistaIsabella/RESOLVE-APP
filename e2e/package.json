@@ -1,0 +1,16 @@
+{
+  "name": "resolve-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Suíte de testes E2E (Playwright + TypeScript) do RESOLVE — Registro Eletrônico de Solicitações e Ocorrências",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "typescript": "^5.6.0"
+  }
+}
