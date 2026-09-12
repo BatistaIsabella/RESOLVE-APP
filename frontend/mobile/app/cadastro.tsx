@@ -17,6 +17,11 @@ import { ApiError } from '@/lib/api';
 
 type Papel = 'cidadao' | 'gestor';
 
+// Validação simples de formato, só pra dar um feedback consistente com o
+// resto do app em vez de depender do popup nativo do navegador (que só
+// aparece rodando em web, não no Expo Go).
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function CadastroScreen() {
   const router = useRouter();
   const register = useAuthStore((state) => state.register);
@@ -35,6 +40,11 @@ export default function CadastroScreen() {
 
     if (!nome || !email || !senha || !confirmarSenha) {
       setErro('Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    if (!EMAIL_REGEX.test(email)) {
+      setErro('Digite um e-mail válido');
       return;
     }
 
