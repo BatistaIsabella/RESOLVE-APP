@@ -30,12 +30,16 @@ export default function Page() {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted || !_hasHydrated) return;
     if (!token || role !== 'gestor') {
       router.push('/logingestor');
       return;
     }
     fetchDemands();
-  }, [fetchDemands, token, role, router]);
+  }, [mounted, _hasHydrated, fetchDemands, token, role, router]);
 
   if (!mounted || !_hasHydrated) {
     return (
