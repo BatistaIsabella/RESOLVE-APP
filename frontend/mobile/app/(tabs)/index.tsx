@@ -77,7 +77,7 @@ export default function HomeScreen() {
                 styles.gestorButton,
                 pressed && styles.buttonPressed,
               ]}
-              onPress={() => router.push('/login')}
+              onPress={() => router.push('/denuncias')}
             >
               <Text style={styles.buttonText}>
                 Sou gestor
