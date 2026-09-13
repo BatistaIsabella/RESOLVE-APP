@@ -51,7 +51,7 @@ export default function Page() {
     setTempFilters(filters);
   }, [filters]);
 
-  if (!mounted || !_hasHydrated) {
+  if (!mounted || !_hasHydrated || !token || role !== 'gestor') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">

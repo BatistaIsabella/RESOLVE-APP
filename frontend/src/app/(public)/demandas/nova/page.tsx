@@ -25,7 +25,7 @@ export default function NovaDemandaPage() {
     }
   }, [isMounted, _hasHydrated, token, router]);
 
-  if (!isMounted || !_hasHydrated) return <div className="min-h-screen bg-neutral-100" />;
+  if (!isMounted || !_hasHydrated || !token) return <div className="min-h-screen bg-neutral-100" />;
 
   return (
     <div className="min-h-screen bg-neutral-100">

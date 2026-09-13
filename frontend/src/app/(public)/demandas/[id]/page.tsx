@@ -40,7 +40,7 @@ export default function DemandDetailsCitizenPage() {
     router.push('/telaUsuario');
   };
 
-  if (!isMounted || !_hasHydrated) return <div className="min-h-screen bg-neutral-100" />;
+  if (!isMounted || !_hasHydrated || !token) return <div className="min-h-screen bg-neutral-100" />;
 
   if (isLoading && !demand) {
     return (
