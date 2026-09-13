@@ -14,6 +14,13 @@ interface AuthState {
   _hasHydrated: boolean;
   setHasHydrated: (value: boolean) => void;
   login: (email: string, senha: string) => Promise<'cidadao' | 'gestor'>;
+  register: (
+    nome: string,
+    email: string,
+    senha: string,
+    papel: 'cidadao' | 'gestor',
+    codigoAcesso?: string
+  ) => Promise<'cidadao' | 'gestor'>;
   logout: () => void;
 }
 
@@ -44,6 +51,29 @@ export const useAuthStore = create<AuthState>()(
           return result.papel;
         } catch (err) {
           const message = err instanceof ApiError ? err.message : 'Erro ao fazer login';
+          set({ isLoading: false, error: message });
+          throw err;
+        }
+      },
+
+      register: async (nome, email, senha, papel, codigoAcesso) => {
+        set({ isLoading: true, error: null });
+        try {
+          // /auth/register não devolve token (apenas id/nome/email/papel),
+          // então após criar a conta reaproveitamos o login para autenticar
+          // a sessão, igual ao fluxo já existente na tela de login.
+          await authService.register(nome, email, senha, papel, codigoAcesso);
+          const result = await authService.login(email, senha);
+          set({
+            token: result.token,
+            role: result.papel,
+            userName: result.nome,
+            userEmail: email,
+            isLoading: false,
+          });
+          return result.papel;
+        } catch (err) {
+          const message = err instanceof ApiError ? err.message : 'Erro ao criar conta';
           set({ isLoading: false, error: message });
           throw err;
         }

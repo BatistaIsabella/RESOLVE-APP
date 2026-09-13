@@ -21,6 +21,7 @@ services:
     environment:
       PORT: 3001
       DATABASE_URL_AUTH: ${DATABASE_URL_AUTH}
+      GESTOR_ACCESS_CODE: ${GESTOR_ACCESS_CODE}
     ports:
       - "3001:3001"
 

@@ -15,24 +15,55 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { setRemembered } from '@/lib/secureStorage';
 import { ApiError } from '@/lib/api';
 
-export default function LoginScreen() {
+type Papel = 'cidadao' | 'gestor';
+
+// Validação simples de formato, só pra dar um feedback consistente com o
+// resto do app em vez de depender do popup nativo do navegador (que só
+// aparece rodando em web, não no Expo Go).
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export default function CadastroScreen() {
   const router = useRouter();
-  const login = useAuthStore((state) => state.login);
+  const register = useAuthStore((state) => state.register);
   const isLoading = useAuthStore((state) => state.isLoading);
 
+  const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const [manterConectado, setManterConectado] = useState(true);
+  const [confirmarSenha, setConfirmarSenha] = useState('');
+  const [papel, setPapel] = useState<Papel>('cidadao');
+  const [codigoAcesso, setCodigoAcesso] = useState('');
   const [erro, setErro] = useState('');
 
-  const handleLogin = async () => {
+  const handleCadastro = async () => {
     setErro('');
+
+    if (!nome || !email || !senha || !confirmarSenha) {
+      setErro('Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    if (!EMAIL_REGEX.test(email)) {
+      setErro('Digite um e-mail válido');
+      return;
+    }
+
+    if (senha !== confirmarSenha) {
+      setErro('As senhas não coincidem');
+      return;
+    }
+
+    if (papel === 'gestor' && !codigoAcesso) {
+      setErro('Informe o código de acesso de gestor');
+      return;
+    }
+
     try {
-      setRemembered(manterConectado);
-      await login(email, senha);
+      setRemembered(true);
+      await register(nome, email, senha, papel, papel === 'gestor' ? codigoAcesso : undefined);
       router.replace('/');
     } catch (err) {
-      setErro(err instanceof ApiError ? err.message : 'Erro ao fazer login');
+      setErro(err instanceof ApiError ? err.message : 'Erro ao criar conta');
     }
   };
 
@@ -65,43 +96,21 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.card}>
-            <Text style={styles.title}>Smart City</Text>
-
-            <View style={styles.ssoButtons}>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.ssoButton,
-                  pressed && styles.buttonPressed,
-                ]}
-                disabled
-              >
-                <Text style={styles.ssoButtonText}>
-                  Entrar com Certificado Digital
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={({ pressed }) => [
-                  styles.ssoButton,
-                  pressed && styles.buttonPressed,
-                ]}
-                disabled
-              >
-                <Text style={styles.ssoButtonText}>Entrar com gov.br</Text>
-              </Pressable>
-            </View>
-
-            <Text style={styles.helperText}>
-              Faça login em sua conta. Ou{' '}
-              <Text
-                style={styles.link}
-                onPress={() => router.push('/cadastro')}
-              >
-                Cadastrar-se
-              </Text>
-            </Text>
+            <Text style={styles.title}>Criar conta</Text>
 
             {erro ? <Text style={styles.errorText}>{erro}</Text> : null}
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Nome completo</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Seu nome completo"
+                placeholderTextColor="#9B8AC4"
+                autoCapitalize="words"
+                value={nome}
+                onChangeText={setNome}
+              />
+            </View>
 
             <View style={styles.field}>
               <Text style={styles.label}>Email</Text>
@@ -128,34 +137,79 @@ export default function LoginScreen() {
               />
             </View>
 
-            <Pressable
-              style={styles.checkboxRow}
-              onPress={() => setManterConectado((v) => !v)}
-            >
-              <View
-                style={[
-                  styles.checkbox,
-                  manterConectado && styles.checkboxChecked,
-                ]}
-              >
-                {manterConectado && <Text style={styles.checkboxMark}>✓</Text>}
+            <View style={styles.field}>
+              <Text style={styles.label}>Confirmar senha</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••"
+                placeholderTextColor="#9B8AC4"
+                secureTextEntry
+                value={confirmarSenha}
+                onChangeText={setConfirmarSenha}
+              />
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Tipo de usuário:</Text>
+              <View style={styles.radioRow}>
+                <Pressable
+                  style={styles.radioOption}
+                  onPress={() => {
+                    setPapel('cidadao');
+                    setCodigoAcesso('');
+                  }}
+                >
+                  <View style={styles.radioCircle}>
+                    {papel === 'cidadao' && <View style={styles.radioDot} />}
+                  </View>
+                  <Text style={styles.radioLabel}>Cidadão</Text>
+                </Pressable>
+
+                <Pressable
+                  style={styles.radioOption}
+                  onPress={() => setPapel('gestor')}
+                >
+                  <View style={styles.radioCircle}>
+                    {papel === 'gestor' && <View style={styles.radioDot} />}
+                  </View>
+                  <Text style={styles.radioLabel}>Gestor</Text>
+                </Pressable>
               </View>
-              <Text style={styles.checkboxLabel}>Mantenha-me conectado</Text>
-            </Pressable>
+            </View>
+
+            {papel === 'gestor' && (
+              <View style={styles.field}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Código de acesso"
+                  placeholderTextColor="#9B8AC4"
+                  autoCapitalize="none"
+                  value={codigoAcesso}
+                  onChangeText={setCodigoAcesso}
+                />
+              </View>
+            )}
 
             <Pressable
               style={({ pressed }) => [
-                styles.enterButton,
+                styles.criarButton,
                 pressed && styles.buttonPressed,
                 isLoading && styles.buttonDisabled,
               ]}
-              onPress={handleLogin}
+              onPress={handleCadastro}
               disabled={isLoading}
             >
-              <Text style={styles.enterButtonText}>
-                {isLoading ? 'ENTRANDO...' : 'ENTRAR'}
+              <Text style={styles.criarButtonText}>
+                {isLoading ? 'CRIANDO...' : 'Criar Conta'}
               </Text>
             </Pressable>
+
+            <Text style={styles.helperText}>
+              Já tem conta?{' '}
+              <Text style={styles.link} onPress={() => router.push('/login')}>
+                Fazer login
+              </Text>
+            </Text>
           </View>
         </ScrollView>
       </ImageBackground>
@@ -196,14 +250,14 @@ const styles = StyleSheet.create({
   },
 
   /*
-   * Card branco com o formulário de login
+   * Card branco com o formulário de cadastro
    */
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     paddingHorizontal: 24,
     paddingVertical: 32,
-    gap: 20,
+    gap: 16,
 
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
@@ -217,24 +271,6 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: '800',
     textAlign: 'center',
-  },
-
-  ssoButtons: {
-    gap: 12,
-  },
-
-  ssoButton: {
-    backgroundColor: '#3D2683',
-    borderRadius: 10,
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  ssoButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '600',
   },
 
   helperText: {
@@ -275,39 +311,40 @@ const styles = StyleSheet.create({
     color: '#1F2937',
   },
 
-  checkboxRow: {
+  radioRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+    gap: 24,
   },
 
-  checkbox: {
+  radioOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  radioCircle: {
     width: 20,
     height: 20,
-    borderRadius: 4,
+    borderRadius: 10,
     borderWidth: 1.5,
     borderColor: '#9B8AC4',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  checkboxChecked: {
+  radioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: '#7B2BEF',
-    borderColor: '#7B2BEF',
   },
 
-  checkboxMark: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-
-  checkboxLabel: {
+  radioLabel: {
     color: '#374151',
-    fontSize: 13,
+    fontSize: 14,
   },
 
-  enterButton: {
+  criarButton: {
     backgroundColor: '#8628FF',
     borderRadius: 30,
     height: 54,
@@ -315,7 +352,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  enterButtonText: {
+  criarButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',

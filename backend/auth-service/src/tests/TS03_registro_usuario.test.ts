@@ -38,16 +38,60 @@ describe('TS03 - Registro de usuário', () => {
 
   describe('Cenário: Cadastro bem-sucedido de gestor', () => {
 
-    it('Given dados válidos de gestor, When POST /auth/register, Then retorna 201 com papel gestor', async () => {
+    const codigoAcesso = process.env.GESTOR_ACCESS_CODE || 'change-me-codigo-gestor';
+
+    it('Given dados válidos de gestor com código de acesso correto, When POST /auth/register, Then retorna 201 com papel gestor', async () => {
       const email = `ts03.gestor.${Date.now()}@test.com`;
       emailsParaLimpar.push(email);
 
       const res = await request(app)
         .post('/auth/register')
-        .send({ nome: 'Gestor TS03', email, senha: 'gestor456', papel: 'gestor' });
+        .send({ nome: 'Gestor TS03', email, senha: 'gestor456', papel: 'gestor', codigoAcesso });
 
       expect(res.status).toBe(201);
       expect(res.body.papel).toBe('gestor');
+    });
+
+  });
+
+  describe('Cenário: Código de acesso de gestor inválido', () => {
+
+    it('Given papel gestor sem código de acesso, When POST /auth/register, Then retorna 403', async () => {
+      const email = `ts03.gestor.semcodigo.${Date.now()}@test.com`;
+
+      const res = await request(app)
+        .post('/auth/register')
+        .send({ nome: 'Gestor Sem Código', email, senha: 'gestor456', papel: 'gestor' });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error).toMatch(/código de acesso/i);
+    });
+
+    it('Given papel gestor com código de acesso errado, When POST /auth/register, Then retorna 403', async () => {
+      const email = `ts03.gestor.codigoerrado.${Date.now()}@test.com`;
+
+      const res = await request(app)
+        .post('/auth/register')
+        .send({
+          nome: 'Gestor Código Errado',
+          email,
+          senha: 'gestor456',
+          papel: 'gestor',
+          codigoAcesso: 'codigo-errado-qualquer',
+        });
+
+      expect(res.status).toBe(403);
+    });
+
+    it('Given papel cidadao sem código de acesso, When POST /auth/register, Then retorna 201 (código não se aplica a cidadão)', async () => {
+      const email = `ts03.cidadao.semcodigo.${Date.now()}@test.com`;
+      emailsParaLimpar.push(email);
+
+      const res = await request(app)
+        .post('/auth/register')
+        .send({ nome: 'Cidadão Sem Código', email, senha: 'senha123', papel: 'cidadao' });
+
+      expect(res.status).toBe(201);
     });
 
   });

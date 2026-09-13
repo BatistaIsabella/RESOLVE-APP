@@ -15,6 +15,13 @@ export default function RootLayout() {
         <Stack.Screen name="denuncias" />
         <Stack.Screen name="gestor" />
         <Stack.Screen
+          name="cadastro"
+          options={{
+            headerShown: false,
+          }}
+        />
+
+        <Stack.Screen
           name="modal"
           options={{
             presentation: 'modal',
