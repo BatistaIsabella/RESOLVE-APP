@@ -35,13 +35,17 @@ export default function Page() {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted || !_hasHydrated) return;
     if (!token || role !== 'gestor') {
       router.push('/logingestor');
       return;
     }
     fetchDemands();
     fetchMetrics();
-  }, [fetchDemands, fetchMetrics, token, role, router]);
+  }, [mounted, _hasHydrated, fetchDemands, fetchMetrics, token, role, router]);
 
   useEffect(() => {
     setTempFilters(filters);

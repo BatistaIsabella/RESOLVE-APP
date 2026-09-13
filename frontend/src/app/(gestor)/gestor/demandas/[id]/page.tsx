@@ -24,16 +24,21 @@ export default function DemandDetailsManagerPage() {
   const updateDemandStatus = useDemandStore((state) => state.updateDemandStatus);
   const updateDemandPriority = useDemandStore((state) => state.updateDemandPriority);
   const isLoading = useDemandStore((state) => state.isLoading);
+  const _hasHydrated = useDemandStore((state) => state._hasHydrated);
 
   useEffect(() => {
     setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted || !_hasHydrated) return;
     if (!token || role !== 'gestor') {
       router.push('/logingestor');
       return;
     }
 
     fetchDemandById(demandId).then(setDemand);
-  }, [demandId, fetchDemandById, token, role, router]);
+  }, [isMounted, _hasHydrated, demandId, fetchDemandById, token, role, router]);
 
   const handleBack = () => {
     router.push('/gestor/dashboard');
@@ -67,7 +72,7 @@ export default function DemandDetailsManagerPage() {
     }
   };
 
-  if (!isMounted) return <div className="min-h-screen bg-white" />;
+  if (!isMounted || !_hasHydrated) return <div className="min-h-screen bg-white" />;
 
   if (isLoading && !demand) {
     return (

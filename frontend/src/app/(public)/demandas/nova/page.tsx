@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FormDemanda } from "../../../../components/demands/FormDemanda";
 import Link from "next/link";
@@ -8,15 +8,24 @@ import { useDemandStore } from "@/stores/useDemandStore";
 
 export default function NovaDemandaPage() {
   const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
   const token = useDemandStore((state) => state.token);
   const userName = useDemandStore((state) => state.userName);
   const logout = useDemandStore((state) => state.logout);
+  const _hasHydrated = useDemandStore((state) => state._hasHydrated);
 
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted || !_hasHydrated) return;
     if (!token) {
       router.push("/login");
     }
-  }, [token, router]);
+  }, [isMounted, _hasHydrated, token, router]);
+
+  if (!isMounted || !_hasHydrated) return <div className="min-h-screen bg-neutral-100" />;
 
   return (
     <div className="min-h-screen bg-neutral-100">
