@@ -72,7 +72,7 @@ export default function DemandDetailsManagerPage() {
     }
   };
 
-  if (!isMounted || !_hasHydrated) return <div className="min-h-screen bg-white" />;
+  if (!isMounted || !_hasHydrated || !token || role !== 'gestor') return <div className="min-h-screen bg-white" />;
 
   if (isLoading && !demand) {
     return (
