@@ -11,14 +11,16 @@ interface AuthState {
   userEmail: string | null;
   isLoading: boolean;
   error: string | null;
-  login: (email: string, senha: string) => Promise<void>;
+  _hasHydrated: boolean;
+  setHasHydrated: (value: boolean) => void;
+  login: (email: string, senha: string) => Promise<'cidadao' | 'gestor'>;
   register: (
     nome: string,
     email: string,
     senha: string,
     papel: 'cidadao' | 'gestor',
     codigoAcesso?: string
-  ) => Promise<void>;
+  ) => Promise<'cidadao' | 'gestor'>;
   logout: () => void;
 }
 
@@ -31,6 +33,9 @@ export const useAuthStore = create<AuthState>()(
       userEmail: null,
       isLoading: false,
       error: null,
+      _hasHydrated: false,
+
+      setHasHydrated: (value) => set({ _hasHydrated: value }),
 
       login: async (email, senha) => {
         set({ isLoading: true, error: null });
@@ -43,6 +48,7 @@ export const useAuthStore = create<AuthState>()(
             userEmail: email,
             isLoading: false,
           });
+          return result.papel;
         } catch (err) {
           const message = err instanceof ApiError ? err.message : 'Erro ao fazer login';
           set({ isLoading: false, error: message });
@@ -65,6 +71,7 @@ export const useAuthStore = create<AuthState>()(
             userEmail: email,
             isLoading: false,
           });
+          return result.papel;
         } catch (err) {
           const message = err instanceof ApiError ? err.message : 'Erro ao criar conta';
           set({ isLoading: false, error: message });
@@ -84,6 +91,13 @@ export const useAuthStore = create<AuthState>()(
         userName: state.userName,
         userEmail: state.userEmail,
       }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );
+
+export function getPostLoginRoute(role: 'cidadao' | 'gestor'): '/denuncias' | '/gestor' {
+  return role === 'gestor' ? '/gestor' : '/denuncias';
+}

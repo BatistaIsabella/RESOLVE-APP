@@ -1,0 +1,18 @@
+export const AppColors = {
+  primary: '#8628FF',
+  primaryDark: '#7B2BEF',
+  accent: '#FF5757',
+  gradientStart: '#6523DC',
+  gradientMid: '#8923DC',
+  gradientEnd: '#FF4B5C',
+  gestorGradientStart: '#E91E63',
+  gestorGradientEnd: '#8628FF',
+  white: '#FFFFFF',
+  text: '#1F2937',
+  textMuted: '#6B7280',
+  border: '#D1D5DB',
+  cardBg: '#FFFFFF',
+  dotRed: '#EF4444',
+  dotYellow: '#F59E0B',
+  dotGreen: '#22C55E',
+};

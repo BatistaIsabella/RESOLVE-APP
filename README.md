@@ -161,6 +161,7 @@ A plataforma RESOLVE utiliza um API Gateway como ponto central de entrada (Porta
 cd frontend/mobile
 npm install
 npx expo install
+npx expo install expo-secure-store
 npx expo start
 ```
 > Disponível em http://localhost:3000

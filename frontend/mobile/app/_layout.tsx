@@ -9,21 +9,11 @@ export const unstable_settings = {
 export default function RootLayout() {
   return (
     <>
-      <Stack>
-        <Stack.Screen
-          name="(tabs)"
-          options={{
-            headerShown: false,
-          }}
-        />
-
-        <Stack.Screen
-          name="login"
-          options={{
-            headerShown: false,
-          }}
-        />
-
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="denuncias" />
+        <Stack.Screen name="gestor" />
         <Stack.Screen
           name="cadastro"
           options={{
@@ -39,7 +29,6 @@ export default function RootLayout() {
           }}
         />
       </Stack>
-
       <StatusBar style="light" />
     </>
   );
