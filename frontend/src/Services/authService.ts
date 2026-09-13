@@ -21,9 +21,20 @@ export const authService = {
       body: JSON.stringify({ email, senha }),
     });
 
-    // 👉 MÁGICA DO F5: Guarda o token no navegador assim que o login dá certo
     if (resposta && resposta.token) {
       localStorage.setItem('@SmartCity:token', resposta.token);
+
+      const stateStore = {
+        state: {
+          token: resposta.token,
+          role: resposta.papel,
+          userEmail: email,
+          userName: resposta.nome,
+        },
+        version: 0,
+      };
+
+      localStorage.setItem('smart-city-storage-v2', JSON.stringify(stateStore));
     }
 
     return resposta;

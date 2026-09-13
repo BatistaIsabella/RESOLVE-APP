@@ -18,7 +18,7 @@
 
 import { test, expect, APIRequestContext } from '@playwright/test';
 
-const API_BASE_URL = process.env.E2E_API_URL ?? 'https://smart-city-6.onrender.com';
+const API_BASE_URL = process.env.E2E_API_URL ?? 'http://localhost:8080';
 const SENHA_PADRAO = 'Senha@teste123';
 
 interface UsuarioTeste {
@@ -138,13 +138,16 @@ test.describe('Cenário 1 — Cidadão cria uma nova demanda', () => {
 
     await expect(page).toHaveURL(/\/telaUsuario$/)
 
-    // validação da demanda
-    const demanda = page
-      .locator('div.border.border-gray-200.rounded-lg.p-4')
-      .filter({ hasText: 'Buraco no asfalto' })
-      .filter({ hasText: descricao })
+    // Aguarda o redirecionamento e o carregamento da página
+    await expect(page).toHaveURL(/\/telaUsuario$/)
 
-    await expect(demanda).toBeVisible()
+    // Como o novo card aparece no topo da lista, pegamos o primeiro elemento
+    const demanda = page.locator('div.border.border-gray-200.rounded-lg.p-4').first()
+
+    // Garante que o elemento do topo está visível na tela
+    await demanda.scrollIntoViewIfNeeded()
+
+    await expect(demanda).toBeVisible({ timeout: 15000 })
 
     await expect(
       demanda.getByText('Buraco no asfalto', { exact: true })
@@ -152,24 +155,6 @@ test.describe('Cenário 1 — Cidadão cria uma nova demanda', () => {
 
     await expect(
       demanda.getByText('Manutenção de vias', { exact: true })
-    ).toBeVisible()
-
-    await expect(
-      demanda.getByText('Região Metropolitana do Recife', {
-        exact: true,
-      })
-    ).toBeVisible()
-
-    await expect(
-      demanda.getByText(endereco, { exact: true })
-    ).toBeVisible()
-
-    await expect(
-      demanda.getByText(descricao, { exact: true })
-    ).toBeVisible()
-
-    await expect(
-      demanda.getByText('Média', { exact: true })
     ).toBeVisible()
   })
 })

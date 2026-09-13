@@ -12,7 +12,6 @@ import { CATEGORIAS, REGIOES, STATUS, PRIORIDADES } from '@/constants/demanda'
 type FilterKeys = "status" | "category" | "region" | "priority"
 
 export default function TelaUsuarioPage() {
-
   const [isMounted, setIsMounted] = useState(false)
 
   const filters = useDemandStore((state) => state.filters)
@@ -174,27 +173,30 @@ export default function TelaUsuarioPage() {
               Resultados Recentes
             </p>
 
-            {isLoading ? (
-              <div className="flex flex-col items-center py-10 text-gray-500">
-                <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-3" />
-                Buscando denúncias...
-              </div>
-            ) : error ? (
-              <div className="text-center py-10 text-red-500">{error}</div>
-            ) : filteredDemands.length > 0 ? (
-              filteredDemands.map((demand) => (
-                <DemandCard
-                  key={demand.id}
-                  demand={demand}
-                  onViewDetails={handleViewDetails}
-                />
-              ))
-            ) : (
-              <div className="text-center py-10 text-gray-400">
-                Nenhuma denúncia encontrada para esses filtros.
-              </div>
-            )}
+            <div className="max-h-[600px] overflow-y-auto pr-2 space-y-4">
+              {isLoading ? (
+                <div className="flex flex-col items-center py-10 text-gray-500">
+                  <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-3" />
+                  Buscando denúncias...
+                </div>
+              ) : error ? (
+                <div className="text-center py-10 text-red-500">{error}</div>
+              ) : filteredDemands.length > 0 ? (
+                filteredDemands.map((demand) => (
+                  <DemandCard
+                    key={demand.id}
+                    demand={demand}
+                    onViewDetails={handleViewDetails}
+                  />
+                ))
+              ) : (
+                <div className="text-center py-10 text-gray-400">
+                  Nenhuma denúncia encontrada para esses filtros.
+                </div>
+              )}
+            </div>
           </div>
+
         </div>
       </div>
     </div>

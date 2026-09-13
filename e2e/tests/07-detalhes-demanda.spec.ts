@@ -25,7 +25,7 @@
 
 import { test, expect, APIRequestContext } from '@playwright/test';
 
-const API_BASE_URL = process.env.E2E_API_URL ?? 'https://smart-city-6.onrender.com';
+const API_BASE_URL = process.env.E2E_API_URL ?? 'http://localhost:8080';
 const SENHA_PADRAO = 'Senha@teste123';
 
 interface UsuarioTeste {

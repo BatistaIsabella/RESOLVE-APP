@@ -248,6 +248,32 @@ npm run dev
 
 Acesse http://localhost:3000
 
+## Testes Automatizados (E2E)
+
+A suíte de testes de ponta a ponta utiliza o **Playwright** para validar os fluxos críticos da aplicação, simulando cenários reais de uso pelo navegador.
+
+### Pré-requisitos
+* Certifique-se de que os microsserviços do backend via Docker e o banco de dados local estejam em execução.
+* O ambiente de testes utiliza a variável `E2E_API_URL` para se comunicar com o gateway local (`http://localhost:8080`).
+
+### Como rodar os testes
+Acesse a pasta correspondente aos testes E2E e utilize os comandos abaixo:
+
+```bash
+cd e2e
+
+# Instalar as dependências do Playwright (caso necessário)
+npm install
+
+# Rodar todos os testes automatizados
+npx playwright test
+
+# Rodar um teste específico com a interface visual (headed)
+npx playwright test tests/07-detalhes-demanda.spec.ts --headed
+
+# Abrir o relatório HTML detalhado da última execução
+npx playwright show-report
+
 ### Desenvolvimento sem Docker (opcional)
 
 ```bash
