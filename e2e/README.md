@@ -33,6 +33,44 @@ O teste:
 > número/nome na hora de consolidar a suíte se já tiver conflito com o
 > arquivo de outra pessoa.
 
+## Entrega individual — Leandro (C7)
+
+**Arquivo:** [`tests/07-detalhes-demanda.spec.ts`](tests/07-detalhes-demanda.spec.ts)
+
+**Cenário 7 — Cidadão visualiza os detalhes de uma demanda**
+
+> Como Cidadão, acesso a tela de detalhes de uma demanda que registrei,
+> garantindo que todas as informações (categoria, prioridade, endereço e
+> descrição) estejam corretas e batam com o que foi cadastrado.
+
+O teste:
+1. Cria (via API, só pra preparar o cenário) um cidadão e uma demanda de
+   teste com título, endereço e descrição conhecidos.
+2. Faz **login real na tela do cidadão** (`/login`) pela UI.
+3. Na listagem (`/telaUsuario`), localiza o card da demanda recém-criada e
+   confere categoria ("Manutenção de vias") e prioridade ("Média") já ali.
+4. Clica em "Ver Detalhes" e é levado para `/demandas/{id}`.
+5. Confirma que a tela de detalhes exibe corretamente título, categoria,
+   prioridade, endereço e descrição cadastrados.
+6. Clica em "← Voltar para Lista" (navegação real, sem reload manual) e
+   confirma que o **card da mesma demanda continua visível** na listagem —
+   ou seja, a navegação de ida e volta não perde nem corrompe os dados.
+
+> ✅ Validado rodando localmente (`1 passed`, duas execuções seguidas) com o
+> backend subido via `docker compose up -d --build` (pasta `backend/`) e o
+> front-end pelo próprio `webServer` do Playwright. O backend compartilhado
+> do Render estava com rate limit (`429 Too Many Requests`) no momento do
+> teste, então a validação final foi feita 100% local — ver comando abaixo.
+
+```bash
+# a partir da raiz do projeto
+cd backend
+docker compose up -d --build      # sobe postgres, redis e os 3 serviços + gateway
+
+cd ../e2e
+E2E_API_URL=http://localhost:8080 npx playwright test tests/07-detalhes-demanda.spec.ts
+```
+
 ## Como rodar
 
 Pré-requisitos: Node.js 18+ instalado.
