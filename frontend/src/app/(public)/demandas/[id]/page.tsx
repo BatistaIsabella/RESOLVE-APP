@@ -20,22 +20,27 @@ export default function DemandDetailsCitizenPage() {
   const logout = useDemandStore((state) => state.logout);
   const fetchDemandById = useDemandStore((state) => state.fetchDemandById);
   const isLoading = useDemandStore((state) => state.isLoading);
+  const _hasHydrated = useDemandStore((state) => state._hasHydrated);
 
   useEffect(() => {
     setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted || !_hasHydrated) return;
     if (!token) {
       router.push('/login');
       return;
     }
 
     fetchDemandById(demandId).then(setDemand);
-  }, [demandId, fetchDemandById, token, router]);
+  }, [isMounted, _hasHydrated, demandId, fetchDemandById, token, router]);
 
   const handleBack = () => {
     router.push('/telaUsuario');
   };
 
-  if (!isMounted) return <div className="min-h-screen bg-neutral-100" />;
+  if (!isMounted || !_hasHydrated || !token) return <div className="min-h-screen bg-neutral-100" />;
 
   if (isLoading && !demand) {
     return (

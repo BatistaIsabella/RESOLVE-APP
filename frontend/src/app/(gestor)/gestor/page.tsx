@@ -30,14 +30,18 @@ export default function Page() {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted || !_hasHydrated) return;
     if (!token || role !== 'gestor') {
       router.push('/logingestor');
       return;
     }
     fetchDemands();
-  }, [fetchDemands, token, role, router]);
+  }, [mounted, _hasHydrated, fetchDemands, token, role, router]);
 
-  if (!mounted || !_hasHydrated) {
+  if (!mounted || !_hasHydrated || !token || role !== 'gestor') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
