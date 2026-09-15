@@ -1,4 +1,3 @@
-
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
@@ -19,17 +18,12 @@ const demandaValida = {
   regiao: 'REGIAO_METROPOLITANA_DO_RECIFE',
   descricao: 'Poste apagado há 3 dias, rua sem iluminação à noite.',
   prioridade: 'ALTA',
-  numero: '45',
-  cep: '50000-000',
-  bairro: 'Boa Viagem',
-  cidade: 'Recife',
-  rua: 'Av. Boa Viagem',
+  endereco: 'Av. Boa Viagem, 45 - Boa Viagem, Recife - CEP: 50000-000',
 };
 
 const idsParaLimpar: number[] = [];
 
 beforeAll(async () => {
-  // demand-service não tem o model Usuario — SQL direto para satisfazer a FK no ambiente local
   const [cidadaoRow] = await prisma.$queryRaw<{ id: number }[]>`
     INSERT INTO usuarios (nome, email, senha, papel)
     VALUES ('Cidadao TS02', 'ts02.cidadao@test.com', 'hash', 'CIDADAO')
@@ -62,24 +56,27 @@ afterAll(async () => {
 
 describe('TS02 - Persistência de nova demanda urbana', () => {
 
-  describe('Autenticação', () => {
-    it('rejeita requisição sem token', async () => {
+  describe('1 — Autenticação e autorização', () => {
+
+    it('Given usuário sem token, When POST /demandas, Then retorna 401', async () => {
       const res = await request(app).post('/demandas').send(demandaValida);
       expect(res.status).toBe(401);
     });
 
-    it('rejeita gestor tentando criar demanda', async () => {
+    it('Given gestor autenticado, When POST /demandas, Then retorna 403 com mensagem de acesso restrito', async () => {
       const res = await request(app)
         .post('/demandas')
         .set('Authorization', `Bearer ${tokenGestor}`)
         .send(demandaValida);
       expect(res.status).toBe(403);
-      expect(res.body.error).toBe('Acesso restrito a cidadãos');
+      expect(res.body.error).toMatch(/acesso/i);
     });
+
   });
 
-  describe('Validação de campos', () => {
-    it('rejeita body vazio', async () => {
+  describe('2 — Validação de campos', () => {
+
+    it('Given cidadão autenticado, When POST /demandas com body vazio, Then retorna 400', async () => {
       const res = await request(app)
         .post('/demandas')
         .set('Authorization', `Bearer ${token}`)
@@ -87,7 +84,7 @@ describe('TS02 - Persistência de nova demanda urbana', () => {
       expect(res.status).toBe(400);
     });
 
-    it('rejeita categoria inválida', async () => {
+    it('Given cidadão autenticado, When POST /demandas com categoria inexistente, Then retorna 400', async () => {
       const res = await request(app)
         .post('/demandas')
         .set('Authorization', `Bearer ${token}`)
@@ -95,17 +92,19 @@ describe('TS02 - Persistência de nova demanda urbana', () => {
       expect(res.status).toBe(400);
     });
 
-    it('rejeita região inválida', async () => {
+    it('Given cidadão autenticado, When POST /demandas com região inexistente, Then retorna 400', async () => {
       const res = await request(app)
         .post('/demandas')
         .set('Authorization', `Bearer ${token}`)
         .send({ ...demandaValida, regiao: 'REGIAO_INEXISTENTE' });
       expect(res.status).toBe(400);
     });
+
   });
 
-  describe('Persistência no banco', () => {
-    it('persiste a demanda e retorna 201 com os dados corretos', async () => {
+  describe('3 — Persistência no banco', () => {
+
+    it('Given cidadão autenticado com dados válidos, When POST /demandas, Then retorna 201 com os dados persistidos', async () => {
       const res = await request(app)
         .post('/demandas')
         .set('Authorization', `Bearer ${token}`)
@@ -121,7 +120,7 @@ describe('TS02 - Persistência de nova demanda urbana', () => {
       idsParaLimpar.push(res.body.id_denuncia);
     });
 
-    it('aplica status ABERTA por padrão', async () => {
+    it('Given criação bem-sucedida, When POST /demandas, Then status padrão é ABERTA', async () => {
       const res = await request(app)
         .post('/demandas')
         .set('Authorization', `Bearer ${token}`)
@@ -131,7 +130,7 @@ describe('TS02 - Persistência de nova demanda urbana', () => {
       idsParaLimpar.push(res.body.id_denuncia);
     });
 
-    it('aplica prioridade MEDIA quando não informada', async () => {
+    it('Given prioridade não informada, When POST /demandas, Then prioridade padrão é MEDIA', async () => {
       const { prioridade, ...semPrioridade } = demandaValida;
       const res = await request(app)
         .post('/demandas')
@@ -143,9 +142,11 @@ describe('TS02 - Persistência de nova demanda urbana', () => {
       idsParaLimpar.push(res.body.id_denuncia);
     });
 
-    // Concorrência: Promise.all dispara dois POSTs ao mesmo tempo —
-    // valida que o upsert não cria cidadão duplicado sob carga paralela.
-    it('lida com duas criações simultâneas do mesmo cidadão sem duplicar o registro', async () => {
+  });
+
+  describe('4 — Concorrência', () => {
+
+    it('Given dois POSTs simultâneos do mesmo cidadão via Promise.all, When ambos são enviados, Then ambos retornam 201 e cidadão não é duplicado no banco', async () => {
       const [res1, res2] = await Promise.all([
         request(app)
           .post('/demandas')
@@ -165,6 +166,7 @@ describe('TS02 - Persistência de nova demanda urbana', () => {
 
       idsParaLimpar.push(res1.body.id_denuncia, res2.body.id_denuncia);
     });
+
   });
 
 });

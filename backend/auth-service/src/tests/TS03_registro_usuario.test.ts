@@ -17,7 +17,7 @@ afterAll(async () => {
 
 describe('TS03 - Registro de usuário', () => {
 
-  describe('Cenário: Cadastro bem-sucedido de cidadão', () => {
+  describe('1 — Cadastros bem-sucedidos', () => {
 
     it('Given dados válidos de cidadão, When POST /auth/register, Then retorna 201 com id, nome, email e papel', async () => {
       const email = `ts03.cidadao.${Date.now()}@test.com`;
@@ -34,17 +34,14 @@ describe('TS03 - Registro de usuário', () => {
       expect(res.body.papel).toBe('cidadao');
     });
 
-  });
-
-  describe('Cenário: Cadastro bem-sucedido de gestor', () => {
-
-    it('Given dados válidos de gestor, When POST /auth/register, Then retorna 201 com papel gestor', async () => {
+    it('Given dados válidos de gestor com código de acesso correto, When POST /auth/register, Then retorna 201 com papel gestor', async () => {
       const email = `ts03.gestor.${Date.now()}@test.com`;
       emailsParaLimpar.push(email);
+      const codigoAcesso = process.env.GESTOR_ACCESS_CODE || 'change-me-codigo-gestor';
 
       const res = await request(app)
         .post('/auth/register')
-        .send({ nome: 'Gestor TS03', email, senha: 'gestor456', papel: 'gestor' });
+        .send({ nome: 'Gestor TS03', email, senha: 'gestor456', papel: 'gestor', codigoAcesso });
 
       expect(res.status).toBe(201);
       expect(res.body.papel).toBe('gestor');
@@ -52,27 +49,7 @@ describe('TS03 - Registro de usuário', () => {
 
   });
 
-  describe('Cenário: E-mail duplicado', () => {
-
-    it('Given e-mail já cadastrado, When POST /auth/register com o mesmo e-mail, Then retorna 409', async () => {
-      const email = `ts03.dup.${Date.now()}@test.com`;
-      emailsParaLimpar.push(email);
-
-      await request(app)
-        .post('/auth/register')
-        .send({ nome: 'Primeiro TS03', email, senha: 'abc123', papel: 'cidadao' });
-
-      const res = await request(app)
-        .post('/auth/register')
-        .send({ nome: 'Segundo TS03', email, senha: 'xyz789', papel: 'gestor' });
-
-      expect(res.status).toBe(409);
-      expect(res.body.error).toBeDefined();
-    });
-
-  });
-
-  describe('Cenário: Campos obrigatórios ausentes', () => {
+  describe('2 — Validações de campos obrigatórios', () => {
 
     it('Given body sem nome, When POST /auth/register, Then retorna 400', async () => {
       const res = await request(app)
@@ -120,7 +97,24 @@ describe('TS03 - Registro de usuário', () => {
 
   });
 
-  describe('Cenário: Papel inválido', () => {
+  describe('3 — Regras de negócio', () => {
+
+    it('Given e-mail já cadastrado, When POST /auth/register com o mesmo e-mail, Then retorna 409', async () => {
+      const email = `ts03.dup.${Date.now()}@test.com`;
+      emailsParaLimpar.push(email);
+      const codigoAcesso = process.env.GESTOR_ACCESS_CODE || 'change-me-codigo-gestor';
+
+      await request(app)
+        .post('/auth/register')
+        .send({ nome: 'Primeiro TS03', email, senha: 'abc123', papel: 'cidadao' });
+
+      const res = await request(app)
+        .post('/auth/register')
+        .send({ nome: 'Segundo TS03', email, senha: 'xyz789', papel: 'gestor', codigoAcesso });
+
+      expect(res.status).toBe(409);
+      expect(res.body.error).toBeDefined();
+    });
 
     it('Given papel diferente de cidadao/gestor, When POST /auth/register, Then retorna 400', async () => {
       const res = await request(app)
@@ -141,23 +135,49 @@ describe('TS03 - Registro de usuário', () => {
 
   });
 
-  describe('Cenário: Contrato de segurança — senha não exposta na resposta', () => {
+  describe('4 — Código de acesso de gestor', () => {
 
-    it('Given registro bem-sucedido, When POST /auth/register, Then resposta não contém campo senha', async () => {
-      const email = `ts03.seguranca.${Date.now()}@test.com`;
+    it('Given papel gestor sem código de acesso, When POST /auth/register, Then retorna 403', async () => {
+      const email = `ts03.gestor.semcodigo.${Date.now()}@test.com`;
+
+      const res = await request(app)
+        .post('/auth/register')
+        .send({ nome: 'Gestor Sem Código', email, senha: 'gestor456', papel: 'gestor' });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error).toMatch(/código de acesso/i);
+    });
+
+    it('Given papel gestor com código de acesso errado, When POST /auth/register, Then retorna 403', async () => {
+      const email = `ts03.gestor.codigoerrado.${Date.now()}@test.com`;
+
+      const res = await request(app)
+        .post('/auth/register')
+        .send({
+          nome: 'Gestor Código Errado',
+          email,
+          senha: 'gestor456',
+          papel: 'gestor',
+          codigoAcesso: 'codigo-invalido-qualquer',
+        });
+
+      expect(res.status).toBe(403);
+    });
+
+    it('Given papel cidadao sem código de acesso, When POST /auth/register, Then retorna 201 (código não se aplica a cidadão)', async () => {
+      const email = `ts03.cidadao.semcodigo.${Date.now()}@test.com`;
       emailsParaLimpar.push(email);
 
       const res = await request(app)
         .post('/auth/register')
-        .send({ nome: 'Teste Segurança', email, senha: 'segredo123', papel: 'cidadao' });
+        .send({ nome: 'Cidadão Sem Código', email, senha: 'senha123', papel: 'cidadao' });
 
       expect(res.status).toBe(201);
-      expect(res.body.senha).toBeUndefined();
     });
 
   });
 
-  describe('Cenário: Contrato de resposta', () => {
+  describe('5 — Contrato da resposta', () => {
 
     it('Given registro bem-sucedido, When POST /auth/register, Then Content-Type é application/json', async () => {
       const email = `ts03.contrato.${Date.now()}@test.com`;
@@ -171,7 +191,7 @@ describe('TS03 - Registro de usuário', () => {
       expect(res.headers['content-type']).toMatch(/application\/json/);
     });
 
-    it('Given registro bem-sucedido, When POST /auth/register, Then resposta contém exatamente os campos: id, nome, email, papel', async () => {
+    it('Given registro bem-sucedido, When POST /auth/register, Then resposta contém os campos: id, nome, email, papel', async () => {
       const email = `ts03.campos.${Date.now()}@test.com`;
       emailsParaLimpar.push(email);
 
@@ -184,6 +204,18 @@ describe('TS03 - Registro de usuário', () => {
       expect(typeof res.body.nome).toBe('string');
       expect(typeof res.body.email).toBe('string');
       expect(typeof res.body.papel).toBe('string');
+    });
+
+    it('Given registro bem-sucedido, When POST /auth/register, Then resposta não contém campo senha', async () => {
+      const email = `ts03.seguranca.${Date.now()}@test.com`;
+      emailsParaLimpar.push(email);
+
+      const res = await request(app)
+        .post('/auth/register')
+        .send({ nome: 'Teste Segurança', email, senha: 'segredo123', papel: 'cidadao' });
+
+      expect(res.status).toBe(201);
+      expect(res.body.senha).toBeUndefined();
     });
 
   });

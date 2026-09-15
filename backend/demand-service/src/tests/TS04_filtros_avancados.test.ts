@@ -7,9 +7,9 @@
 //   • Variável JWT_SECRET definida (ou usa padrão 'smartcity-dev-secret')
 //
 // ENDPOINTS TESTADOS:
-//   GET /demandas/demands      → listMinhasDenuncias  (cidadão)
-//   GET /demandas/demands/feed     → listarFeedDenuncias  (cidadão)
-//   GET /demandas/gestor/demands   → listarTodasDenuncias (gestor)
+//   GET /demandas/my-demands   → listMinhasDenuncias  (cidadão)
+//   GET /demandas/feed         → listarFeedDenuncias  (cidadão)
+//   GET /demandas/gestor       → listarTodasDenuncias (gestor)
 //
 // Os conflitos de merge foram resolvidos. O JWT usa o campo `papel` em todos os testes.
 //
@@ -178,7 +178,7 @@ describe('TS04 - Filtros avançados combinados', () => {
       'Given 5 denúncias cadastradas para o cidadão, When GET /demandas/demands com ?page=1&limit=2, Then retorna 2 registros e pagination.totalPages correto',
       async () => {
         const res = await request(app)
-          .get('/demandas/demands?page=1&limit=2')
+          .get('/demandas/my-demands?page=1&limit=2')
           .set('Authorization', `Bearer ${tokenCidadao}`);
 
         expect(res.status).toBe(200);
@@ -199,7 +199,7 @@ describe('TS04 - Filtros avançados combinados', () => {
       'Given denúncias cadastradas, When GET /demandas/demands com ?page=999, Then retorna array vazio',
       async () => {
         const res = await request(app)
-          .get('/demandas/demands?page=999&limit=20')
+          .get('/demandas/my-demands?page=999&limit=20')
           .set('Authorization', `Bearer ${tokenCidadao}`);
 
         expect(res.status).toBe(200);
@@ -217,7 +217,7 @@ describe('TS04 - Filtros avançados combinados', () => {
       'Given 5+ denúncias no banco, When GET /demandas/demands/feed com ?page=1&limit=2, Then retorna 2 registros com pagination correto',
       async () => {
         const res = await request(app)
-          .get('/demandas/demands/feed?page=1&limit=2')
+          .get('/demandas/feed?page=1&limit=2')
           .set('Authorization', `Bearer ${tokenCidadao}`);
 
         expect(res.status).toBe(200);
@@ -236,7 +236,7 @@ describe('TS04 - Filtros avançados combinados', () => {
       'Given 5+ denúncias no banco, When gestor faz GET /demandas/gestor/demands com ?page=1&limit=2, Then retorna 2 registros',
       async () => {
         const res = await request(app)
-          .get('/demandas/gestor/demands?page=1&limit=2')
+          .get('/demandas/gestor?page=1&limit=2')
           .set('Authorization', `Bearer ${tokenGestor}`);
 
         expect(res.status).toBe(200);
@@ -257,7 +257,7 @@ describe('TS04 - Filtros avançados combinados', () => {
       'Given denúncias de categorias diferentes, When GET /demandas/demands/feed com ?categoria=ILUMINACAO_PUBLICA, Then retorna apenas da categoria filtrada',
       async () => {
         const res = await request(app)
-          .get('/demandas/demands/feed?categoria=ILUMINACAO_PUBLICA')
+          .get('/demandas/feed?categoria=ILUMINACAO_PUBLICA')
           .set('Authorization', `Bearer ${tokenCidadao}`);
 
         expect(res.status).toBe(200);
@@ -276,7 +276,7 @@ describe('TS04 - Filtros avançados combinados', () => {
       'Given denúncias com status diferentes, When GET /demandas/demands/feed com ?status=ABERTA, Then retorna apenas as abertas',
       async () => {
         const res = await request(app)
-          .get('/demandas/demands/feed?status=ABERTA')
+          .get('/demandas/feed?status=ABERTA')
           .set('Authorization', `Bearer ${tokenCidadao}`);
 
         expect(res.status).toBe(200);
@@ -295,7 +295,7 @@ describe('TS04 - Filtros avançados combinados', () => {
       'Given denúncias de regiões diferentes, When GET /demandas/demands/feed com ?regiao=AGRESTE, Then retorna apenas do Agreste',
       async () => {
         const res = await request(app)
-          .get('/demandas/demands/feed?regiao=AGRESTE')
+          .get('/demandas/feed?regiao=AGRESTE')
           .set('Authorization', `Bearer ${tokenCidadao}`);
 
         expect(res.status).toBe(200);
@@ -314,7 +314,7 @@ describe('TS04 - Filtros avançados combinados', () => {
       'Given denúncias com prioridades diferentes, When GET /demandas/demands/feed com ?prioridade=ALTA, Then retorna apenas as de prioridade alta',
       async () => {
         const res = await request(app)
-          .get('/demandas/demands/feed?prioridade=ALTA')
+          .get('/demandas/feed?prioridade=ALTA')
           .set('Authorization', `Bearer ${tokenCidadao}`);
 
         expect(res.status).toBe(200);
@@ -333,7 +333,7 @@ describe('TS04 - Filtros avançados combinados', () => {
       'Given denúncias variadas, When aplica categoria + status ao mesmo tempo, Then retorna apenas registros que atendem ambos os filtros',
       async () => {
         const res = await request(app)
-          .get('/demandas/demands/feed?categoria=ILUMINACAO_PUBLICA&status=ABERTA')
+          .get('/demandas/feed?categoria=ILUMINACAO_PUBLICA&status=ABERTA')
           .set('Authorization', `Bearer ${tokenCidadao}`);
 
         expect(res.status).toBe(200);
@@ -366,7 +366,7 @@ describe('TS04 - Filtros avançados combinados', () => {
         const tokenSemDemanda = jwt.sign({ userId: novoRow.id, papel: 'cidadao' }, SECRET);
 
         const res = await request(app)
-          .get('/demandas/demands')
+          .get('/demandas/my-demands')
           .set('Authorization', `Bearer ${tokenSemDemanda}`);
 
         expect(res.status).toBe(200);
@@ -385,7 +385,7 @@ describe('TS04 - Filtros avançados combinados', () => {
       'Given denúncias cadastradas, When aplica filtro que não corresponde a nenhum registro, Then retorna data vazio com total = 0',
       async () => {
         const res = await request(app)
-          .get('/demandas/demands/feed?categoria=FISCALIZACAO&status=EM_ANALISE&regiao=OUTRA')
+          .get('/demandas/feed?categoria=FISCALIZACAO&status=EM_ANALISE&regiao=OUTRA')
           .set('Authorization', `Bearer ${tokenCidadao}`);
 
         expect(res.status).toBe(200);

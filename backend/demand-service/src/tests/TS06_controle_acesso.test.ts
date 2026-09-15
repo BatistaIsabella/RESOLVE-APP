@@ -68,7 +68,7 @@ afterAll(async () => {
 
 describe('TS06 - Controle de acesso e autenticação', () => {
 
-  describe('Cenário: Requisições sem token de autenticação', () => {
+  describe('1 — Requisições sem token de autenticação', () => {
 
     it('Given sem Authorization, When POST /demandas, Then retorna 401', async () => {
       const res = await request(app).post('/demandas').send({ titulo: 'Sem token' });
@@ -107,7 +107,7 @@ describe('TS06 - Controle de acesso e autenticação', () => {
 
   });
 
-  describe('Cenário: Token com formato inválido', () => {
+  describe('2 — Token com formato inválido', () => {
 
     it('Given header sem prefixo Bearer, When GET /demandas/feed, Then retorna 401', async () => {
       const res = await request(app)
@@ -136,7 +136,7 @@ describe('TS06 - Controle de acesso e autenticação', () => {
 
   });
 
-  describe('Cenário: Token expirado', () => {
+  describe('3 — Token expirado e secret incorreto', () => {
 
     it('Given token com expiração no passado, When GET /demandas/feed, Then retorna 401', async () => {
       const tokenExpirado = jwt.sign(
@@ -153,10 +153,6 @@ describe('TS06 - Controle de acesso e autenticação', () => {
       expect(res.body.error).toMatch(/inválido|expirado/i);
     });
 
-  });
-
-  describe('Cenário: Token assinado com secret incorreto', () => {
-
     it('Given token gerado com secret diferente, When GET /demandas/feed, Then retorna 401', async () => {
       const tokenSecretErrado = jwt.sign(
         { userId: usuarioIdCidadao, papel: 'cidadao' },
@@ -172,7 +168,7 @@ describe('TS06 - Controle de acesso e autenticação', () => {
 
   });
 
-  describe('Cenário: Cidadão tentando acessar rotas exclusivas de gestor', () => {
+  describe('4 — Autorização por papel', () => {
 
     it('Given cidadão autenticado, When GET /demandas/gestor, Then retorna 403', async () => {
       const res = await request(app)
@@ -209,10 +205,6 @@ describe('TS06 - Controle de acesso e autenticação', () => {
       expect(res.status).toBe(403);
     });
 
-  });
-
-  describe('Cenário: Gestor tentando acessar rotas exclusivas de cidadão', () => {
-
     it('Given gestor autenticado, When POST /demandas (criação de denúncia), Then retorna 403', async () => {
       const res = await request(app)
         .post('/demandas')
@@ -246,7 +238,7 @@ describe('TS06 - Controle de acesso e autenticação', () => {
 
   });
 
-  describe('Cenário: Parâmetro ID inválido nas rotas', () => {
+  describe('5 — Validação de parâmetros de rota', () => {
 
     it('Given ID não numérico, When GET /demandas/:id pelo cidadão, Then retorna 400', async () => {
       const res = await request(app)

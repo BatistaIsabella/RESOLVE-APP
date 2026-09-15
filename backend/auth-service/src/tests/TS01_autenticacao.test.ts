@@ -14,6 +14,7 @@ const gestor = {
   email: `ts01.gestor.${Date.now()}@test.com`,
   senha: 'senha456',
   papel: 'gestor',
+  codigoAcesso: process.env.GESTOR_ACCESS_CODE || 'change-me-codigo-gestor',
 };
 
 beforeAll(async () => {

@@ -58,7 +58,7 @@ afterAll(async () => {
 
 describe('TS08 - Health check e contrato da API (demand-service)', () => {
 
-  describe('Cenário: Health check do serviço', () => {
+  describe('1 — Health check do serviço', () => {
 
     it('Given serviço online, When GET /health, Then retorna 200', async () => {
       const res = await request(app).get('/health');
@@ -82,7 +82,7 @@ describe('TS08 - Health check e contrato da API (demand-service)', () => {
 
   });
 
-  describe('Cenário: Contrato da resposta de criação de denúncia (POST /demandas)', () => {
+  describe('2 — Contrato da resposta de criação de denúncia', () => {
 
     it('Given cidadão autenticado e dados válidos, When POST /demandas, Then resposta contém os campos obrigatórios', async () => {
       const res = await request(app)
@@ -131,7 +131,7 @@ describe('TS08 - Health check e contrato da API (demand-service)', () => {
 
   });
 
-  describe('Cenário: Contrato da resposta paginada (GET /demandas/my-demands)', () => {
+  describe('3 — Contrato das listagens paginadas', () => {
 
     it('Given cidadão autenticado, When GET /demandas/my-demands, Then resposta contém "data" e "pagination"', async () => {
       const res = await request(app)
@@ -155,10 +155,6 @@ describe('TS08 - Health check e contrato da API (demand-service)', () => {
       expect(typeof res.body.pagination.totalPages).toBe('number');
     });
 
-  });
-
-  describe('Cenário: Contrato da resposta paginada (GET /demandas/feed)', () => {
-
     it('Given cidadão autenticado, When GET /demandas/feed, Then resposta contém "data" (array) e "pagination"', async () => {
       const res = await request(app)
         .get('/demandas/feed')
@@ -168,10 +164,6 @@ describe('TS08 - Health check e contrato da API (demand-service)', () => {
       expect(Array.isArray(res.body.data)).toBe(true);
       expect(res.body.pagination).toBeDefined();
     });
-
-  });
-
-  describe('Cenário: Contrato da resposta paginada (GET /demandas/gestor)', () => {
 
     it('Given gestor autenticado, When GET /demandas/gestor, Then resposta contém "data" (array) e "pagination"', async () => {
       const res = await request(app)
@@ -194,7 +186,7 @@ describe('TS08 - Health check e contrato da API (demand-service)', () => {
 
   });
 
-  describe('Cenário: Contrato de respostas de erro', () => {
+  describe('4 — Contrato de respostas de erro', () => {
 
     it('Given requisição sem token, When POST /demandas, Then resposta contém campo "error"', async () => {
       const res = await request(app).post('/demandas').send(demandaValida);

@@ -70,7 +70,7 @@ afterAll(async () => {
 
 describe('TS05 - Operações do gestor', () => {
 
-  describe('Cenário: Gestor lista todas as denúncias', () => {
+  describe('1 — Listagem de denúncias', () => {
 
     it('Given gestor autenticado, When GET /demandas/gestor, Then retorna 200 com lista paginada', async () => {
       const res = await request(app)
@@ -93,13 +93,12 @@ describe('TS05 - Operações do gestor', () => {
 
     it('Given requisição sem token, When GET /demandas/gestor, Then retorna 401', async () => {
       const res = await request(app).get('/demandas/gestor');
-
       expect(res.status).toBe(401);
     });
 
   });
 
-  describe('Cenário: Gestor obtém detalhes de uma denúncia', () => {
+  describe('2 — Detalhes de uma denúncia', () => {
 
     it('Given gestor autenticado e denúncia existente, When GET /demandas/gestor/:id, Then retorna 200 com detalhes e imagens', async () => {
       const res = await request(app)
@@ -132,7 +131,7 @@ describe('TS05 - Operações do gestor', () => {
 
   });
 
-  describe('Cenário: Atualização de status com sucesso', () => {
+  describe('3 — Atualização de status', () => {
 
     it('Given gestor autenticado e denúncia ABERTA, When PATCH /gestor/:id/status com EM_ANALISE, Then retorna 200 com status atualizado e histórico', async () => {
       const res = await request(app)
@@ -156,10 +155,6 @@ describe('TS05 - Operações do gestor', () => {
       expect(res.body.denuncia.status).toBe('RESOLVIDA');
     });
 
-  });
-
-  describe('Cenário: Status inválido', () => {
-
     it('Given gestor autenticado, When PATCH /gestor/:id/status com status inexistente, Then retorna 400', async () => {
       const res = await request(app)
         .patch(`/demandas/gestor/${denunciaId}/status`)
@@ -179,10 +174,6 @@ describe('TS05 - Operações do gestor', () => {
       expect(res.status).toBe(400);
     });
 
-  });
-
-  describe('Cenário: Status igual ao atual', () => {
-
     it('Given denúncia com status RESOLVIDA, When PATCH /gestor/:id/status com RESOLVIDA, Then retorna 400 (sem mudança)', async () => {
       const res = await request(app)
         .patch(`/demandas/gestor/${denunciaId}/status`)
@@ -193,10 +184,6 @@ describe('TS05 - Operações do gestor', () => {
       expect(res.body.error).toMatch(/já possui/i);
     });
 
-  });
-
-  describe('Cenário: Denúncia inexistente para atualização de status', () => {
-
     it('Given gestor autenticado, When PATCH /gestor/999999/status, Then retorna 404', async () => {
       const res = await request(app)
         .patch('/demandas/gestor/999999/status')
@@ -205,10 +192,6 @@ describe('TS05 - Operações do gestor', () => {
 
       expect(res.status).toBe(404);
     });
-
-  });
-
-  describe('Cenário: Cidadão tenta atualizar status', () => {
 
     it('Given cidadão autenticado, When PATCH /gestor/:id/status, Then retorna 403', async () => {
       const res = await request(app)
@@ -221,7 +204,7 @@ describe('TS05 - Operações do gestor', () => {
 
   });
 
-  describe('Cenário: Atualização de prioridade com sucesso', () => {
+  describe('4 — Atualização de prioridade', () => {
 
     it('Given gestor autenticado e denúncia com prioridade MEDIA, When PATCH /gestor/:id/prioridade com ALTA, Then retorna 200 com prioridade atualizada', async () => {
       const res = await request(app)
@@ -245,10 +228,6 @@ describe('TS05 - Operações do gestor', () => {
       expect(res.body.denuncia.prioridade).toBe('BAIXA');
     });
 
-  });
-
-  describe('Cenário: Prioridade inválida', () => {
-
     it('Given gestor autenticado, When PATCH /gestor/:id/prioridade com valor inexistente, Then retorna 400', async () => {
       const res = await request(app)
         .patch(`/demandas/gestor/${denunciaId}/prioridade`)
@@ -268,10 +247,6 @@ describe('TS05 - Operações do gestor', () => {
       expect(res.status).toBe(400);
     });
 
-  });
-
-  describe('Cenário: Prioridade igual à atual', () => {
-
     it('Given denúncia com prioridade BAIXA, When PATCH /gestor/:id/prioridade com BAIXA, Then retorna 400', async () => {
       const res = await request(app)
         .patch(`/demandas/gestor/${denunciaId}/prioridade`)
@@ -282,10 +257,6 @@ describe('TS05 - Operações do gestor', () => {
       expect(res.body.error).toMatch(/já possui/i);
     });
 
-  });
-
-  describe('Cenário: Denúncia inexistente para atualização de prioridade', () => {
-
     it('Given gestor autenticado, When PATCH /gestor/999999/prioridade, Then retorna 404', async () => {
       const res = await request(app)
         .patch('/demandas/gestor/999999/prioridade')
@@ -294,10 +265,6 @@ describe('TS05 - Operações do gestor', () => {
 
       expect(res.status).toBe(404);
     });
-
-  });
-
-  describe('Cenário: Cidadão tenta atualizar prioridade', () => {
 
     it('Given cidadão autenticado, When PATCH /gestor/:id/prioridade, Then retorna 403', async () => {
       const res = await request(app)

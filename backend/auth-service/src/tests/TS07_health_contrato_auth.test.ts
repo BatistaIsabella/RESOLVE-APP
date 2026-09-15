@@ -27,7 +27,7 @@ afterAll(async () => {
 
 describe('TS07 - Health check e contrato da API (auth-service)', () => {
 
-  describe('Cenário: Health check do serviço', () => {
+  describe('1 — Health check do serviço', () => {
 
     it('Given serviço online, When GET /health, Then retorna 200', async () => {
       const res = await request(app).get('/health');
@@ -51,7 +51,7 @@ describe('TS07 - Health check e contrato da API (auth-service)', () => {
 
   });
 
-  describe('Cenário: Headers CORS', () => {
+  describe('2 — Headers CORS', () => {
 
     it('Given qualquer requisição ao auth-service, When resposta chega, Then Access-Control-Allow-Origin está presente', async () => {
       const res = await request(app)
@@ -68,7 +68,7 @@ describe('TS07 - Health check e contrato da API (auth-service)', () => {
 
   });
 
-  describe('Cenário: Contrato da resposta de registro', () => {
+  describe('3 — Contrato da resposta de registro', () => {
 
     it('Given registro bem-sucedido, When POST /auth/register, Then resposta contém id (number), nome, email, papel', async () => {
       const email = `ts07.reg.${Date.now()}@test.com`;
@@ -88,10 +88,11 @@ describe('TS07 - Health check e contrato da API (auth-service)', () => {
     it('Given registro bem-sucedido, When POST /auth/register, Then resposta NÃO expõe o campo senha', async () => {
       const email = `ts07.nosensinha.${Date.now()}@test.com`;
       emailsParaLimpar.push(email);
+      const codigoAcesso = process.env.GESTOR_ACCESS_CODE || 'change-me-codigo-gestor';
 
       const res = await request(app)
         .post('/auth/register')
-        .send({ nome: 'Sem Senha TS07', email, senha: 'secreto999', papel: 'gestor' });
+        .send({ nome: 'Sem Senha TS07', email, senha: 'secreto999', papel: 'gestor', codigoAcesso });
 
       expect(res.status).toBe(201);
       expect(res.body.senha).toBeUndefined();
@@ -99,7 +100,7 @@ describe('TS07 - Health check e contrato da API (auth-service)', () => {
 
   });
 
-  describe('Cenário: Contrato da resposta de login', () => {
+  describe('4 — Contrato da resposta de login', () => {
 
     it('Given login bem-sucedido, When POST /auth/login, Then resposta contém token, papel, userId e nome', async () => {
       const res = await request(app)
@@ -134,7 +135,7 @@ describe('TS07 - Health check e contrato da API (auth-service)', () => {
 
   });
 
-  describe('Cenário: Contrato de respostas de erro', () => {
+  describe('5 — Contrato de respostas de erro', () => {
 
     it('Given credenciais inválidas, When POST /auth/login, Then erro contém campo "error" (não "message")', async () => {
       const res = await request(app)
