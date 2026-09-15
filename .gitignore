@@ -40,6 +40,18 @@ yarn-error.log*
 .pnpm-debug.log*
 backend/.env
 
+# ───── Nix ─────
+# O flake.nix e o flake.lock SÃO versionados; o que fica de fora é o
+# resultado de build e o cache do direnv.
+result
+result-*
+.direnv/
+
+# ───── Playwright (e2e) ─────
+/e2e/test-results/
+/e2e/playwright-report/
+/e2e/blob-report/
+
 # ───── Claude Code ─────
 .claude/
 CLAUDE.md

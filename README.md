@@ -204,6 +204,33 @@ docker compose --env-file .env.local exec demand-service npx prisma migrate depl
 ```
 > Disponível em http://localhost:8080
 
+### Ambiente reprodutível com Nix (opcional)
+
+O repositório traz um `flake.nix` para quem usa Nix/NixOS. Ele fixa as versões
+das ferramentas, então não é preciso instalar Node na mão nem acertar a
+versão certa:
+
+```bash
+nix develop            # Node 22 + Playwright (frontend e e2e)
+nix develop .#backend  # Postgres 16 + Redis + Node, para rodar os serviços sem Docker
+```
+
+Dois detalhes que o flake resolve e valem para todo mundo saber:
+
+- **Node:** os Dockerfiles do backend fixam `node:20-alpine`, mas o Node 20 saiu
+  de suporte (EOL em 2026-04-30). O flake usa **Node 22 LTS**, que atende o
+  requisito do Next 16 (`>= 20.9`). O `e2e/README.md` ainda diz "Node 18+" —
+  isso está desatualizado.
+- **Playwright:** o pacote npm exige um build exato de navegador, então
+  `e2e/package.json` fixa `@playwright/test` na mesma versão empacotada pelo
+  nixpkgs (`playwright-driver`). No shell do Nix os navegadores já vêm prontos
+  (`PLAYWRIGHT_BROWSERS_PATH`), dispensando o `npx playwright install` — que,
+  sem isso, baixa um binário dinâmico que não roda no NixOS. Se as versões
+  saírem de sincronia, o shell avisa ao ser aberto.
+
+Quem não usa Nix segue normalmente com Node 22 instalado pelo gerenciador de
+sua preferência — nada no projeto passou a depender do Nix.
+
 ---
 
 ## 👩‍💻 Equipe de Desenvolvimento
