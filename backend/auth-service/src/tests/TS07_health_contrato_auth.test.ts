@@ -8,7 +8,7 @@ const emailsParaLimpar: string[] = [];
 
 const usuarioBase = {
   nome: 'Contrato TS07',
-  email: `ts07.contrato.${Date.now()}@test.com`,
+  email: `ts07.contrat.${Date.now()}@test.com`,
   senha: 'senha123',
   papel: 'cidadao',
 };
@@ -86,7 +86,7 @@ describe('TS07 - Health check e contrato da API (auth-service)', () => {
     });
 
     it('Given registro bem-sucedido, When POST /auth/register, Then resposta NÃO expõe o campo senha', async () => {
-      const email = `ts07.nosensinha.${Date.now()}@test.com`;
+      const email = `ts07.nosinha.${Date.now()}@test.com`;
       emailsParaLimpar.push(email);
       const codigoAcesso = process.env.GESTOR_ACCESS_CODE || 'change-me-codigo-gestor';
 

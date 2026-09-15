@@ -165,7 +165,7 @@ describe('TS03 - Registro de usuário', () => {
     });
 
     it('Given papel cidadao sem código de acesso, When POST /auth/register, Then retorna 201 (código não se aplica a cidadão)', async () => {
-      const email = `ts03.cidadao.semcodigo.${Date.now()}@test.com`;
+      const email = `ts03.semcod.${Date.now()}@test.com`;
       emailsParaLimpar.push(email);
 
       const res = await request(app)
@@ -180,7 +180,7 @@ describe('TS03 - Registro de usuário', () => {
   describe('5 — Contrato da resposta', () => {
 
     it('Given registro bem-sucedido, When POST /auth/register, Then Content-Type é application/json', async () => {
-      const email = `ts03.contrato.${Date.now()}@test.com`;
+      const email = `ts03.contrat.${Date.now()}@test.com`;
       emailsParaLimpar.push(email);
 
       const res = await request(app)
@@ -207,7 +207,7 @@ describe('TS03 - Registro de usuário', () => {
     });
 
     it('Given registro bem-sucedido, When POST /auth/register, Then resposta não contém campo senha', async () => {
-      const email = `ts03.seguranca.${Date.now()}@test.com`;
+      const email = `ts03.segur.${Date.now()}@test.com`;
       emailsParaLimpar.push(email);
 
       const res = await request(app)
