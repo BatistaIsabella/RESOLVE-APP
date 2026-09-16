@@ -138,7 +138,10 @@ test.describe('Cenário 7 — Cidadão visualiza os detalhes de uma demanda', ()
     await expect(card.getByText('Média', { exact: true })).toBeVisible();
 
     await card.getByRole('button', { name: 'Ver Detalhes' }).click();
-    await expect(page).toHaveURL(/\/demandas\/\d+/);
+    // Timeout maior que o padrão (8s): na primeira visita a /demandas/[id] em modo
+    // dev, o Turbopack compila a rota sob demanda, e essa navegação client-side
+    // (RSC) pode não terminar a tempo do expect.timeout default.
+    await expect(page).toHaveURL(/\/demandas\/\d+/, { timeout: 30_000 });
 
     // ---------- Assert 1: a tela de detalhes exibe os dados corretos ----------
     await expect(page.getByRole('heading', { name: demandaTeste.titulo })).toBeVisible();
