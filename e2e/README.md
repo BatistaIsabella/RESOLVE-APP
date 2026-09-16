@@ -71,9 +71,63 @@ cd ../e2e
 E2E_API_URL=http://localhost:8080 npx playwright test tests/07-detalhes-demanda.spec.ts
 ```
 
+## Cenário 10 — Acesso não autorizado ao Painel do Gestor
+
+**Arquivo:** [`tests/10-acesso-nao-autorizado-painel-gestor.spec.ts`](tests/10-acesso-nao-autorizado-painel-gestor.spec.ts)
+
+> Como Cidadão não autorizado, tento acessar diretamente a URL do Painel do
+> Gestor via navegação, garantindo que o sistema bloqueia o acesso e
+> redireciona para o login.
+
+O arquivo tem quatro testes, cobrindo as duas faces do "não autorizado", a
+checagem de back-end e o outro lado da regra de autorização:
+
+1. **Visitante sem login** digita direto as URLs protegidas
+   (`/gestor/dashboard`, `/gestor` e `/gestor/demandas/{id}`). Para cada
+   uma, confirma que a URL final é `/logingestor`, que o formulário de
+   login do gestor está na tela e que **nenhum conteúdo do painel vazou**
+   (nem o título "Painel de Gestão", nem cards de demanda). Confirma também
+   que o navegador **não chegou a chamar** as rotas de gestor da API
+   (`/demands/gestor`, `/metrics`) — o bloqueio acontece antes de qualquer
+   tentativa de buscar dados.
+2. **Cidadão autenticado** (papel `cidadao`) faz login real pela UI em
+   `/login` e, já com sessão válida, tenta `/gestor/dashboard`. Também é
+   barrado — ou seja, o guard valida **papel**, não só "tem token".
+3. **Defesa em profundidade:** direto na API, `GET /demands/gestor` sem
+   token responde `401` e, com token de cidadão, responde `403` — o
+   bloqueio não depende só do front-end.
+4. **Gestor legítimo continua no painel após um F5** — marcado com
+   `test.fail()`, porque **hoje isso está quebrado** (ver BUG-04 no
+   `RELATORIO_BUGS.md`).
+
+> 🐛 **Bug encontrado escrevendo este cenário (BUG-04):** o guard das páginas
+> do gestor roda antes de o Zustand reidratar o token do `localStorage`, então
+> *qualquer* carga direta de URL derruba o usuário pro login — inclusive um
+> gestor legítimo dando F5 no próprio painel. Consequência para esta suíte: os
+> testes 1 e 2 confirmam o comportamento que o cenário exige (bloquear e
+> redirecionar), mas o teste 2 **não prova sozinho** que a checagem de papel
+> funciona — hoje ele passaria mesmo sem ela. Quem fixa o outro lado da regra
+> é o teste 4. Quando o BUG-04 for corrigido, o Playwright vai acusar
+> "unexpected pass" nele — aí é só remover o `test.fail()`.
+
+> ⚠️ Nota pro grupo: o slot `10-*` foi escolhido por ser o próximo número
+> livre na pasta (existem 01, 02, 03, 07 e 08). Ajustem o número/nome na
+> hora de consolidar a suíte se ele conflitar com o cenário de outra pessoa.
+
+> ✅ Validado localmente: `4 passed` (3 testes + 1 expected fail), estável em
+> 3 execuções seguidas (`--repeat-each=3` → `12 passed`), com o backend subido
+> via `docker compose` e o front-end pelo `webServer` do Playwright:
+> `E2E_API_URL=http://localhost:8080 npx playwright test tests/10-acesso-nao-autorizado-painel-gestor.spec.ts`
+
 ## Como rodar
 
-Pré-requisitos: Node.js 18+ instalado.
+Pré-requisitos: Node.js 22 (LTS) instalado. O frontend usa Next 16, que exige
+Node `>= 20.9` — o "18+" que estava aqui antes não serve mais.
+
+> 💡 Usa Nix/NixOS? `nix develop` na raiz do projeto já entrega o Node 22 e os
+> navegadores do Playwright prontos, dispensando o
+> `npx playwright install chromium` do passo abaixo. Ver "Ambiente reprodutível
+> com Nix" no README raiz.
 
 ```bash
 cd e2e
