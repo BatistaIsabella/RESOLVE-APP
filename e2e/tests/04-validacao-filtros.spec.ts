@@ -188,12 +188,9 @@ test.describe('Cenário 4 — Cidadão aplica filtros de Categoria e Região', (
     // Seleciona Categoria
     await selectCategoria.selectOption({ value: categoriaAlvo });
 
-    // Aguarda a resposta HTTP gerada após selecionar a Região
-    const respostaRegiaoPromise = page.waitForResponse(
-      (resp) => resp.url().includes('/demands') && resp.status() === 200
-    );
+    // Seleciona Região — os filtros são aplicados no cliente (sem nova
+    // chamada à API), então validamos o resultado diretamente na UI
     await selectRegiao.selectOption({ value: regiaoAlva });
-    await respostaRegiaoPromise;
 
     // ---------- Assertions: Valida se a UI exibiu o card correto e ocultou o incorreto ----------
     const cardValido = page.locator('div.max-h-\\[600px\\] > div').filter({ hasText: tituloDemandaValida });

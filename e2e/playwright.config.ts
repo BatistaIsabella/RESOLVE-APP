@@ -13,10 +13,15 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests',
-  fullyParallel: true,
+  // Roda um teste por vez: os cenários criam usuários/dados via API contra
+  // um backend local (auth-service, demand-service, metrics-service) que
+  // não suporta bem carga concorrente em ambiente de desenvolvimento
+  // (ts-node-dev single-thread + bcryptjs síncrono). Rodar em série evita
+  // falhas de timeout no login que só aparecem sob paralelismo.
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: [['html', { open: 'never' }]],
   // 60s (em vez do padrão de 30s): em modo dev, o Next.js/Turbopack compila cada
   // rota sob demanda na primeira visita, o que pode ser lento em máquinas/VMs
