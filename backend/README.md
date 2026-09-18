@@ -200,6 +200,32 @@ PostgreSQL / Redis
 
 ---
 
+## Deploy em produção (Coolify / self-hosted)
+
+O `docker-compose.prod.yml` empacota os 5 containers (Postgres, Redis e os 4 serviços) prontos para deploy via Coolify (ou qualquer host Docker), sem expor Postgres/Redis para fora da rede interna — só o `api-gateway` (porta 8080) fica acessível externamente.
+
+### No Coolify
+1. Crie um novo recurso do tipo **Docker Compose**, apontando para este repositório.
+2. Defina o **Base Directory** como `backend` e o **Docker Compose Location** como `docker-compose.prod.yml`.
+3. Em **Environment Variables**, defina (veja `.env.production.example`):
+   - `POSTGRES_PASSWORD` — senha do banco.
+   - `JWT_SECRET` — segredo para assinar os JWTs (gere com `openssl rand -base64 48`). É compartilhado entre `auth-service`, `demand-service` e `metrics-service`.
+   - `POSTGRES_USER` / `POSTGRES_DB` são opcionais (default `postgres`).
+4. Deploy. O `postgres-init/001-create-schemas.sql` cria o schema `demand` automaticamente na primeira subida do volume; os serviços `auth-service` e `demand-service` rodam `prisma migrate deploy` no start.
+5. Associe um domínio (com SSL) ao serviço `api-gateway` na aba **Domains** do Coolify — é o único ponto de entrada da API.
+
+### Validação local antes de subir
+```bash
+cd backend
+cp .env.production.example .env
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+curl http://localhost:8080/health
+```
+
+> **Atenção:** o cadastro (`POST /auth/register`) não tem verificação de código de acesso para o papel `gestor` — qualquer pessoa pode se registrar como gestor. Isso é uma limitação pré-existente da aplicação, não algo introduzido pelo deploy.
+
+---
+
 ## Como rodar localmente
 
 ### Pré-requisitos
