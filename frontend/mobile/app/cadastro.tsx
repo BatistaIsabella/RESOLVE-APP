@@ -11,7 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
-import { useAuthStore } from '@/stores/useAuthStore';
+import { useAuthStore, getPostLoginRoute } from '@/stores/useAuthStore';
 import { setRemembered } from '@/lib/secureStorage';
 import { ApiError } from '@/lib/api';
 
@@ -60,8 +60,8 @@ export default function CadastroScreen() {
 
     try {
       setRemembered(true);
-      await register(nome, email, senha, papel, papel === 'gestor' ? codigoAcesso : undefined);
-      router.replace('/');
+      const role = await register(nome, email, senha, papel, papel === 'gestor' ? codigoAcesso : undefined);
+      router.replace(getPostLoginRoute(role));
     } catch (err) {
       setErro(err instanceof ApiError ? err.message : 'Erro ao criar conta');
     }
