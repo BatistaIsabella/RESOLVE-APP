@@ -11,58 +11,77 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-  
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: smartcity_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   auth-service:
     build: ./auth-service
     container_name: smartcity_auth
     restart: always
-    env_file:
-      - .env.local
     environment:
       PORT: 3001
-      DATABASE_URL_AUTH: ${DATABASE_URL_AUTH}
-      GESTOR_ACCESS_CODE: ${GESTOR_ACCESS_CODE}
+      DATABASE_URL: "postgresql://postgres:postgrespassword@postgres:5432/postgres?schema=public"
+      DATABASE_URL_AUTH: "postgresql://postgres:postgrespassword@postgres:5432/postgres?schema=public"
     ports:
       - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   demand-service:
     build: ./demand-service
     container_name: smartcity_demand
     restart: always
-    env_file:
-      - .env.local
     environment:
       PORT: 3002
       REDIS_URL: redis://redis:6379
-      DATABASE_URL_DEMAND: ${DATABASE_URL_DEMAND}
+      DATABASE_URL: "postgresql://postgres:postgrespassword@postgres:5432/postgres?schema=public"
+      DATABASE_URL_AUTH: "postgresql://postgres:postgrespassword@postgres:5432/postgres?schema=public"
     ports:
       - "3002:3002"
     depends_on:
       redis:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
 
   metrics-service:
     build: ./metrics-service
     container_name: smartcity_metrics
     restart: always
-    env_file:
-      - .env.local
     environment:
       PORT: 3003
       REDIS_URL: redis://redis:6379
-      DATABASE_URL_DEMAND: ${DATABASE_URL_DEMAND}
+      DATABASE_URL: "postgresql://postgres:postgrespassword@postgres:5432/postgres?schema=public"
+      DATABASE_URL_AUTH: "postgresql://postgres:postgrespassword@postgres:5432/postgres?schema=public"
     ports:
       - "3003:3003"
     depends_on:
       redis:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
 
   api-gateway:
     build: ./api-gateway
     container_name: smartcity_gateway
     restart: always
-    env_file:
-      - .env.local
     environment:
       PORT: 8080
       AUTH_SERVICE_URL: http://auth-service:3001
@@ -75,3 +94,5 @@ services:
       - demand-service
       - metrics-service
 
+volumes:
+  postgres_data:

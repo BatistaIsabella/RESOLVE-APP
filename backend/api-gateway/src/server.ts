@@ -5,9 +5,9 @@ import rateLimit from 'express-rate-limit';
 
 const app = express();
 
-const AUTH_URL = process.env.AUTH_SERVICE_URL ?? 'http://localhost:3001';
-const DEMAND_URL = process.env.DEMAND_SERVICE_URL ?? 'http://localhost:3002';
-const METRICS_URL = process.env.METRICS_SERVICE_URL ?? 'http://localhost:3003';
+const AUTH_URL = process.env.AUTH_SERVICE_URL ?? 'http://auth-service:3001';
+const DEMAND_URL = process.env.DEMAND_SERVICE_URL ?? 'http://demand-service:3002';
+const METRICS_URL = process.env.METRICS_SERVICE_URL ?? 'http://metrics-service:3003';
 
 // Configuração de CORS
 app.use((_req, res, next) => {
@@ -23,7 +23,7 @@ app.options('*', (_req, res) => res.sendStatus(204));
 app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 200, // Limite de 200 requisições por IP
+    max: 5000, 
     standardHeaders: true,
     legacyHeaders: false,
   })
@@ -73,7 +73,6 @@ app.use(
   createProxyMiddleware({
     target: AUTH_URL,
     changeOrigin: true,
-    xfwd: true, // repassa X-Forwarded-For com o IP real do cliente, necessário pro rate limit do login
   })
 );
 
