@@ -2,7 +2,7 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/stores/useAuthStore';
 
 export const API_GATEWAY_URL =
-  process.env.EXPO_PUBLIC_API_GATEWAY_URL ?? 'https://smart-city-6.onrender.com';
+  process.env.EXPO_PUBLIC_API_GATEWAY_URL ?? 'https://smartcity-api.beholder.app.br';
 
 export class ApiError extends Error {
   status: number;
