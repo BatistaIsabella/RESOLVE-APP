@@ -1,7 +1,8 @@
 export const API_GATEWAY_URL =
-  process.env.NEXT_PUBLIC_API_GATEWAY_URL ?? 'http://localhost:8080';
+  process.env.NEXT_PUBLIC_API_GATEWAY_URL ?? 'https://smartcity-api.beholder.app.br';
 
-export const AUTH_API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080') + '/auth';
+export const AUTH_API_URL =
+  (process.env.NEXT_PUBLIC_API_URL || 'https://smartcity-api.beholder.app.br') + '/auth';
 export const DEMAND_API_URL = `${API_GATEWAY_URL}/demands`;
 export const METRICS_API_URL = `${API_GATEWAY_URL}/metrics`;
 
