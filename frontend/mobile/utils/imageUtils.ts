@@ -1,9 +1,7 @@
-import * as FileSystem from 'expo-file-system';
+import { File } from 'expo-file-system';
 
 export async function uriToBase64(uri: string): Promise<string> {
-  const base64 = await FileSystem.readAsStringAsync(uri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
+  const base64 = await new File(uri).base64();
   const extension = uri.split('.').pop()?.toLowerCase();
   const mime =
     extension === 'png'
