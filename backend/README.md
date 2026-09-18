@@ -202,7 +202,12 @@ PostgreSQL / Redis
 
 ## Deploy em produção (Coolify / self-hosted)
 
-O `docker-compose.prod.yml` empacota os 5 containers (Postgres, Redis e os 4 serviços) prontos para deploy via Coolify (ou qualquer host Docker), sem expor Postgres/Redis para fora da rede interna — só o `api-gateway` (porta 8080) fica acessível externamente.
+O `docker-compose.prod.yml` empacota os 6 containers (Postgres, Redis, os 4 serviços e `cloudflared`) prontos para deploy via Coolify. Nenhum serviço publica porta no host — tudo fica só na rede interna do compose, e o `cloudflared` expõe o `api-gateway` para fora através de um Cloudflare Tunnel. Isso evita colisão com a porta 8080 do próprio Traefik do Coolify (`coolify-proxy`) e segue o mesmo padrão usado em outros projetos do servidor (ex.: Beholder).
+
+### Criando o túnel no Cloudflare
+1. No painel do Cloudflare Zero Trust: **Networks → Tunnels → Create a tunnel**, tipo *Cloudflared*.
+2. Na aba de instalação, escolha **Docker** e copie o valor do `--token` (é o `CLOUDFLARE_TUNNEL_TOKEN`).
+3. Em **Public Hostname**, aponte o subdomínio desejado (ex. `resolve-api.seudominio.com`) para `http://api-gateway:8080` — o `cloudflared` está na mesma rede Docker do `api-gateway` e o resolve pelo nome do serviço.
 
 ### No Coolify
 1. Crie um novo recurso do tipo **Docker Compose**, apontando para este repositório.
@@ -210,16 +215,19 @@ O `docker-compose.prod.yml` empacota os 5 containers (Postgres, Redis e os 4 ser
 3. Em **Environment Variables**, defina (veja `.env.production.example`):
    - `POSTGRES_PASSWORD` — senha do banco.
    - `JWT_SECRET` — segredo para assinar os JWTs (gere com `openssl rand -base64 48`). É compartilhado entre `auth-service`, `demand-service` e `metrics-service`.
+   - `CLOUDFLARE_TUNNEL_TOKEN` — token do túnel criado acima.
    - `POSTGRES_USER` / `POSTGRES_DB` são opcionais (default `postgres`).
-4. Deploy. O `postgres-init/001-create-schemas.sql` cria o schema `demand` automaticamente na primeira subida do volume; os serviços `auth-service` e `demand-service` rodam `prisma migrate deploy` no start.
-5. Associe um domínio (com SSL) ao serviço `api-gateway` na aba **Domains** do Coolify — é o único ponto de entrada da API.
+4. Deploy. O `postgres-init/001-create-schemas.sql` cria o schema `demand` automaticamente na primeira subida do volume; `auth-service` e `demand-service` também garantem o schema e rodam `prisma migrate deploy` a cada start, de forma idempotente.
+5. Não é necessário configurar domínio pela aba **Domains** do Coolify — a exposição pública é feita pelo túnel.
 
 ### Validação local antes de subir
 ```bash
 cd backend
 cp .env.production.example .env
-docker compose -f docker-compose.prod.yml --env-file .env up -d --build
-curl http://localhost:8080/health
+# localmente não há túnel, então pode comentar o serviço cloudflared
+# ou exportar um CLOUDFLARE_TUNNEL_TOKEN de teste antes de subir
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build auth-service demand-service metrics-service api-gateway postgres redis
+docker compose -f docker-compose.prod.yml exec api-gateway wget -qO- http://localhost:8080/health
 ```
 
 > **Atenção:** o cadastro (`POST /auth/register`) não tem verificação de código de acesso para o papel `gestor` — qualquer pessoa pode se registrar como gestor. Isso é uma limitação pré-existente da aplicação, não algo introduzido pelo deploy.

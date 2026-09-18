@@ -97,8 +97,6 @@ services:
       AUTH_SERVICE_URL: http://auth-service:3001
       DEMAND_SERVICE_URL: http://demand-service:3002
       METRICS_SERVICE_URL: http://metrics-service:3003
-    ports:
-      - "8080:8080"
     depends_on:
       auth-service:
         condition: service_healthy
@@ -112,6 +110,16 @@ services:
       timeout: 5s
       retries: 5
       start_period: 15s
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?defina CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      api-gateway:
+        condition: service_healthy
 
 volumes:
   postgres_data:
