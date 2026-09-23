@@ -31,6 +31,9 @@ export interface Demand {
   endereco: string;
   solicitante: string;
   dataRegistro: string;
+  /** Data crua em ISO. `dataRegistro`/`createdAt` já vêm formatados em pt-BR e
+   *  não servem para agregar por dia. */
+  dataRegistroISO: string;
 }
 
 export interface DemandFilters {
