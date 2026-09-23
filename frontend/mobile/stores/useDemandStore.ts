@@ -24,6 +24,7 @@ interface DemandStore {
     imagens?: string[];
   }) => Promise<Demand>;
   updateDemandStatus: (id: string, status: DemandStatus) => Promise<void>;
+  updateDemandPriority: (id: string, priority: DemandPriority) => Promise<void>;
   setFilters: (filters: Partial<DemandFilters>) => void;
   resetFilters: () => void;
   getFilteredDemands: () => Demand[];
@@ -110,6 +111,21 @@ export const useDemandStore = create<DemandStore>((set, get) => ({
       }));
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao atualizar status';
+      set({ isLoading: false, error: message });
+      throw err;
+    }
+  },
+
+  updateDemandPriority: async (id, priority) => {
+    set({ isLoading: true, error: null });
+    try {
+      const updated = await demandService.updatePriority(id, priority);
+      set((state) => ({
+        demands: state.demands.map((d) => (d.id === id ? updated : d)),
+        isLoading: false,
+      }));
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Erro ao atualizar prioridade';
       set({ isLoading: false, error: message });
       throw err;
     }

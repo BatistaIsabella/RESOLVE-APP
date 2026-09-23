@@ -91,6 +91,7 @@ export function mapDenunciaFromApi(denuncia: ApiDenuncia, solicitante = ''): Dem
     endereco: denuncia.endereco,
     solicitante: denuncia.email_solicitante ?? solicitante,
     dataRegistro: formatDataRegistro(denuncia.data_registro),
+    dataRegistroISO: denuncia.data_registro,
   };
 }
 
