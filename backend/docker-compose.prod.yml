@@ -36,6 +36,7 @@ services:
       PORT: 3001
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-postgres}?schema=public
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET}
+      GESTOR_ACCESS_CODE: ${GESTOR_ACCESS_CODE:?defina GESTOR_ACCESS_CODE}
     depends_on:
       postgres:
         condition: service_healthy
