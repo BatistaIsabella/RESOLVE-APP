@@ -6,18 +6,43 @@ const prisma = new PrismaClient();
 const SECRET = process.env.JWT_SECRET || 'change-me';
 const SALT_ROUNDS = 10;
 
+const DEV_GESTOR_ACCESS_CODE = 'change-me-codigo-gestor';
+
 function httpError(mensagem: string, status: number): Error & { status: number } {
   const err = new Error(mensagem) as Error & { status: number };
   err.status = status;
   return err;
 }
 
+/**
+ * Código esperado para criar conta de gestor.
+ *
+ * Sem a variável definida, só fora de produção cai no padrão. Em produção o
+ * cadastro de gestor fica fechado em vez de aceitar um código que está
+ * versionado neste repositório.
+ */
+function gestorAccessCode(): string | null {
+  const code = process.env.GESTOR_ACCESS_CODE;
+  if (code) return code;
+  return process.env.NODE_ENV === 'production' ? null : DEV_GESTOR_ACCESS_CODE;
+}
+
 export async function register(
   nome: string,
   email: string,
   senha: string,
-  papel: 'cidadao' | 'gestor'
+  papel: 'cidadao' | 'gestor',
+  codigoAcesso?: string
 ) {
+  // A regra fica aqui, e não no controller, para valer para qualquer caminho
+  // que chegue ao cadastro.
+  if (papel === 'gestor') {
+    const esperado = gestorAccessCode();
+    if (!esperado || codigoAcesso !== esperado) {
+      throw httpError('Código de acesso de gestor inválido', 403);
+    }
+  }
+
   const hash = await bcrypt.hash(senha, SALT_ROUNDS);
   const papelEnum = papel.toUpperCase() as 'CIDADAO' | 'GESTOR';
 

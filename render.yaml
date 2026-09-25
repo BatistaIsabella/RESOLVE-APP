@@ -32,6 +32,8 @@ services:
           name: smartcity-auth-db
           property: connectionString
       - fromGroup: smartcity-shared
+      - key: GESTOR_ACCESS_CODE
+        sync: false
       - key: PORT
         value: 3001
 
