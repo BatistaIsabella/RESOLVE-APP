@@ -184,9 +184,15 @@ Técnicas rigorosas foram implementadas para proteger a memória, o tempo de res
 
 ### Frontend
 ```bash
-cd Smart-City
+```bash
+cd frontend/mobile
 npm install
-npm run dev
+
+npm install @expo/vector-icons@15.1.1 @react-native-picker/picker@2.11.4 @react-navigation/bottom-tabs@7.18.18 @react-navigation/elements@2.9.40 @react-navigation/native@7.3.18 axios@1.20.0 expo-camera@57.0.5 expo-constants@57.0.19 expo-file-system@57.0.7 expo-font@57.0.4 expo-haptics@57.0.3 expo-image-picker@57.0.20 expo-image@57.0.5 expo-linear-gradient@57.0.2 expo-linking@57.0.11 expo-location@57.0.20 expo-router@57.0.23 expo-secure-store@57.0.4 expo-splash-screen@57.0.9 expo-status-bar@57.0.1 expo-symbols@57.0.3 expo-system-ui@57.0.4 expo-web-browser@57.0.3 expo@57.0.25 react-dom@19.2.3 react-native-gesture-handler@2.32.0 react-native-reanimated@4.5.1 react-native-safe-area-context@5.7.0 react-native-screens@4.26.2 react-native-svg@15.15.4 react-native-web@0.21.2 react-native-worklets@0.10.1 react-native@0.86.3 react@19.2.3 typescript@6.0.3 zustand@5.0.15
+
+npm install -D @types/react@19.2.18 eslint-config-expo@57.0.2 eslint@9.39.5
+
+npx expo start
 ```
 > Disponível em http://localhost:3000
 
