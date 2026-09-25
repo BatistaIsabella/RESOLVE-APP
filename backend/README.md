@@ -179,7 +179,7 @@ PostgreSQL / Redis
 
 | Método | Rota | Descrição | Auth |
 |---|---|---|---|
-| POST | `/auth/register` | Cadastra novo usuário | ❌ |
+| POST | `/auth/register` | Cadastra novo usuário. Papel `gestor` exige `codigoAcesso` válido no corpo, senão 403 | ❌ |
 | POST | `/auth/login` | Autentica e retorna JWT | ❌ |
 
 ### demand-service — porta 3002
@@ -215,6 +215,7 @@ O `docker-compose.prod.yml` empacota os 6 containers (Postgres, Redis, os 4 serv
 3. Em **Environment Variables**, defina (veja `.env.production.example`):
    - `POSTGRES_PASSWORD` — senha do banco.
    - `JWT_SECRET` — segredo para assinar os JWTs (gere com `openssl rand -base64 48`). É compartilhado entre `auth-service`, `demand-service` e `metrics-service`.
+   - `GESTOR_ACCESS_CODE` — código exigido para criar conta de gestor (gere com `openssl rand -base64 24`). Sem ele o cadastro de gestor responde 403, porque em produção não há valor padrão.
    - `CLOUDFLARE_TUNNEL_TOKEN` — token do túnel criado acima.
    - `POSTGRES_USER` / `POSTGRES_DB` são opcionais (default `postgres`).
 4. Deploy. O `postgres-init/001-create-schemas.sql` cria o schema `demand` automaticamente na primeira subida do volume; `auth-service` e `demand-service` também garantem o schema e rodam `prisma migrate deploy` a cada start, de forma idempotente.
@@ -230,7 +231,7 @@ docker compose -f docker-compose.prod.yml --env-file .env up -d --build auth-ser
 docker compose -f docker-compose.prod.yml exec api-gateway wget -qO- http://localhost:8080/health
 ```
 
-> **Atenção:** o cadastro (`POST /auth/register`) não tem verificação de código de acesso para o papel `gestor` — qualquer pessoa pode se registrar como gestor. Isso é uma limitação pré-existente da aplicação, não algo introduzido pelo deploy.
+> **Atenção:** o cadastro com papel `gestor` exige o `codigoAcesso` correto no corpo da requisição, conferido contra `GESTOR_ACCESS_CODE`. Se a variável não estiver definida, o `auth-service` recusa todo cadastro de gestor em produção (403) — não há valor padrão fora de desenvolvimento. Defina-a antes do primeiro deploy, ou nenhuma conta de gestor poderá ser criada.
 
 ---
 
