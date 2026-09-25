@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Alert,
   Image,
@@ -12,12 +12,18 @@ import {
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+
 import { GradientHeader } from '@/components/ui/GradientHeader';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { SelectField } from '@/components/ui/SelectField';
 import { useAuth } from '@/hooks/useAuth';
 import { useDemandStore } from '@/stores/useDemandStore';
-import { CATEGORIAS, PROBLEMAS_POR_CATEGORIA, REGIOES } from '@/constants/demanda';
+import {
+  CATEGORIAS,
+  PROBLEMAS_POR_CATEGORIA,
+  REGIOES,
+} from '@/constants/demanda';
 import { DemandCategory, DemandRegion } from '@/types/demand';
 import { ApiError } from '@/lib/api';
 import { AppColors } from '@/constants/colors';
@@ -40,58 +46,131 @@ export default function NovaDenunciaScreen() {
   const [erro, setErro] = useState('');
   const [locating, setLocating] = useState(false);
 
+  // ÚNICA parte nova para expo-camera
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraPermission, requestCameraPermission] =
+    useCameraPermissions();
+  const cameraRef = useRef<CameraView>(null);
+
   const steps: Step[] = ['foto', 'categoria', 'localizacao', 'descricao'];
   const stepIndex = steps.indexOf(step);
 
-  const pickImage = async (useCamera: boolean) => {
-    const permission = useCamera
-      ? await ImagePicker.requestCameraPermissionsAsync()
-      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+  // CÂMERA: substitui apenas o uso da câmera do ImagePicker
+  const openCamera = async () => {
+    if (!cameraPermission?.granted) {
+      const permission = await requestCameraPermission();
 
-    if (!permission.granted) {
-      Alert.alert('Permissão necessária', 'Autorize o acesso à câmera ou galeria para anexar fotos.');
+      if (!permission.granted) {
+        Alert.alert(
+          'Permissão necessária',
+          'Autorize o acesso à câmera para anexar fotos.',
+        );
+        return;
+      }
+    }
+
+    setShowCamera(true);
+  };
+
+  const takePicture = async () => {
+    if (!cameraRef.current) {
       return;
     }
 
-    const result = useCamera
-      ? await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true })
-      : await ImagePicker.launchImageLibraryAsync({ quality: 0.7, allowsEditing: true });
+    try {
+      const result = await cameraRef.current.takePictureAsync({
+        quality: 0.7,
+      });
+
+      if (result?.uri) {
+        setImageUri(result.uri);
+        setShowCamera(false);
+      }
+    } catch {
+      Alert.alert(
+        'Erro',
+        'Não foi possível tirar a foto.',
+      );
+    }
+  };
+
+  // GALERIA: continua exatamente com expo-image-picker
+  const pickImage = async () => {
+    const permission =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert(
+        'Permissão necessária',
+        'Autorize o acesso à galeria para anexar fotos.',
+      );
+      return;
+    }
+
+    const result =
+      await ImagePicker.launchImageLibraryAsync({
+        quality: 0.7,
+        allowsEditing: true,
+      });
 
     if (!result.canceled && result.assets[0]) {
       setImageUri(result.assets[0].uri);
     }
   };
 
+  // LOCALIZAÇÃO: mantida como estava
   const captureLocation = async () => {
     setLocating(true);
     setErro('');
+
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      const { status } =
+        await Location.requestForegroundPermissionsAsync();
+
       if (status !== 'granted') {
-        Alert.alert('Permissão negada', 'Ative a localização para registrar o endereço automaticamente.');
+        Alert.alert(
+          'Permissão negada',
+          'Ative a localização para registrar o endereço automaticamente.',
+        );
         return;
       }
 
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+      const position =
+        await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
 
-      const [geo] = await Location.reverseGeocodeAsync({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-      });
+      const [geo] =
+        await Location.reverseGeocodeAsync({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
 
       if (geo) {
-        const parts = [geo.street, geo.name, geo.district, geo.city, geo.region].filter(Boolean);
-        const coords = ` (${position.coords.latitude.toFixed(5)}, ${position.coords.longitude.toFixed(5)})`;
+        const parts = [
+          geo.street,
+          geo.name,
+          geo.district,
+          geo.city,
+          geo.region,
+        ].filter(Boolean);
+
+        const coords = ` (${position.coords.latitude.toFixed(
+          5,
+        )}, ${position.coords.longitude.toFixed(5)})`;
+
         setEndereco(`${parts.join(', ')}${coords}`);
       } else {
         setEndereco(
-          `Lat: ${position.coords.latitude.toFixed(5)}, Lng: ${position.coords.longitude.toFixed(5)}`
+          `Lat: ${position.coords.latitude.toFixed(
+            5,
+          )}, Lng: ${position.coords.longitude.toFixed(5)}`,
         );
       }
     } catch {
-      setErro('Não foi possível obter a localização. Digite o endereço manualmente.');
+      setErro(
+        'Não foi possível obter a localização. Digite o endereço manualmente.',
+      );
     } finally {
       setLocating(false);
     }
@@ -99,35 +178,52 @@ export default function NovaDenunciaScreen() {
 
   const validateStep = (): boolean => {
     setErro('');
-    if (step === 'categoria' && (!categoria || !problema || !regiao)) {
+
+    if (
+      step === 'categoria' &&
+      (!categoria || !problema || !regiao)
+    ) {
       setErro('Selecione categoria, problema e região.');
       return false;
     }
+
     if (step === 'localizacao' && !endereco.trim()) {
       setErro('Informe ou capture o endereço.');
       return false;
     }
+
     if (step === 'descricao' && !descricao.trim()) {
       setErro('Informe a descrição da denúncia.');
       return false;
     }
+
     return true;
   };
 
   const nextStep = () => {
     if (!validateStep()) return;
+
     const next = steps[stepIndex + 1];
-    if (next) setStep(next);
+
+    if (next) {
+      setStep(next);
+    }
   };
 
   const prevStep = () => {
     const prev = steps[stepIndex - 1];
-    if (prev) setStep(prev);
-    else router.back();
+
+    if (prev) {
+      setStep(prev);
+    } else {
+      router.back();
+    }
   };
 
+  // SALVAMENTO: mantido como estava
   const handleSubmit = async () => {
     if (!validateStep()) return;
+
     setErro('');
 
     try {
@@ -141,10 +237,17 @@ export default function NovaDenunciaScreen() {
       });
 
       Alert.alert('Sucesso', 'Denúncia registrada com sucesso!', [
-        { text: 'OK', onPress: () => router.replace('/denuncias') },
+        {
+          text: 'OK',
+          onPress: () => router.replace('/denuncias'),
+        },
       ]);
     } catch (err) {
-      setErro(err instanceof ApiError ? err.message : 'Erro ao salvar denúncia');
+      setErro(
+        err instanceof ApiError
+          ? err.message
+          : 'Erro ao salvar denúncia',
+      );
     }
   };
 
@@ -152,6 +255,33 @@ export default function NovaDenunciaScreen() {
     logout();
     router.replace('/');
   };
+
+  // Tela da câmera
+  if (showCamera) {
+    return (
+      <View style={styles.cameraContainer}>
+        <CameraView
+          ref={cameraRef}
+          style={styles.camera}
+          facing="back"
+        />
+
+        <View style={styles.cameraControls}>
+          <PrimaryButton
+            label="Tirar foto"
+            onPress={takePicture}
+            style={styles.cameraButton}
+          />
+
+          <PrimaryButton
+            label="Cancelar"
+            onPress={() => setShowCamera(false)}
+            style={styles.cameraButton}
+          />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -162,26 +292,53 @@ export default function NovaDenunciaScreen() {
         onLogout={handleLogout}
       />
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={styles.stepIndicator}>
           Passo {stepIndex + 1} de {steps.length}
         </Text>
 
         {step === 'foto' && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Adicione imagens</Text>
-            <Pressable style={styles.imageBox} onPress={() => pickImage(false)}>
+            <Text style={styles.sectionTitle}>
+              Adicione imagens
+            </Text>
+
+            <Pressable
+              style={styles.imageBox}
+              onPress={openCamera}
+            >
               {imageUri ? (
-                <Image source={{ uri: imageUri }} style={styles.preview} />
+                <Image
+                  source={{ uri: imageUri }}
+                  style={styles.preview}
+                />
               ) : (
                 <Text style={styles.plus}>+</Text>
               )}
             </Pressable>
+
             <View style={styles.row}>
-              <PrimaryButton label="Galeria" onPress={() => pickImage(false)} style={styles.halfBtn} />
-              <PrimaryButton label="Câmera" onPress={() => pickImage(true)} style={styles.halfBtn} />
+              <PrimaryButton
+                label="Galeria"
+                onPress={pickImage}
+                style={styles.halfBtn}
+              />
+
+              <PrimaryButton
+                label="Câmera"
+                onPress={openCamera}
+                style={styles.halfBtn}
+              />
             </View>
-            <PrimaryButton label="Continuar" onPress={nextStep} style={styles.nextBtn} />
+
+            <PrimaryButton
+              label="Continuar"
+              onPress={nextStep}
+              style={styles.nextBtn}
+            />
           </View>
         )}
 
@@ -197,13 +354,19 @@ export default function NovaDenunciaScreen() {
                 setProblema('');
               }}
             />
+
             <SelectField
               label="Problema"
               value={problema}
-              options={categoria ? PROBLEMAS_POR_CATEGORIA[categoria] ?? [] : []}
+              options={
+                categoria
+                  ? PROBLEMAS_POR_CATEGORIA[categoria] ?? []
+                  : []
+              }
               placeholder="Título / Problema"
               onChange={setProblema}
             />
+
             <SelectField
               label="Região"
               value={regiao}
@@ -211,18 +374,28 @@ export default function NovaDenunciaScreen() {
               placeholder="Região"
               onChange={setRegiao}
             />
-            <PrimaryButton label="Continuar" onPress={nextStep} style={styles.nextBtn} />
+
+            <PrimaryButton
+              label="Continuar"
+              onPress={nextStep}
+              style={styles.nextBtn}
+            />
           </View>
         )}
 
         {step === 'localizacao' && (
           <View style={styles.section}>
             <PrimaryButton
-              label={locating ? 'Obtendo GPS...' : 'Usar minha localização (GPS)'}
+              label={
+                locating
+                  ? 'Obtendo GPS...'
+                  : 'Usar minha localização (GPS)'
+              }
               onPress={captureLocation}
               loading={locating}
               style={styles.nextBtn}
             />
+
             <TextInput
               style={styles.input}
               placeholder="Endereço"
@@ -231,7 +404,12 @@ export default function NovaDenunciaScreen() {
               onChangeText={setEndereco}
               multiline
             />
-            <PrimaryButton label="Continuar" onPress={nextStep} style={styles.nextBtn} />
+
+            <PrimaryButton
+              label="Continuar"
+              onPress={nextStep}
+              style={styles.nextBtn}
+            />
           </View>
         )}
 
@@ -247,6 +425,7 @@ export default function NovaDenunciaScreen() {
               numberOfLines={6}
               textAlignVertical="top"
             />
+
             <PrimaryButton
               label="Salvar"
               onPress={handleSubmit}
@@ -256,7 +435,11 @@ export default function NovaDenunciaScreen() {
           </View>
         )}
 
-        {erro ? <Text style={styles.error}>{erro}</Text> : null}
+        {erro ? (
+          <Text style={styles.error}>
+            {erro}
+          </Text>
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -267,26 +450,31 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
+
   content: {
     padding: 16,
     paddingBottom: 40,
     gap: 16,
   },
+
   stepIndicator: {
     textAlign: 'center',
     color: AppColors.textMuted,
     fontSize: 13,
     fontWeight: '600',
   },
+
   section: {
     gap: 14,
   },
+
   sectionTitle: {
     textAlign: 'center',
     fontSize: 15,
     fontWeight: '600',
     color: AppColors.text,
   },
+
   imageBox: {
     borderWidth: 1,
     borderColor: AppColors.border,
@@ -297,24 +485,30 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.white,
     overflow: 'hidden',
   },
+
   preview: {
     width: '100%',
     height: '100%',
   },
+
   plus: {
     fontSize: 48,
     color: AppColors.textMuted,
   },
+
   row: {
     flexDirection: 'row',
     gap: 10,
   },
+
   halfBtn: {
     flex: 1,
   },
+
   nextBtn: {
     marginTop: 4,
   },
+
   input: {
     borderWidth: 1,
     borderColor: AppColors.border,
@@ -325,13 +519,36 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.white,
     textAlign: 'center',
   },
+
   textArea: {
     minHeight: 140,
     textAlign: 'left',
   },
+
   error: {
     color: '#DC2626',
     textAlign: 'center',
     fontSize: 14,
+  },
+
+  cameraContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+
+  camera: {
+    flex: 1,
+  },
+
+  cameraControls: {
+    position: 'absolute',
+    bottom: 40,
+    left: 20,
+    right: 20,
+    gap: 12,
+  },
+
+  cameraButton: {
+    marginTop: 4,
   },
 });
