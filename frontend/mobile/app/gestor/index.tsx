@@ -20,6 +20,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useDemandStore } from '@/stores/useDemandStore';
 import { DemandFilters } from '@/types/demand';
 import { buildPeriodSeries, countBy, toSlices } from '@/utils/metricsAggregator';
+import { REGIAO_ABREVIADA } from '@/constants/demanda';
+import { filterDemands, hasActiveFilters } from '@/utils/demandFilters';
 import { AppColors, ChartPalette, ChartStatusColors } from '@/constants/colors';
 
 export default function GestorScreen() {
@@ -53,29 +55,14 @@ export default function GestorScreen() {
     setRefreshing(false);
   };
 
-  const hasActiveFilters = !!(
-    filters.status ||
-    filters.category ||
-    filters.region ||
-    filters.priority
-  );
+  const filtrosAtivos = hasActiveFilters(filters);
 
-  const filteredDemands = useMemo(
-    () =>
-      demands.filter((demand) => {
-        if (filters.status && demand.status !== filters.status) return false;
-        if (filters.category && demand.category !== filters.category) return false;
-        if (filters.region && demand.region !== filters.region) return false;
-        if (filters.priority && demand.priority !== filters.priority) return false;
-        return true;
-      }),
-    [demands, filters]
-  );
+  const filteredDemands = useMemo(() => filterDemands(demands, filters), [demands, filters]);
 
   // Sem filtro os números vêm do /metrics (total histórico). Com filtro o
   // recorte só existe no cliente, então são derivados da lista.
   const source = useMemo(() => {
-    if (hasActiveFilters || !metrics) {
+    if (filtrosAtivos || !metrics) {
       return {
         total: filteredDemands.length,
         byCategory: countBy(filteredDemands, (d) => d.category),
@@ -89,11 +76,18 @@ export default function GestorScreen() {
       byRegion: metrics.byRegion,
       byStatus: metrics.byStatus,
     };
-  }, [hasActiveFilters, metrics, filteredDemands]);
+  }, [filtrosAtivos, metrics, filteredDemands]);
 
   const categorySlices = useMemo(() => toSlices(source.byCategory), [source.byCategory]);
   const statusSlices = useMemo(() => toSlices(source.byStatus, 3), [source.byStatus]);
-  const regionSlices = useMemo(() => toSlices(source.byRegion), [source.byRegion]);
+  const regionSlices = useMemo(
+    () =>
+      toSlices(source.byRegion).map((slice) => ({
+        ...slice,
+        label: REGIAO_ABREVIADA[slice.label] ?? slice.label,
+      })),
+    [source.byRegion]
+  );
   const periodSeries = useMemo(() => buildPeriodSeries(filteredDemands), [filteredDemands]);
 
   const chartWidth = width - 64;

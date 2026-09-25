@@ -8,6 +8,7 @@ import {
   mapStatusToApi,
 } from '@/utils/demandMapper';
 import { Demand, DemandCategory, DemandPriority, DemandRegion, DemandStatus } from '@/types/demand';
+import { uriToBase64 } from '@/utils/imageUtils';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -42,9 +43,11 @@ export const demandService = {
     descricao: string;
     endereco: string;
     prioridade?: DemandPriority;
-    imagens?: string[];
+    /** URI local da foto. A conversão para base64 acontece aqui, não na tela. */
+    imagemUri?: string | null;
   }, solicitante = ''): Promise<Demand> {
-    const payload = buildCreatePayload(input);
+    const imagens = input.imagemUri ? [await uriToBase64(input.imagemUri)] : undefined;
+    const payload = buildCreatePayload({ ...input, imagens });
     const { data } = await api.post<ApiDenuncia>('/demands', payload);
     return mapDenunciaFromApi(data, solicitante);
   },

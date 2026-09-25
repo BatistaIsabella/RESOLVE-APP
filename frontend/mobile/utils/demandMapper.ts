@@ -80,9 +80,9 @@ export function mapDenunciaFromApi(denuncia: ApiDenuncia, solicitante = ''): Dem
     id: String(denuncia.id_denuncia),
     titulo: denuncia.titulo,
     location: denuncia.endereco,
-    category: CATEGORIA_FROM_API[denuncia.categoria] ?? 'Outros Empecilhos',
-    region: REGIAO_FROM_API[denuncia.regiao] ?? 'Outra',
-    status: STATUS_FROM_API[denuncia.status] ?? 'Aberta',
+    category: mapCategoryFromApi(denuncia.categoria),
+    region: mapRegionFromApi(denuncia.regiao),
+    status: mapStatusFromApi(denuncia.status),
     priority: PRIORIDADE_FROM_API[denuncia.prioridade] ?? 'Media',
     description: denuncia.descricao,
     createdAt: formatDataRegistro(denuncia.data_registro),
@@ -97,6 +97,18 @@ export function mapDenunciaFromApi(denuncia: ApiDenuncia, solicitante = ''): Dem
 
 export function mapDenunciasFromApi(denuncias: ApiDenuncia[], solicitante = ''): Demand[] {
   return denuncias.map((denuncia) => mapDenunciaFromApi(denuncia, solicitante));
+}
+
+export function mapCategoryFromApi(value: string): DemandCategory {
+  return CATEGORIA_FROM_API[value] ?? 'Outros Empecilhos';
+}
+
+export function mapRegionFromApi(value: string): DemandRegion {
+  return REGIAO_FROM_API[value] ?? 'Outra';
+}
+
+export function mapStatusFromApi(value: string): DemandStatus {
+  return STATUS_FROM_API[value] ?? 'Aberta';
 }
 
 export function mapCategoryToApi(category: DemandCategory): string {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { GradientHeader } from '@/components/ui/GradientHeader';
@@ -6,7 +6,6 @@ import { DemandCard } from '@/components/ui/DemandCard';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { useAuth } from '@/hooks/useAuth';
 import { useDemandStore } from '@/stores/useDemandStore';
-import { Demand } from '@/types/demand';
 import { AppColors } from '@/constants/colors';
 
 export default function DenunciaDetalhesScreen() {
@@ -17,11 +16,12 @@ export default function DenunciaDetalhesScreen() {
   const isLoading = useDemandStore((s) => s.isLoading);
   const error = useDemandStore((s) => s.error);
 
-  const [demand, setDemand] = useState<Demand | null>(null);
+  // Lida do store: nada de copia local, para a tela nao divergir da lista.
+  const demand = useDemandStore((s) => s.demands.find((d) => d.id === id) ?? null);
 
   useEffect(() => {
     if (id) {
-      fetchDemandById(id).then(setDemand);
+      fetchDemandById(id);
     }
   }, [id, fetchDemandById]);
 

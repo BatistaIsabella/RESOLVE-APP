@@ -20,7 +20,6 @@ import { useDemandStore } from '@/stores/useDemandStore';
 import { CATEGORIAS, PROBLEMAS_POR_CATEGORIA, REGIOES } from '@/constants/demanda';
 import { DemandCategory, DemandRegion } from '@/types/demand';
 import { ApiError } from '@/lib/api';
-import { uriToBase64 } from '@/utils/imageUtils';
 import { AppColors } from '@/constants/colors';
 
 type Step = 'foto' | 'categoria' | 'localizacao' | 'descricao';
@@ -132,18 +131,13 @@ export default function NovaDenunciaScreen() {
     setErro('');
 
     try {
-      let imagens: string[] | undefined;
-      if (imageUri) {
-        imagens = [await uriToBase64(imageUri)];
-      }
-
       await createDemand({
         titulo: problema,
         categoria: categoria as DemandCategory,
         regiao: regiao as DemandRegion,
         descricao: descricao.trim(),
         endereco: endereco.trim(),
-        imagens,
+        imagemUri: imageUri,
       });
 
       Alert.alert('Sucesso', 'Denúncia registrada com sucesso!', [

@@ -19,6 +19,12 @@ export const REGIOES = [
 
 export const STATUS = ['Aberta', 'Em análise', 'Resolvida'] as const;
 
+// Só para eixos de gráfico, onde o nome por extenso não cabe. O rótulo de
+// domínio continua sendo o nome completo.
+export const REGIAO_ABREVIADA: Record<string, string> = {
+  'Região Metropolitana do Recife': 'RMR',
+};
+
 export const PRIORIDADES = ['Baixa', 'Média', 'Alta'] as const;
 
 export const PROBLEMAS_POR_CATEGORIA: Record<string, string[]> = {
