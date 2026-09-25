@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   RefreshControl,
@@ -14,20 +14,21 @@ import { DemandFiltersPanel } from '@/components/ui/DemandFilters';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { useAuth } from '@/hooks/useAuth';
 import { useDemandStore } from '@/stores/useDemandStore';
+import { filterDemands } from '@/utils/demandFilters';
 import { DemandFilters } from '@/types/demand';
 import { AppColors } from '@/constants/colors';
 
 export default function DenunciasScreen() {
   const router = useRouter();
   const { userName, logout } = useAuth();
-  const {
-    filters,
-    isLoading,
-    error,
-    fetchDemands,
-    setFilters,
-    getFilteredDemands,
-  } = useDemandStore();
+  // Seletor por campo: assinar o store inteiro re-renderizava a lista a cada
+  // mudança de qualquer parte do estado.
+  const filters = useDemandStore((s) => s.filters);
+  const demands = useDemandStore((s) => s.demands);
+  const isLoading = useDemandStore((s) => s.isLoading);
+  const error = useDemandStore((s) => s.error);
+  const fetchDemands = useDemandStore((s) => s.fetchDemands);
+  const setFilters = useDemandStore((s) => s.setFilters);
 
   const [refreshing, setRefreshing] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<DemandFilters>(filters);
@@ -51,14 +52,17 @@ export default function DenunciasScreen() {
     setFilters(next);
   };
 
-  const demands = getFilteredDemands();
+  const visibleDemands = useMemo(
+    () => filterDemands(demands, filters),
+    [demands, filters]
+  );
 
   const handleLogout = () => {
     logout();
     router.replace('/');
   };
 
-  if (isLoading && demands.length === 0 && !refreshing) {
+  if (isLoading && visibleDemands.length === 0 && !refreshing) {
     return <LoadingScreen message="Carregando denúncias..." />;
   }
 
@@ -83,7 +87,7 @@ export default function DenunciasScreen() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <FlatList
-          data={demands}
+          data={visibleDemands}
           keyExtractor={(item) => item.id}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={AppColors.primary} />

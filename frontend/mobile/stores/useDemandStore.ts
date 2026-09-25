@@ -4,6 +4,7 @@ import { demandService } from '@/services/demandService';
 import { metricsService } from '@/services/metricsService';
 import { ApiError } from '@/lib/api';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { filterDemands } from '@/utils/demandFilters';
 
 interface DemandStore {
   demands: Demand[];
@@ -21,13 +22,21 @@ interface DemandStore {
     descricao: string;
     endereco: string;
     prioridade?: DemandPriority;
-    imagens?: string[];
+    imagemUri?: string | null;
   }) => Promise<Demand>;
   updateDemandStatus: (id: string, status: DemandStatus) => Promise<void>;
   updateDemandPriority: (id: string, priority: DemandPriority) => Promise<void>;
   setFilters: (filters: Partial<DemandFilters>) => void;
   resetFilters: () => void;
   getFilteredDemands: () => Demand[];
+}
+
+function upsert(demands: Demand[], demand: Demand): Demand[] {
+  const index = demands.findIndex((d) => d.id === demand.id);
+  if (index === -1) return [demand, ...demands];
+  const next = [...demands];
+  next[index] = demand;
+  return next;
 }
 
 const defaultFilters: DemandFilters = {
@@ -78,7 +87,7 @@ export const useDemandStore = create<DemandStore>((set, get) => ({
         role === 'gestor'
           ? await demandService.getByIdForGestor(id)
           : await demandService.getById(id, userEmail ?? '');
-      set({ isLoading: false });
+      set((state) => ({ demands: upsert(state.demands, demand), isLoading: false }));
       return demand;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao carregar demanda';
@@ -102,31 +111,41 @@ export const useDemandStore = create<DemandStore>((set, get) => ({
   },
 
   updateDemandStatus: async (id, status) => {
-    set({ isLoading: true, error: null });
+    const anterior = get().demands.find((d) => d.id === id) ?? null;
+    // Pinta na hora e desfaz se a API recusar: a tela le a lista e nao precisa
+    // manter copia propria para fazer rollback.
+    set((state) => ({
+      demands: state.demands.map((d) => (d.id === id ? { ...d, status } : d)),
+      error: null,
+    }));
     try {
       const updated = await demandService.updateStatus(id, status);
-      set((state) => ({
-        demands: state.demands.map((d) => (d.id === id ? updated : d)),
-        isLoading: false,
-      }));
+      set((state) => ({ demands: upsert(state.demands, updated) }));
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao atualizar status';
-      set({ isLoading: false, error: message });
+      set((state) => ({
+        demands: anterior ? upsert(state.demands, anterior) : state.demands,
+        error: message,
+      }));
       throw err;
     }
   },
 
   updateDemandPriority: async (id, priority) => {
-    set({ isLoading: true, error: null });
+    const anterior = get().demands.find((d) => d.id === id) ?? null;
+    set((state) => ({
+      demands: state.demands.map((d) => (d.id === id ? { ...d, priority } : d)),
+      error: null,
+    }));
     try {
       const updated = await demandService.updatePriority(id, priority);
-      set((state) => ({
-        demands: state.demands.map((d) => (d.id === id ? updated : d)),
-        isLoading: false,
-      }));
+      set((state) => ({ demands: upsert(state.demands, updated) }));
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Erro ao atualizar prioridade';
-      set({ isLoading: false, error: message });
+      set((state) => ({
+        demands: anterior ? upsert(state.demands, anterior) : state.demands,
+        error: message,
+      }));
       throw err;
     }
   },
@@ -137,12 +156,6 @@ export const useDemandStore = create<DemandStore>((set, get) => ({
 
   getFilteredDemands: () => {
     const { demands, filters } = get();
-    return demands.filter((demand) => {
-      if (filters.status && demand.status !== filters.status) return false;
-      if (filters.category && demand.category !== filters.category) return false;
-      if (filters.region && demand.region !== filters.region) return false;
-      if (filters.priority && demand.priority !== filters.priority) return false;
-      return true;
-    });
+    return filterDemands(demands, filters);
   },
 }));

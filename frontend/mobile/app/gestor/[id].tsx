@@ -7,7 +7,7 @@ import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { SelectField } from '@/components/ui/SelectField';
 import { useAuth } from '@/hooks/useAuth';
 import { useDemandStore } from '@/stores/useDemandStore';
-import { Demand, DemandPriority, DemandStatus } from '@/types/demand';
+import { DemandPriority, DemandStatus } from '@/types/demand';
 import { PRIORIDADES, STATUS } from '@/constants/demanda';
 import { formatPriorityLabel } from '@/utils/demandMapper';
 import { ApiError } from '@/lib/api';
@@ -24,27 +24,23 @@ export default function GestorDemandaScreen() {
   const isLoading = useDemandStore((s) => s.isLoading);
   const storeError = useDemandStore((s) => s.error);
 
-  const [demand, setDemand] = useState<Demand | null>(null);
+  // Lida do store: o otimismo e o rollback vivem la, nao aqui.
+  const demand = useDemandStore((s) => s.demands.find((d) => d.id === id) ?? null);
   const [erro, setErro] = useState('');
 
   useEffect(() => {
     if (id) {
-      fetchDemandById(id).then(setDemand);
+      fetchDemandById(id);
     }
   }, [id, fetchDemandById]);
 
   const handleStatusChange = async (value: string) => {
     if (!id || !demand || value === demand.status) return;
-    const status = value as DemandStatus;
-    const anterior = demand;
     setErro('');
-    setDemand({ ...demand, status });
     try {
-      await updateDemandStatus(id, status);
-      setDemand(await fetchDemandById(id));
+      await updateDemandStatus(id, value as DemandStatus);
     } catch (err) {
       setErro(err instanceof ApiError ? err.message : 'Erro ao atualizar status');
-      setDemand(anterior);
     }
   };
 
@@ -52,15 +48,11 @@ export default function GestorDemandaScreen() {
     if (!id || !demand) return;
     const priority = (value === 'Média' ? 'Media' : value) as DemandPriority;
     if (priority === demand.priority) return;
-    const anterior = demand;
     setErro('');
-    setDemand({ ...demand, priority });
     try {
       await updateDemandPriority(id, priority);
-      setDemand(await fetchDemandById(id));
     } catch (err) {
       setErro(err instanceof ApiError ? err.message : 'Erro ao atualizar prioridade');
-      setDemand(anterior);
     }
   };
 
