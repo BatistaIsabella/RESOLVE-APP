@@ -1,3 +1,11 @@
+## Documentação do grupo
+
+Plano de testes e Backlog de automação
+
+**Arquivo:**  [Template_Plano_de_Testes_e_Backlog grupo 5.md - Google Docs](https://docs.google.com/document/d/1R-aOrtenqLDhXF6g0rWwx9QbTeDCCBjN_vuRoMfj734/edit?tab=t.0#heading=h.ipy4hhrvrbqi)
+
+------------------------------------------------------------------------
+
 # RESOLVE --- Testes E2E (Playwright + TypeScript)
 
 Suíte de testes End-to-End do RESOLVE. Cada arquivo em `tests/`
