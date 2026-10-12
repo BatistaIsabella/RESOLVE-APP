@@ -131,7 +131,8 @@ async function logarGestorViaUi(
 
 async function lerTotal(page: import('@playwright/test').Page): Promise<number> {
   const bloco = page.locator('div.bg-purple-600').filter({ hasText: 'Demandas registradas' });
-  const texto = await bloco.locator('p.text-7xl').innerText();
+  await bloco.locator('p.text-7xl').waitFor({ timeout: 30000 });
+  const texto = await bloco.locator('p.text-7xl').innerText({ timeout: 30000 });
   return Number(texto.trim());
 }
 
@@ -140,10 +141,12 @@ async function lerContagemCategoria(
   categoria: string
 ): Promise<number> {
   const bloco = page.locator('div.bg-purple-600').filter({ hasText: 'Demandas por categoria' });
+  await bloco.waitFor({ timeout: 30000 });
   const linha = bloco
     .locator('div.flex.items-center.justify-between.gap-1')
     .filter({ hasText: categoria });
-  const texto = await linha.locator('span.font-bold').innerText();
+  await linha.locator('span.font-bold').waitFor({ timeout: 30000 });
+  const texto = await linha.locator('span.font-bold').innerText({ timeout: 30000 });
   return Number(texto.trim());
 }
 
@@ -152,10 +155,12 @@ async function lerContagemRegiao(
   regiao: string
 ): Promise<number> {
   const bloco = page.locator('div.bg-purple-600').filter({ hasText: 'Demandas por região' });
+  await bloco.waitFor({ timeout: 30000 });
   const linha = bloco
     .locator('div.flex.items-center.justify-between.gap-1')
     .filter({ hasText: regiao });
-  const texto = await linha.locator('span.font-bold').innerText();
+  await linha.locator('span.font-bold').waitFor({ timeout: 30000 });
+  const texto = await linha.locator('span.font-bold').innerText({ timeout: 30000 });
   return Number(texto.trim());
 }
 
@@ -164,6 +169,7 @@ test.describe('Cenario 9 - Painel Administrativo do Gestor', () => {
     page,
     request,
   }) => {
+    test.setTimeout(120_000); // Redis cold-start em CI pode ser lento
     const gestor = await criarUsuario(request, 'gestor');
     await logarGestorViaUi(page, gestor);
 
@@ -183,18 +189,18 @@ test.describe('Cenario 9 - Painel Administrativo do Gestor', () => {
 
     await page.goto('/gestor/dashboard');
     await expect(page).toHaveURL(/\/gestor\/dashboard/, { timeout: 30000 });
-    await page.getByText('Demandas registradas').waitFor({ timeout: 15000 });
+    await page.getByText('Demandas registradas').waitFor({ timeout: 45000 });
 
     await expect
-      .poll(() => lerTotal(page), { timeout: 15000 })
+      .poll(() => lerTotal(page), { timeout: 60000 })
       .toBeGreaterThanOrEqual(totalAntes + QTD_DEMANDAS_CRIADAS);
 
     await expect
-      .poll(() => lerContagemCategoria(page, CATEGORIA_TESTE), { timeout: 10000 })
+      .poll(() => lerContagemCategoria(page, CATEGORIA_TESTE), { timeout: 30000 })
       .toBeGreaterThanOrEqual(categoriaAntes + QTD_DEMANDAS_CRIADAS);
 
     await expect
-      .poll(() => lerContagemRegiao(page, REGIAO_TESTE), { timeout: 10000 })
+      .poll(() => lerContagemRegiao(page, REGIAO_TESTE), { timeout: 30000 })
       .toBeGreaterThanOrEqual(regiaoAntes + QTD_DEMANDAS_CRIADAS);
   });
 
