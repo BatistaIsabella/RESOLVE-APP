@@ -51,6 +51,8 @@ jobs:
       - name: "Testes Unitários"
         working-directory: resolve-app/backend/demand-service
         run: npx vitest run --config vitest.unit.config.ts
+        env:
+          JWT_SECRET: ''
 
       - name: Gerar Prisma Client — auth-service
         working-directory: resolve-app/backend/auth-service
