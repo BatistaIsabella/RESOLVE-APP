@@ -105,7 +105,7 @@ jobs:
         env:
           DATABASE_URL: ${{ env.DATABASE_URL_DEMAND }}
           REDIS_URL: ${{ env.REDIS_URL }}
-          JWT_SECRET: ${{ env.JWT_SECRET }}
+          JWT_SECRET: change-me
           PORT: 3002
 
       - name: Subir backend do RESOLVE para E2E
