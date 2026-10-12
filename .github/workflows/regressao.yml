@@ -54,18 +54,15 @@ jobs:
         env:
           JWT_SECRET: ''
 
-      - name: Criar schemas PostgreSQL
-        run: docker exec smartcity_postgres psql -U postgres -c "CREATE SCHEMA IF NOT EXISTS auth; CREATE SCHEMA IF NOT EXISTS demand;"
-
       - name: Gerar Prisma Client — auth-service
         working-directory: resolve-app/backend/auth-service
         run: npx prisma generate
         env:
           DATABASE_URL: ${{ env.DATABASE_URL_AUTH }}
 
-      - name: Executar migrações — auth-service
+      - name: Criar tabelas — auth-service
         working-directory: resolve-app/backend/auth-service
-        run: npx prisma migrate deploy
+        run: npx prisma db push --accept-data-loss
         env:
           DATABASE_URL: ${{ env.DATABASE_URL_AUTH }}
 
@@ -75,9 +72,9 @@ jobs:
         env:
           DATABASE_URL: ${{ env.DATABASE_URL_DEMAND }}
 
-      - name: Executar migrações — demand-service
+      - name: Criar tabelas — demand-service
         working-directory: resolve-app/backend/demand-service
-        run: npx prisma migrate deploy
+        run: npx prisma db push --accept-data-loss
         env:
           DATABASE_URL: ${{ env.DATABASE_URL_DEMAND }}
 
