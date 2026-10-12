@@ -1,0 +1,151 @@
+name: Regressão Completa
+
+on:
+  workflow_dispatch:
+
+jobs:
+  regressao:
+    name: Regressão Completa
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL_AUTH: postgresql://postgres:postgrespassword@localhost:5432/postgres
+      DATABASE_URL_DEMAND: postgresql://postgres:postgrespassword@localhost:5432/postgres?schema=public
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ci-secret-resolve-app
+
+    steps:
+      - name: Checkout resolve-app
+        uses: actions/checkout@v4
+        with:
+          path: resolve-app
+
+      - name: Checkout RESOLVE
+        uses: actions/checkout@v4
+        with:
+          repository: Cecimedeiros/RESOLVE
+          path: resolve-web
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Subir PostgreSQL e Redis
+        working-directory: resolve-app/backend
+        run: docker compose up -d postgres redis
+
+      - name: Aguardar PostgreSQL e Redis ficarem prontos
+        run: |
+          timeout 60 bash -c 'until docker exec smartcity_postgres pg_isready -U postgres; do sleep 2; done'
+          timeout 30 bash -c 'until docker exec smartcity_redis redis-cli ping | grep -q PONG; do sleep 2; done'
+
+      - name: Instalar dependências — demand-service
+        working-directory: resolve-app/backend/demand-service
+        run: npm ci
+
+      - name: Instalar dependências — auth-service
+        working-directory: resolve-app/backend/auth-service
+        run: npm ci
+
+      - name: "Testes Unitários"
+        working-directory: resolve-app/backend/demand-service
+        run: npx vitest run --config vitest.unit.config.ts
+
+      - name: Gerar Prisma Client — auth-service
+        working-directory: resolve-app/backend/auth-service
+        run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL_AUTH }}
+
+      - name: Executar migrações — auth-service
+        working-directory: resolve-app/backend/auth-service
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL_AUTH }}
+
+      - name: Gerar Prisma Client — demand-service
+        working-directory: resolve-app/backend/demand-service
+        run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL_DEMAND }}
+
+      - name: Executar migrações — demand-service
+        working-directory: resolve-app/backend/demand-service
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL_DEMAND }}
+
+      - name: "Testes de API — auth-service"
+        working-directory: resolve-app/backend/auth-service
+        run: npx vitest run
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL_AUTH }}
+          JWT_SECRET: ${{ env.JWT_SECRET }}
+          PORT: 3001
+
+      - name: "Testes de API — demand-service"
+        working-directory: resolve-app/backend/demand-service
+        run: npx vitest run
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL_DEMAND }}
+          REDIS_URL: ${{ env.REDIS_URL }}
+          JWT_SECRET: ${{ env.JWT_SECRET }}
+          PORT: 3002
+
+      - name: Subir backend do RESOLVE para E2E
+        working-directory: resolve-web/backend
+        run: docker compose up -d --build
+        env:
+          JWT_SECRET: ${{ env.JWT_SECRET }}
+
+      - name: Aguardar api-gateway do RESOLVE (:8080)
+        run: timeout 180 bash -c 'until nc -z localhost 8080; do sleep 3; done'
+
+      - name: Instalar dependências — frontend RESOLVE
+        working-directory: resolve-web/frontend
+        run: npm ci
+
+      - name: Build frontend RESOLVE
+        working-directory: resolve-web/frontend
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_GATEWAY_URL: http://localhost:8080
+
+      - name: Iniciar frontend RESOLVE em segundo plano
+        working-directory: resolve-web/frontend
+        run: |
+          NEXT_PUBLIC_API_GATEWAY_URL=http://localhost:8080 npm run start &
+          timeout 60 bash -c 'until nc -z localhost 3000; do sleep 2; done'
+
+      - name: Instalar dependências — e2e
+        working-directory: resolve-app/e2e
+        run: npm ci
+
+      - name: Instalar Chromium (Playwright)
+        working-directory: resolve-app/e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: "Testes E2E"
+        working-directory: resolve-app/e2e
+        run: npx playwright test
+        env:
+          E2E_API_URL: http://localhost:8080
+          E2E_REUSE_SERVER: 'true'
+          CI: true
+
+      - name: Upload relatório Playwright
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: resolve-app/e2e/playwright-report/
+          retention-days: 7
+
+      - name: Upload screenshots e vídeos de falhas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: resolve-app/e2e/test-results/
+          retention-days: 7
