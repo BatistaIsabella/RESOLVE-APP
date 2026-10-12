@@ -8,7 +8,13 @@ export function roleMiddleware(...roles: Array<'cidadao' | 'gestor'>) {
     }
 
     if (!roles.includes(req.user.papel)) {
-      return res.status(403).json({ error: 'Acesso negado para este perfil' });
+      const mensagem =
+        roles.length === 1 && roles[0] === 'cidadao'
+          ? 'Acesso restrito a cidadãos'
+          : roles.length === 1 && roles[0] === 'gestor'
+          ? 'Acesso restrito a gestores'
+          : 'Acesso negado para este perfil';
+      return res.status(403).json({ error: mensagem });
     }
 
     next();

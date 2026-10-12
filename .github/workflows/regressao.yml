@@ -78,6 +78,19 @@ jobs:
         env:
           DATABASE_URL: ${{ env.DATABASE_URL_DEMAND }}
 
+      - name: Criar tabela auxiliar demand.usuarios
+        run: |
+          docker exec smartcity_postgres psql -U postgres -d postgres -c "
+            CREATE TABLE IF NOT EXISTS demand.usuarios (
+              id SERIAL PRIMARY KEY,
+              nome VARCHAR(100) NOT NULL,
+              email VARCHAR(35) NOT NULL,
+              senha VARCHAR(60) NOT NULL,
+              papel VARCHAR(20) NOT NULL,
+              CONSTRAINT usuarios_demand_email_key UNIQUE (email)
+            );
+          "
+
       - name: "Testes de API — auth-service"
         working-directory: resolve-app/backend/auth-service
         run: npx vitest run

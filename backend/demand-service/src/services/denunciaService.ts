@@ -50,10 +50,18 @@ export function validateCreateDenunciaInput(body: Record<string, unknown>): Crea
     categoria,
     regiao,
     descricao,
-    endereco,
+    endereco: enderecoField,
+    rua,
+    numero,
+    bairro,
+    cidade,
+    cep,
     prioridade,
     imagens,
   } = body;
+
+  const endereco = enderecoField
+    || ([rua, numero, bairro, cidade, cep].filter(Boolean).join(', ') || undefined);
 
   const camposObrigatorios = { titulo, categoria, regiao, descricao, endereco };
   const faltando = Object.entries(camposObrigatorios)
