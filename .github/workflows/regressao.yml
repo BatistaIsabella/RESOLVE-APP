@@ -10,7 +10,7 @@ jobs:
 
     env:
       DATABASE_URL_AUTH: postgresql://postgres:postgrespassword@localhost:5432/postgres
-      DATABASE_URL_DEMAND: postgresql://postgres:postgrespassword@localhost:5432/postgres?schema=public
+      DATABASE_URL_DEMAND: postgresql://postgres:postgrespassword@localhost:5432/postgres?schema=demand
       REDIS_URL: redis://localhost:6379
       JWT_SECRET: ci-secret-resolve-app
 
@@ -53,6 +53,9 @@ jobs:
         run: npx vitest run --config vitest.unit.config.ts
         env:
           JWT_SECRET: ''
+
+      - name: Criar schemas PostgreSQL
+        run: docker exec smartcity_postgres psql -U postgres -c "CREATE SCHEMA IF NOT EXISTS auth; CREATE SCHEMA IF NOT EXISTS demand;"
 
       - name: Gerar Prisma Client — auth-service
         working-directory: resolve-app/backend/auth-service
