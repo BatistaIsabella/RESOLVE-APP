@@ -1,7 +1,7 @@
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["public"]
+  schemas  = ["auth"]
 }
 
 generator client {
@@ -17,12 +17,12 @@ model Usuario {
   papel Papel  @default(CIDADAO)
 
   @@map("usuarios")
-  @@schema("public")
+  @@schema("auth")
 }
 
 enum Papel {
   CIDADAO
   GESTOR
 
-  @@schema("public")
+  @@schema("auth")
 }

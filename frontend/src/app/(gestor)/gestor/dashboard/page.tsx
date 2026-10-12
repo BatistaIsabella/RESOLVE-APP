@@ -35,23 +35,19 @@ export default function Page() {
 
   useEffect(() => {
     setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted || !_hasHydrated) return;
     if (!token || role !== 'gestor') {
       router.push('/logingestor');
       return;
     }
     fetchDemands();
     fetchMetrics();
-  }, [mounted, _hasHydrated, fetchDemands, fetchMetrics, token, role, router]);
+  }, [fetchDemands, fetchMetrics, token, role, router]);
 
   useEffect(() => {
     setTempFilters(filters);
   }, [filters]);
 
-  if (!mounted || !_hasHydrated || !token || role !== 'gestor') {
+  if (!mounted || !_hasHydrated) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">

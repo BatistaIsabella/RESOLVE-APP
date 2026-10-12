@@ -13,6 +13,9 @@
  *   5 - Confirma que os dados de sessão foram limpos, tentando acessar
  *       uma rota protegida diretamente e validando que o usuário é
  *       redirecionado de volta ao login (sem acesso indevido).
+ * 
+ * Execução: npx playwright test tests/11-logout.spec.ts
+   Pré-requisito: projeto rodando (backend Docker + frontend Next.js)
  **/
 
 import { test, expect, APIRequestContext } from '@playwright/test';
@@ -91,9 +94,7 @@ test.describe('Cenário 11 — Encerramento de sessão (Logout)', () => {
     await page.goto('/telaUsuario')
     await expect(page).toHaveURL(/\/login$/)
 
-    // Verificação direta do estado persistido pelo Zustand (chave
-    // "smart-city-storage-v2"), garantindo que token, papel, e-mail e
-    // nome do usuário foram efetivamente limpos após o logout.
+    
     const estadoPersistido = await page.evaluate(() => {
       const bruto = localStorage.getItem('smart-city-storage-v2')
       return bruto ? JSON.parse(bruto) : null

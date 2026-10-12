@@ -37,8 +37,7 @@ services:
     environment:
       PORT: 3001
       DATABASE_URL: "postgresql://postgres:postgrespassword@postgres:5432/postgres?schema=public"
-      DATABASE_URL_AUTH: "postgresql://postgres:postgrespassword@postgres:5432/postgres?schema=public"
-      GESTOR_ACCESS_CODE: "change-me-codigo-gestor"
+      #DATABASE_URL_AUTH: "postgresql://postgres:postgrespassword@postgres:5432/postgres?schema=public"
     ports:
       - "3001:3001"
     depends_on:
@@ -53,7 +52,7 @@ services:
       PORT: 3002
       REDIS_URL: redis://redis:6379
       DATABASE_URL: "postgresql://postgres:postgrespassword@postgres:5432/postgres?schema=public"
-      DATABASE_URL_AUTH: "postgresql://postgres:postgrespassword@postgres:5432/postgres?schema=public"
+      #DATABASE_URL_AUTH: "postgresql://postgres:postgrespassword@postgres:5432/postgres?schema=public"
     ports:
       - "3002:3002"
     depends_on:
@@ -70,7 +69,7 @@ services:
       PORT: 3003
       REDIS_URL: redis://redis:6379
       DATABASE_URL: "postgresql://postgres:postgrespassword@postgres:5432/postgres?schema=public"
-      DATABASE_URL_AUTH: "postgresql://postgres:postgrespassword@postgres:5432/postgres?schema=public"
+      #DATABASE_URL_AUTH: "postgresql://postgres:postgrespassword@postgres:5432/postgres?schema=public"
     ports:
       - "3003:3003"
     depends_on:

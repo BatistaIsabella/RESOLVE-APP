@@ -179,7 +179,7 @@ PostgreSQL / Redis
 
 | Método | Rota | Descrição | Auth |
 |---|---|---|---|
-| POST | `/auth/register` | Cadastra novo usuário. Papel `gestor` exige `codigoAcesso` válido no corpo, senão 403 | ❌ |
+| POST | `/auth/register` | Cadastra novo usuário | ❌ |
 | POST | `/auth/login` | Autentica e retorna JWT | ❌ |
 
 ### demand-service — porta 3002
@@ -197,41 +197,6 @@ PostgreSQL / Redis
 | Método | Rota | Descrição | Auth |
 |---|---|---|---|
 | GET | `/metrics` | Retorna KPIs e estatísticas | ✅ |
-
----
-
-## Deploy em produção (Coolify / self-hosted)
-
-O `docker-compose.prod.yml` empacota os 6 containers (Postgres, Redis, os 4 serviços e `cloudflared`) prontos para deploy via Coolify. Nenhum serviço publica porta no host — tudo fica só na rede interna do compose, e o `cloudflared` expõe o `api-gateway` para fora através de um Cloudflare Tunnel. Isso evita colisão com a porta 8080 do próprio Traefik do Coolify (`coolify-proxy`) e segue o mesmo padrão usado em outros projetos do servidor (ex.: Beholder).
-
-### Criando o túnel no Cloudflare
-1. No painel do Cloudflare Zero Trust: **Networks → Tunnels → Create a tunnel**, tipo *Cloudflared*.
-2. Na aba de instalação, escolha **Docker** e copie o valor do `--token` (é o `CLOUDFLARE_TUNNEL_TOKEN`).
-3. Em **Public Hostname**, aponte o subdomínio desejado (ex. `resolve-api.seudominio.com`) para `http://api-gateway:8080` — o `cloudflared` está na mesma rede Docker do `api-gateway` e o resolve pelo nome do serviço.
-
-### No Coolify
-1. Crie um novo recurso do tipo **Docker Compose**, apontando para este repositório.
-2. Defina o **Base Directory** como `backend` e o **Docker Compose Location** como `docker-compose.prod.yml`.
-3. Em **Environment Variables**, defina (veja `.env.production.example`):
-   - `POSTGRES_PASSWORD` — senha do banco.
-   - `JWT_SECRET` — segredo para assinar os JWTs (gere com `openssl rand -base64 48`). É compartilhado entre `auth-service`, `demand-service` e `metrics-service`.
-   - `GESTOR_ACCESS_CODE` — código exigido para criar conta de gestor (gere com `openssl rand -base64 24`). Sem ele o cadastro de gestor responde 403, porque em produção não há valor padrão.
-   - `CLOUDFLARE_TUNNEL_TOKEN` — token do túnel criado acima.
-   - `POSTGRES_USER` / `POSTGRES_DB` são opcionais (default `postgres`).
-4. Deploy. O `postgres-init/001-create-schemas.sql` cria o schema `demand` automaticamente na primeira subida do volume; `auth-service` e `demand-service` também garantem o schema e rodam `prisma migrate deploy` a cada start, de forma idempotente.
-5. Não é necessário configurar domínio pela aba **Domains** do Coolify — a exposição pública é feita pelo túnel.
-
-### Validação local antes de subir
-```bash
-cd backend
-cp .env.production.example .env
-# localmente não há túnel, então pode comentar o serviço cloudflared
-# ou exportar um CLOUDFLARE_TUNNEL_TOKEN de teste antes de subir
-docker compose -f docker-compose.prod.yml --env-file .env up -d --build auth-service demand-service metrics-service api-gateway postgres redis
-docker compose -f docker-compose.prod.yml exec api-gateway wget -qO- http://localhost:8080/health
-```
-
-> **Atenção:** o cadastro com papel `gestor` exige o `codigoAcesso` correto no corpo da requisição, conferido contra `GESTOR_ACCESS_CODE`. Se a variável não estiver definida, o `auth-service` recusa todo cadastro de gestor em produção (403) — não há valor padrão fora de desenvolvimento. Defina-a antes do primeiro deploy, ou nenhuma conta de gestor poderá ser criada.
 
 ---
 

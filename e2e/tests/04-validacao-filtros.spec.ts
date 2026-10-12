@@ -1,47 +1,39 @@
 /**
  * Cenário 4 — Cidadão filtra demandas por Categoria e Região
  *
+ * O QUE ESTE TESTE VALIDA:
  * "Como Cidadão, quero aplicar simultaneamente os filtros de
  * Categoria e Região na tela inicial, para visualizar apenas
  * as demandas que correspondam aos critérios selecionados."
  *
- * Este teste valida o comportamento combinado dos filtros,
- * garantindo que:
- *
  * - Uma demanda que corresponde à Categoria e à Região
- *   selecionadas seja exibida na lista.
+ *   selecionadas é exibida na lista.
+ * - Uma demanda com a mesma Categoria, mas de Região diferente,
+ *   NÃO é exibida.
+ * - Os filtros são aplicados de forma conjunta (AND), considerando
+ *   os dois critérios simultaneamente — não apenas um deles.
  *
- * - Uma demanda que possui a mesma Categoria, mas pertence
- *   a uma Região diferente, não seja exibida.
+ * FLUXO AUTOMATIZADO:
+ * 1. Arrange (via API): cria um cidadão de teste, faz login pra obter
+ *    o token, e cria duas demandas:
+ *      - válida: categoria "Manutenção de vias" + região "Região
+ *        Metropolitana do Recife"
+ *      - inválida: mesma categoria + região "Outra"
+ * 2. Login real pela UI em /login e confirma redirecionamento para
+ *    /telaUsuario (toHaveURL).
+ * 3. Seleciona os dois filtros (Categoria e Região) nos <select> da
+ *    tela inicial.
+ * 4. Valida o resultado:
+ *      - o card da demanda válida está visível (toBeVisible)
+ *      - o card da demanda de outra região não aparece (toHaveCount(0))
+ *      - waitForResponse garante que a lista já foi atualizada pela
+ *        API antes da validação
+ * 
+ * Pré-requisito: projeto rodando (backend Docker + frontend Next.js)
  *
- * - Os filtros sejam aplicados de forma conjunta, considerando
- *   os dois critérios simultaneamente, e não apenas um deles.
- *
- * Para isso, são criadas duas demandas via API:
- * 1. Demanda válida: Categoria "Manutenção de vias" +
- *    Região Metropolitana do Recife.
- * 2. Demanda inválida: Categoria "Manutenção de vias" +
- *    Região "Outra".
- *
- * Após o login do cidadão, os dois filtros são selecionados
- * na interface e a lista de demandas é validada.
- *
- * A validação é realizada através das seguintes asserções:
- *
- * - toHaveURL: verifica se o cidadão foi redirecionado
- *   corretamente para a tela inicial após o login.
- *
- * - toBeVisible: verifica se o card da demanda que atende
- *   aos dois filtros está visível na lista de resultados.
- *
- * - toHaveCount(0): verifica se o card da demanda que
- *   pertence a outra região não está presente na lista
- *   filtrada, garantindo que o resultado não inclua demandas
- *   fora dos critérios selecionados.
- *
- * - waitForResponse: aguarda a resposta HTTP de sucesso
- *   da API de demandas após a seleção da Região, garantindo
- *   que a lista tenha sido atualizada antes da validação.
+ * Execução:
+ *  - cd e2e
+ *  - npx playwright test tests/04-validacao-filtros.spec.ts
  */
 
 import { test, expect, APIRequestContext } from '@playwright/test';
