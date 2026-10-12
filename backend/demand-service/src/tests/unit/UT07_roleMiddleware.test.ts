@@ -86,7 +86,7 @@ describe('roleMiddleware', () => {
     middleware(req, res, next);
 
     expect(status).toHaveBeenCalledWith(403);
-    expect(json).toHaveBeenCalledWith({ error: 'Acesso negado para este perfil' });
+    expect(json).toHaveBeenCalledWith({ error: 'Acesso restrito a gestores' });
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -98,7 +98,7 @@ describe('roleMiddleware', () => {
     middleware(req, res, next);
 
     expect(status).toHaveBeenCalledWith(403);
-    expect(json).toHaveBeenCalledWith({ error: 'Acesso negado para este perfil' });
+    expect(json).toHaveBeenCalledWith({ error: 'Acesso restrito a cidadãos' });
     expect(next).not.toHaveBeenCalled();
   });
 
