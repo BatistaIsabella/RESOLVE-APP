@@ -76,10 +76,10 @@ um handle do componente nativo; a View a entrega para `vm.takePicture(camera)` n
 
 | ViewModel | Tela (View) | Responsabilidades |
 |---|---|---|
-| `useLoginViewModel` | `app/login.tsx` | campos e "Mantenha-me conectado", validação, login, rota pós-login por papel |
+| `useLoginViewModel` | `app/login.tsx` | campos e "Mantenha-me conectado", e-mail normalizado, validação, login, rota pós-login por papel |
 | `useCadastroViewModel` | `app/cadastro.tsx` | campos, papel cidadão/gestor e código de acesso, validação (e-mail, senhas iguais), cadastro |
-| `useNovaDenunciaViewModel` | `app/denuncias/nova.tsx` | 4 passos (foto → categoria → localização → descrição), validação por passo, câmera/galeria, GPS com tempo limite de 10 s e endereço reverso, alertas de permissão com "Abrir Ajustes", compressão da foto e envio |
-| `useGestorDashboardViewModel` | `app/gestor/index.tsx` | carregar demandas + métricas, pull-to-refresh, filtros, dados dos gráficos (categoria, status, região, período) e total |
+| `useNovaDenunciaViewModel` | `app/denuncias/nova.tsx` | 4 passos (foto → categoria → localização → descrição), validação por passo, câmera/galeria, GPS com tempo limite de 10 s e endereço reverso, alertas de permissão com "Abrir Ajustes", compressão da foto, envio e voltar (Android/gesto iOS) recuando uma etapa |
+| `useGestorDashboardViewModel` | `app/gestor/index.tsx` | recarregar demandas + métricas a cada foco da tela, pull-to-refresh, filtros, dados dos gráficos (categoria, status, região, período) e total |
 | `useAuth` (`hooks/`) | várias | atalho de leitura da sessão (nome, papel, logout) usado pelas ViewModels e pelo `AuthGuard` |
 
 **Pendente:** `app/denuncias/index.tsx`, `app/denuncias/[id].tsx` e `app/gestor/[id].tsx` ainda leem

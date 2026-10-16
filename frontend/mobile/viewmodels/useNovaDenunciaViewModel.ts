@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { Alert, BackHandler } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -214,6 +214,26 @@ export function useNovaDenunciaViewModel() {
     }
   };
 
+  // Voltar do Android: fecha a câmera ou recua uma etapa; só sai da tela na
+  // primeira etapa, para não perder o que já foi preenchido.
+  useFocusEffect(
+    useCallback(() => {
+      const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+        if (showCamera) {
+          setShowCamera(false);
+          return true;
+        }
+        if (stepIndex > 0) {
+          setErro('');
+          setStep(STEPS[stepIndex - 1]);
+          return true;
+        }
+        return false;
+      });
+      return () => subscription.remove();
+    }, [showCamera, stepIndex])
+  );
+
   const handleSubmit = async () => {
     if (enviando || !validateStep()) return;
 
@@ -253,6 +273,8 @@ export function useNovaDenunciaViewModel() {
     userName,
     step,
     stepNumber: stepIndex + 1,
+    // Gesto de voltar do iOS só na primeira etapa, pelo mesmo motivo.
+    podeSairComGesto: stepIndex === 0 && !showCamera,
     totalSteps: STEPS.length,
     erro,
 

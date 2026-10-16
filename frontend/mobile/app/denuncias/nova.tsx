@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { CameraView } from 'expo-camera';
+import { Stack } from 'expo-router';
 
 import { GradientHeader } from '@/components/ui/GradientHeader';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
@@ -21,9 +22,14 @@ export default function NovaDenunciaScreen() {
   const vm = useNovaDenunciaViewModel();
   const cameraRef = useRef<CameraView>(null);
 
+  const screenOptions = (
+    <Stack.Screen options={{ gestureEnabled: vm.podeSairComGesto }} />
+  );
+
   if (vm.showCamera) {
     return (
       <View style={styles.cameraContainer}>
+        {screenOptions}
         <CameraView
           ref={cameraRef}
           style={styles.camera}
@@ -49,6 +55,7 @@ export default function NovaDenunciaScreen() {
 
   return (
     <View style={styles.container}>
+      {screenOptions}
       <GradientHeader
         title="Nova Denúncia"
         profileLabel={vm.userName ?? 'Usuário'}
