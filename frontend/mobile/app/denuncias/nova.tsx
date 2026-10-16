@@ -1,6 +1,5 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import {
-  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -9,255 +8,20 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
-import * as Location from 'expo-location';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { CameraView } from 'expo-camera';
 
 import { GradientHeader } from '@/components/ui/GradientHeader';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { SelectField } from '@/components/ui/SelectField';
-import { useAuth } from '@/hooks/useAuth';
-import { useDemandStore } from '@/stores/useDemandStore';
-import {
-  CATEGORIAS,
-  PROBLEMAS_POR_CATEGORIA,
-  REGIOES,
-} from '@/constants/demanda';
-import { DemandCategory, DemandRegion } from '@/types/demand';
-import { ApiError } from '@/lib/api';
+import { CATEGORIAS, REGIOES } from '@/constants/demanda';
 import { AppColors } from '@/constants/colors';
-
-type Step = 'foto' | 'categoria' | 'localizacao' | 'descricao';
+import { useNovaDenunciaViewModel } from '@/viewmodels/useNovaDenunciaViewModel';
 
 export default function NovaDenunciaScreen() {
-  const router = useRouter();
-  const { userName, logout } = useAuth();
-  const createDemand = useDemandStore((s) => s.createDemand);
-  const isLoading = useDemandStore((s) => s.isLoading);
-
-  const [step, setStep] = useState<Step>('foto');
-  const [imageUri, setImageUri] = useState<string | null>(null);
-  const [categoria, setCategoria] = useState('');
-  const [problema, setProblema] = useState('');
-  const [regiao, setRegiao] = useState('');
-  const [endereco, setEndereco] = useState('');
-  const [descricao, setDescricao] = useState('');
-  const [erro, setErro] = useState('');
-  const [locating, setLocating] = useState(false);
-
-  // ÚNICA parte nova para expo-camera
-  const [showCamera, setShowCamera] = useState(false);
-  const [cameraPermission, requestCameraPermission] =
-    useCameraPermissions();
+  const vm = useNovaDenunciaViewModel();
   const cameraRef = useRef<CameraView>(null);
 
-  const steps: Step[] = ['foto', 'categoria', 'localizacao', 'descricao'];
-  const stepIndex = steps.indexOf(step);
-
-  // CÂMERA: substitui apenas o uso da câmera do ImagePicker
-  const openCamera = async () => {
-    if (!cameraPermission?.granted) {
-      const permission = await requestCameraPermission();
-
-      if (!permission.granted) {
-        Alert.alert(
-          'Permissão necessária',
-          'Autorize o acesso à câmera para anexar fotos.',
-        );
-        return;
-      }
-    }
-
-    setShowCamera(true);
-  };
-
-  const takePicture = async () => {
-    if (!cameraRef.current) {
-      return;
-    }
-
-    try {
-      const result = await cameraRef.current.takePictureAsync({
-        quality: 0.7,
-      });
-
-      if (result?.uri) {
-        setImageUri(result.uri);
-        setShowCamera(false);
-      }
-    } catch {
-      Alert.alert(
-        'Erro',
-        'Não foi possível tirar a foto.',
-      );
-    }
-  };
-
-  // GALERIA: continua exatamente com expo-image-picker
-  const pickImage = async () => {
-    const permission =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (!permission.granted) {
-      Alert.alert(
-        'Permissão necessária',
-        'Autorize o acesso à galeria para anexar fotos.',
-      );
-      return;
-    }
-
-    const result =
-      await ImagePicker.launchImageLibraryAsync({
-        quality: 0.7,
-        allowsEditing: true,
-      });
-
-    if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
-    }
-  };
-
-  // LOCALIZAÇÃO: mantida como estava
-  const captureLocation = async () => {
-    setLocating(true);
-    setErro('');
-
-    try {
-      const { status } =
-        await Location.requestForegroundPermissionsAsync();
-
-      if (status !== 'granted') {
-        Alert.alert(
-          'Permissão negada',
-          'Ative a localização para registrar o endereço automaticamente.',
-        );
-        return;
-      }
-
-      const position =
-        await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-
-      const [geo] =
-        await Location.reverseGeocodeAsync({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        });
-
-      if (geo) {
-        const parts = [
-          geo.street,
-          geo.name,
-          geo.district,
-          geo.city,
-          geo.region,
-        ].filter(Boolean);
-
-        const coords = ` (${position.coords.latitude.toFixed(
-          5,
-        )}, ${position.coords.longitude.toFixed(5)})`;
-
-        setEndereco(`${parts.join(', ')}${coords}`);
-      } else {
-        setEndereco(
-          `Lat: ${position.coords.latitude.toFixed(
-            5,
-          )}, Lng: ${position.coords.longitude.toFixed(5)}`,
-        );
-      }
-    } catch {
-      setErro(
-        'Não foi possível obter a localização. Digite o endereço manualmente.',
-      );
-    } finally {
-      setLocating(false);
-    }
-  };
-
-  const validateStep = (): boolean => {
-    setErro('');
-
-    if (
-      step === 'categoria' &&
-      (!categoria || !problema || !regiao)
-    ) {
-      setErro('Selecione categoria, problema e região.');
-      return false;
-    }
-
-    if (step === 'localizacao' && !endereco.trim()) {
-      setErro('Informe ou capture o endereço.');
-      return false;
-    }
-
-    if (step === 'descricao' && !descricao.trim()) {
-      setErro('Informe a descrição da denúncia.');
-      return false;
-    }
-
-    return true;
-  };
-
-  const nextStep = () => {
-    if (!validateStep()) return;
-
-    const next = steps[stepIndex + 1];
-
-    if (next) {
-      setStep(next);
-    }
-  };
-
-  const prevStep = () => {
-    const prev = steps[stepIndex - 1];
-
-    if (prev) {
-      setStep(prev);
-    } else {
-      router.back();
-    }
-  };
-
-  // SALVAMENTO: mantido como estava
-  const handleSubmit = async () => {
-    if (!validateStep()) return;
-
-    setErro('');
-
-    try {
-      await createDemand({
-        titulo: problema,
-        categoria: categoria as DemandCategory,
-        regiao: regiao as DemandRegion,
-        descricao: descricao.trim(),
-        endereco: endereco.trim(),
-        imagemUri: imageUri,
-      });
-
-      Alert.alert('Sucesso', 'Denúncia registrada com sucesso!', [
-        {
-          text: 'OK',
-          onPress: () => router.replace('/denuncias'),
-        },
-      ]);
-    } catch (err) {
-      setErro(
-        err instanceof ApiError
-          ? err.message
-          : 'Erro ao salvar denúncia',
-      );
-    }
-  };
-
-  const handleLogout = () => {
-    logout();
-    router.replace('/');
-  };
-
-  // Tela da câmera
-  if (showCamera) {
+  if (vm.showCamera) {
     return (
       <View style={styles.cameraContainer}>
         <CameraView
@@ -269,13 +33,13 @@ export default function NovaDenunciaScreen() {
         <View style={styles.cameraControls}>
           <PrimaryButton
             label="Tirar foto"
-            onPress={takePicture}
+            onPress={() => vm.takePicture(cameraRef.current)}
             style={styles.cameraButton}
           />
 
           <PrimaryButton
             label="Cancelar"
-            onPress={() => setShowCamera(false)}
+            onPress={vm.closeCamera}
             style={styles.cameraButton}
           />
         </View>
@@ -287,9 +51,9 @@ export default function NovaDenunciaScreen() {
     <View style={styles.container}>
       <GradientHeader
         title="Nova Denúncia"
-        profileLabel={userName ?? 'Usuário'}
-        onBack={prevStep}
-        onLogout={handleLogout}
+        profileLabel={vm.userName ?? 'Usuário'}
+        onBack={vm.prevStep}
+        onLogout={vm.handleLogout}
       />
 
       <ScrollView
@@ -297,10 +61,10 @@ export default function NovaDenunciaScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.stepIndicator}>
-          Passo {stepIndex + 1} de {steps.length}
+          Passo {vm.stepNumber} de {vm.totalSteps}
         </Text>
 
-        {step === 'foto' && (
+        {vm.step === 'foto' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
               Adicione imagens
@@ -308,11 +72,11 @@ export default function NovaDenunciaScreen() {
 
             <Pressable
               style={styles.imageBox}
-              onPress={openCamera}
+              onPress={vm.openCamera}
             >
-              {imageUri ? (
+              {vm.imageUri ? (
                 <Image
-                  source={{ uri: imageUri }}
+                  source={{ uri: vm.imageUri }}
                   style={styles.preview}
                 />
               ) : (
@@ -323,76 +87,69 @@ export default function NovaDenunciaScreen() {
             <View style={styles.row}>
               <PrimaryButton
                 label="Galeria"
-                onPress={pickImage}
+                onPress={vm.pickImage}
                 style={styles.halfBtn}
               />
 
               <PrimaryButton
                 label="Câmera"
-                onPress={openCamera}
+                onPress={vm.openCamera}
                 style={styles.halfBtn}
               />
             </View>
 
             <PrimaryButton
               label="Continuar"
-              onPress={nextStep}
+              onPress={vm.nextStep}
               style={styles.nextBtn}
             />
           </View>
         )}
 
-        {step === 'categoria' && (
+        {vm.step === 'categoria' && (
           <View style={styles.section}>
             <SelectField
               label="Categoria"
-              value={categoria}
+              value={vm.categoria}
               options={[...CATEGORIAS]}
               placeholder="Categoria"
-              onChange={(v) => {
-                setCategoria(v);
-                setProblema('');
-              }}
+              onChange={vm.selecionarCategoria}
             />
 
             <SelectField
               label="Problema"
-              value={problema}
-              options={
-                categoria
-                  ? PROBLEMAS_POR_CATEGORIA[categoria] ?? []
-                  : []
-              }
+              value={vm.problema}
+              options={vm.problemasDisponiveis}
               placeholder="Título / Problema"
-              onChange={setProblema}
+              onChange={vm.setProblema}
             />
 
             <SelectField
               label="Região"
-              value={regiao}
+              value={vm.regiao}
               options={[...REGIOES]}
               placeholder="Região"
-              onChange={setRegiao}
+              onChange={vm.setRegiao}
             />
 
             <PrimaryButton
               label="Continuar"
-              onPress={nextStep}
+              onPress={vm.nextStep}
               style={styles.nextBtn}
             />
           </View>
         )}
 
-        {step === 'localizacao' && (
+        {vm.step === 'localizacao' && (
           <View style={styles.section}>
             <PrimaryButton
               label={
-                locating
+                vm.locating
                   ? 'Obtendo GPS...'
                   : 'Usar minha localização (GPS)'
               }
-              onPress={captureLocation}
-              loading={locating}
+              onPress={vm.captureLocation}
+              loading={vm.locating}
               style={styles.nextBtn}
             />
 
@@ -400,27 +157,27 @@ export default function NovaDenunciaScreen() {
               style={styles.input}
               placeholder="Endereço"
               placeholderTextColor={AppColors.textMuted}
-              value={endereco}
-              onChangeText={setEndereco}
+              value={vm.endereco}
+              onChangeText={vm.setEndereco}
               multiline
             />
 
             <PrimaryButton
               label="Continuar"
-              onPress={nextStep}
+              onPress={vm.nextStep}
               style={styles.nextBtn}
             />
           </View>
         )}
 
-        {step === 'descricao' && (
+        {vm.step === 'descricao' && (
           <View style={styles.section}>
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="Descrição"
               placeholderTextColor={AppColors.textMuted}
-              value={descricao}
-              onChangeText={setDescricao}
+              value={vm.descricao}
+              onChangeText={vm.setDescricao}
               multiline
               numberOfLines={6}
               textAlignVertical="top"
@@ -428,16 +185,16 @@ export default function NovaDenunciaScreen() {
 
             <PrimaryButton
               label="Salvar"
-              onPress={handleSubmit}
-              loading={isLoading}
+              onPress={vm.handleSubmit}
+              loading={vm.salvando}
               style={styles.nextBtn}
             />
           </View>
         )}
 
-        {erro ? (
+        {vm.erro ? (
           <Text style={styles.error}>
-            {erro}
+            {vm.erro}
           </Text>
         ) : null}
       </ScrollView>

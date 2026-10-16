@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   ImageBackground,
   Pressable,
@@ -10,31 +10,10 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import { useRouter } from 'expo-router';
-import { useAuthStore, getPostLoginRoute } from '@/stores/useAuthStore';
-import { setRemembered } from '@/lib/secureStorage';
-import { ApiError } from '@/lib/api';
+import { useLoginViewModel } from '@/viewmodels/useLoginViewModel';
 
 export default function LoginScreen() {
-  const router = useRouter();
-  const login = useAuthStore((state) => state.login);
-  const isLoading = useAuthStore((state) => state.isLoading);
-
-  const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
-  const [manterConectado, setManterConectado] = useState(true);
-  const [erro, setErro] = useState('');
-
-  const handleLogin = async () => {
-    setErro('');
-    try {
-      setRemembered(manterConectado);
-      const role = await login(email, senha);
-      router.replace(getPostLoginRoute(role));
-    } catch (err) {
-      setErro(err instanceof ApiError ? err.message : 'Erro ao fazer login');
-    }
-  };
+  const vm = useLoginViewModel();
 
   return (
     <View style={styles.container}>
@@ -56,7 +35,7 @@ export default function LoginScreen() {
           style={StyleSheet.absoluteFill}
         />
 
-        <Pressable style={styles.voltar} onPress={() => router.back()}>
+        <Pressable style={styles.voltar} onPress={vm.goBack}>
           <Text style={styles.voltarText}>Voltar</Text>
         </Pressable>
 
@@ -95,13 +74,13 @@ export default function LoginScreen() {
               Faça login em sua conta. Ou{' '}
               <Text
                 style={styles.link}
-                onPress={() => router.push('/cadastro')}
+                onPress={vm.goToCadastro}
               >
                 Cadastrar-se
               </Text>
             </Text>
 
-            {erro ? <Text style={styles.errorText}>{erro}</Text> : null}
+            {vm.erro ? <Text style={styles.errorText}>{vm.erro}</Text> : null}
 
             <View style={styles.field}>
               <Text style={styles.label}>Email</Text>
@@ -111,8 +90,8 @@ export default function LoginScreen() {
                 placeholderTextColor="#9B8AC4"
                 autoCapitalize="none"
                 keyboardType="email-address"
-                value={email}
-                onChangeText={setEmail}
+                value={vm.email}
+                onChangeText={vm.setEmail}
               />
             </View>
 
@@ -123,22 +102,22 @@ export default function LoginScreen() {
                 placeholder="••••••••"
                 placeholderTextColor="#9B8AC4"
                 secureTextEntry
-                value={senha}
-                onChangeText={setSenha}
+                value={vm.senha}
+                onChangeText={vm.setSenha}
               />
             </View>
 
             <Pressable
               style={styles.checkboxRow}
-              onPress={() => setManterConectado((v) => !v)}
+              onPress={vm.toggleManterConectado}
             >
               <View
                 style={[
                   styles.checkbox,
-                  manterConectado && styles.checkboxChecked,
+                  vm.manterConectado && styles.checkboxChecked,
                 ]}
               >
-                {manterConectado && <Text style={styles.checkboxMark}>✓</Text>}
+                {vm.manterConectado && <Text style={styles.checkboxMark}>✓</Text>}
               </View>
               <Text style={styles.checkboxLabel}>Mantenha-me conectado</Text>
             </Pressable>
@@ -147,13 +126,13 @@ export default function LoginScreen() {
               style={({ pressed }) => [
                 styles.enterButton,
                 pressed && styles.buttonPressed,
-                isLoading && styles.buttonDisabled,
+                vm.isLoading && styles.buttonDisabled,
               ]}
-              onPress={handleLogin}
-              disabled={isLoading}
+              onPress={vm.handleLogin}
+              disabled={vm.isLoading}
             >
               <Text style={styles.enterButtonText}>
-                {isLoading ? 'ENTRANDO...' : 'ENTRAR'}
+                {vm.isLoading ? 'ENTRANDO...' : 'ENTRAR'}
               </Text>
             </Pressable>
           </View>
