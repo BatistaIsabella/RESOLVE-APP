@@ -41,6 +41,17 @@ export interface DemandFilters {
   category: DemandCategory | '';
   region: DemandRegion | '';
   priority: DemandPriority | '';
+  /** Busca por texto no título ou na descrição. Também vai para a API como `q`. */
+  search?: string;
+}
+
+/** Campos que o cidadão pode alterar enquanto a denúncia está Aberta. */
+export interface DemandUpdateInput {
+  titulo?: string;
+  descricao?: string;
+  categoria?: DemandCategory;
+  regiao?: DemandRegion;
+  endereco?: string;
 }
 
 export interface MetricsKpis {

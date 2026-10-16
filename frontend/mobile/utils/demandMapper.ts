@@ -4,6 +4,7 @@ import {
   DemandPriority,
   DemandRegion,
   DemandStatus,
+  DemandUpdateInput,
 } from '@/types/demand';
 
 export interface ApiDenuncia {
@@ -148,6 +149,17 @@ export function buildCreatePayload(input: {
     endereco: input.endereco,
     ...(input.prioridade ? { prioridade: mapPriorityToApi(input.prioridade) } : {}),
     ...(input.imagens ? { imagens: input.imagens } : {}),
+  };
+}
+
+/** Só os campos informados vão no PATCH; os enums seguem o formato da API. */
+export function buildUpdatePayload(input: DemandUpdateInput) {
+  return {
+    ...(input.titulo !== undefined ? { titulo: input.titulo.slice(0, 50) } : {}),
+    ...(input.descricao !== undefined ? { descricao: input.descricao } : {}),
+    ...(input.categoria ? { categoria: mapCategoryToApi(input.categoria) } : {}),
+    ...(input.regiao ? { regiao: mapRegionToApi(input.regiao) } : {}),
+    ...(input.endereco !== undefined ? { endereco: input.endereco } : {}),
   };
 }
 

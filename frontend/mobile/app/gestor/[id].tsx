@@ -5,6 +5,7 @@ import { GradientHeader } from '@/components/ui/GradientHeader';
 import { DemandCard } from '@/components/ui/DemandCard';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { SelectField } from '@/components/ui/SelectField';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { useAuth } from '@/hooks/useAuth';
 import { useDemandStore } from '@/stores/useDemandStore';
 import { DemandPriority, DemandStatus } from '@/types/demand';
@@ -12,6 +13,7 @@ import { PRIORIDADES, STATUS } from '@/constants/demanda';
 import { formatPriorityLabel } from '@/utils/demandMapper';
 import { ApiError } from '@/lib/api';
 import { AppColors } from '@/constants/colors';
+import { useExcluirDenuncia } from '@/viewmodels/useExcluirDenuncia';
 
 export default function GestorDemandaScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,6 +29,10 @@ export default function GestorDemandaScreen() {
   // Lida do store: o otimismo e o rollback vivem la, nao aqui.
   const demand = useDemandStore((s) => s.demands.find((d) => d.id === id) ?? null);
   const [erro, setErro] = useState('');
+  const { confirmarExclusao, excluindo, excluida, erroExclusao } = useExcluirDenuncia(
+    id,
+    '/gestor'
+  );
 
   useEffect(() => {
     if (id) {
@@ -60,6 +66,10 @@ export default function GestorDemandaScreen() {
     logout();
     router.replace('/');
   };
+
+  if (excluida) {
+    return <LoadingScreen message="Voltando para o painel..." />;
+  }
 
   if (isLoading && !demand) {
     return <LoadingScreen message="Carregando demanda..." />;
@@ -127,6 +137,16 @@ export default function GestorDemandaScreen() {
           <Text style={styles.infoLabel}>Registrado em</Text>
           <Text style={styles.infoValue}>{demand.dataRegistro}</Text>
         </View>
+
+        <View style={styles.dangerZone}>
+          {erroExclusao ? <Text style={styles.error}>{erroExclusao}</Text> : null}
+          <PrimaryButton
+            label="Excluir demanda"
+            onPress={confirmarExclusao}
+            loading={excluindo}
+            style={styles.deleteBtn}
+          />
+        </View>
       </ScrollView>
     </View>
   );
@@ -191,5 +211,11 @@ const styles = StyleSheet.create({
   infoValue: {
     fontSize: 14,
     color: AppColors.text,
+  },
+  dangerZone: {
+    marginTop: 16,
+  },
+  deleteBtn: {
+    backgroundColor: '#DC2626',
   },
 });

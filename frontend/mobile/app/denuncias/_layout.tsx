@@ -8,6 +8,7 @@ export default function DenunciasLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="nova" />
         <Stack.Screen name="[id]" />
+        <Stack.Screen name="editar/[id]" />
       </Stack>
     </AuthGuard>
   );
