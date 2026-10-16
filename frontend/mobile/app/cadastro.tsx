@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   ImageBackground,
   Pressable,
@@ -10,62 +10,10 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import { useRouter } from 'expo-router';
-import { useAuthStore, getPostLoginRoute } from '@/stores/useAuthStore';
-import { setRemembered } from '@/lib/secureStorage';
-import { ApiError } from '@/lib/api';
-
-type Papel = 'cidadao' | 'gestor';
-
-// Validação simples de formato, só pra dar um feedback consistente com o
-// resto do app em vez de depender do popup nativo do navegador (que só
-// aparece rodando em web, não no Expo Go).
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { useCadastroViewModel } from '@/viewmodels/useCadastroViewModel';
 
 export default function CadastroScreen() {
-  const router = useRouter();
-  const register = useAuthStore((state) => state.register);
-  const isLoading = useAuthStore((state) => state.isLoading);
-
-  const [nome, setNome] = useState('');
-  const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
-  const [confirmarSenha, setConfirmarSenha] = useState('');
-  const [papel, setPapel] = useState<Papel>('cidadao');
-  const [codigoAcesso, setCodigoAcesso] = useState('');
-  const [erro, setErro] = useState('');
-
-  const handleCadastro = async () => {
-    setErro('');
-
-    if (!nome || !email || !senha || !confirmarSenha) {
-      setErro('Preencha todos os campos obrigatórios');
-      return;
-    }
-
-    if (!EMAIL_REGEX.test(email)) {
-      setErro('Digite um e-mail válido');
-      return;
-    }
-
-    if (senha !== confirmarSenha) {
-      setErro('As senhas não coincidem');
-      return;
-    }
-
-    if (papel === 'gestor' && !codigoAcesso) {
-      setErro('Informe o código de acesso de gestor');
-      return;
-    }
-
-    try {
-      setRemembered(true);
-      const role = await register(nome, email, senha, papel, papel === 'gestor' ? codigoAcesso : undefined);
-      router.replace(getPostLoginRoute(role));
-    } catch (err) {
-      setErro(err instanceof ApiError ? err.message : 'Erro ao criar conta');
-    }
-  };
+  const vm = useCadastroViewModel();
 
   return (
     <View style={styles.container}>
@@ -87,7 +35,7 @@ export default function CadastroScreen() {
           style={StyleSheet.absoluteFill}
         />
 
-        <Pressable style={styles.voltar} onPress={() => router.back()}>
+        <Pressable style={styles.voltar} onPress={vm.goBack}>
           <Text style={styles.voltarText}>Voltar</Text>
         </Pressable>
 
@@ -98,7 +46,7 @@ export default function CadastroScreen() {
           <View style={styles.card}>
             <Text style={styles.title}>Criar conta</Text>
 
-            {erro ? <Text style={styles.errorText}>{erro}</Text> : null}
+            {vm.erro ? <Text style={styles.errorText}>{vm.erro}</Text> : null}
 
             <View style={styles.field}>
               <Text style={styles.label}>Nome completo</Text>
@@ -107,8 +55,8 @@ export default function CadastroScreen() {
                 placeholder="Seu nome completo"
                 placeholderTextColor="#9B8AC4"
                 autoCapitalize="words"
-                value={nome}
-                onChangeText={setNome}
+                value={vm.nome}
+                onChangeText={vm.setNome}
               />
             </View>
 
@@ -120,8 +68,8 @@ export default function CadastroScreen() {
                 placeholderTextColor="#9B8AC4"
                 autoCapitalize="none"
                 keyboardType="email-address"
-                value={email}
-                onChangeText={setEmail}
+                value={vm.email}
+                onChangeText={vm.setEmail}
               />
             </View>
 
@@ -132,8 +80,8 @@ export default function CadastroScreen() {
                 placeholder="••••••••"
                 placeholderTextColor="#9B8AC4"
                 secureTextEntry
-                value={senha}
-                onChangeText={setSenha}
+                value={vm.senha}
+                onChangeText={vm.setSenha}
               />
             </View>
 
@@ -144,8 +92,8 @@ export default function CadastroScreen() {
                 placeholder="••••••••"
                 placeholderTextColor="#9B8AC4"
                 secureTextEntry
-                value={confirmarSenha}
-                onChangeText={setConfirmarSenha}
+                value={vm.confirmarSenha}
+                onChangeText={vm.setConfirmarSenha}
               />
             </View>
 
@@ -154,38 +102,35 @@ export default function CadastroScreen() {
               <View style={styles.radioRow}>
                 <Pressable
                   style={styles.radioOption}
-                  onPress={() => {
-                    setPapel('cidadao');
-                    setCodigoAcesso('');
-                  }}
+                  onPress={() => vm.selecionarPapel('cidadao')}
                 >
                   <View style={styles.radioCircle}>
-                    {papel === 'cidadao' && <View style={styles.radioDot} />}
+                    {vm.papel === 'cidadao' && <View style={styles.radioDot} />}
                   </View>
                   <Text style={styles.radioLabel}>Cidadão</Text>
                 </Pressable>
 
                 <Pressable
                   style={styles.radioOption}
-                  onPress={() => setPapel('gestor')}
+                  onPress={() => vm.selecionarPapel('gestor')}
                 >
                   <View style={styles.radioCircle}>
-                    {papel === 'gestor' && <View style={styles.radioDot} />}
+                    {vm.papel === 'gestor' && <View style={styles.radioDot} />}
                   </View>
                   <Text style={styles.radioLabel}>Gestor</Text>
                 </Pressable>
               </View>
             </View>
 
-            {papel === 'gestor' && (
+            {vm.papel === 'gestor' && (
               <View style={styles.field}>
                 <TextInput
                   style={styles.input}
                   placeholder="Código de acesso"
                   placeholderTextColor="#9B8AC4"
                   autoCapitalize="none"
-                  value={codigoAcesso}
-                  onChangeText={setCodigoAcesso}
+                  value={vm.codigoAcesso}
+                  onChangeText={vm.setCodigoAcesso}
                 />
               </View>
             )}
@@ -194,19 +139,19 @@ export default function CadastroScreen() {
               style={({ pressed }) => [
                 styles.criarButton,
                 pressed && styles.buttonPressed,
-                isLoading && styles.buttonDisabled,
+                vm.isLoading && styles.buttonDisabled,
               ]}
-              onPress={handleCadastro}
-              disabled={isLoading}
+              onPress={vm.handleCadastro}
+              disabled={vm.isLoading}
             >
               <Text style={styles.criarButtonText}>
-                {isLoading ? 'CRIANDO...' : 'Criar Conta'}
+                {vm.isLoading ? 'CRIANDO...' : 'Criar Conta'}
               </Text>
             </Pressable>
 
             <Text style={styles.helperText}>
               Já tem conta?{' '}
-              <Text style={styles.link} onPress={() => router.push('/login')}>
+              <Text style={styles.link} onPress={vm.goToLogin}>
                 Fazer login
               </Text>
             </Text>
