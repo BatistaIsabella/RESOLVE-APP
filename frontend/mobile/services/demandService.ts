@@ -24,7 +24,6 @@ interface PaginatedResponse<T> {
 }
 
 export interface ListOptions {
-  /** Busca no título ou na descrição (`?q=` da API). */
   q?: string;
 }
 
@@ -67,25 +66,26 @@ export const demandService = {
     prioridade?: DemandPriority;
     /** URI local da foto. A conversão para base64 acontece aqui, não na tela. */
     imagemUri?: string | null;
-  }, solicitante = ''): Promise<Demand> {
+  }, solicitante = '', onProgress?: (fracao: number) => void): Promise<Demand> {
     const imagens = input.imagemUri ? [await uriToBase64(input.imagemUri)] : undefined;
     const payload = buildCreatePayload({ ...input, imagens });
-    const { data } = await api.post<ApiDenuncia>('/demands', payload);
+    const { data } = await api.post<ApiDenuncia>('/demands', payload, {
+      onUploadProgress: (event) => {
+        if (onProgress && event.total) onProgress(event.loaded / event.total);
+      },
+    });
     return mapDenunciaFromApi(data, solicitante);
   },
 
-  /** Edição pelo cidadão dono; a API só aceita enquanto o status é ABERTA. */
   async update(id: string, input: DemandUpdateInput, solicitante = ''): Promise<Demand> {
     const { data } = await api.patch<ApiDenuncia>(`/demands/${id}`, buildUpdatePayload(input));
     return mapDenunciaFromApi(data, solicitante);
   },
 
-  /** Cidadão remove a própria denúncia (só ABERTA). */
   async remove(id: string): Promise<void> {
     await api.delete(`/demands/${id}`);
   },
 
-  /** Gestor remove qualquer denúncia. */
   async removeForGestor(id: string): Promise<void> {
     await api.delete(`/demands/gestor/${id}`);
   },

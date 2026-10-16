@@ -196,6 +196,9 @@ export default function NovaDenunciaScreen() {
               loading={vm.salvando}
               style={styles.nextBtn}
             />
+            {vm.salvando && vm.progressoEnvio !== null ? (
+              <Text style={styles.progresso}>Enviando... {vm.progressoEnvio}%</Text>
+            ) : null}
           </View>
         )}
 
@@ -271,6 +274,13 @@ const styles = StyleSheet.create({
 
   nextBtn: {
     marginTop: 4,
+  },
+
+  progresso: {
+    marginTop: 8,
+    textAlign: 'center',
+    color: AppColors.textMuted,
+    fontSize: 13,
   },
 
   input: {
