@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Demand } from '@/types/demand';
 import { extractBairro, formatPriorityLabel } from '@/utils/demandMapper';
@@ -12,10 +12,12 @@ interface DemandCardProps {
   showImage?: boolean;
 }
 
-function getStatusDotColor(demand: Demand): string {
-  if (demand.priority === 'Alta' || demand.status === 'Aberta') return AppColors.dotRed;
-  if (demand.priority === 'Media' || demand.status === 'Em análise') return AppColors.dotYellow;
-  return AppColors.dotGreen;
+// Resolvida é sempre verde, mesmo com prioridade Alta; antes a prioridade
+// vinha primeiro e uma denúncia resolvida aparecia vermelha.
+export function getStatusDotColor(demand: Pick<Demand, 'status' | 'priority'>): string {
+  if (demand.status === 'Resolvida') return AppColors.dotGreen;
+  if (demand.status === 'Aberta' || demand.priority === 'Alta') return AppColors.dotRed;
+  return AppColors.dotYellow;
 }
 
 export function DemandCard({ demand, onViewDetails, showImage = false }: DemandCardProps) {

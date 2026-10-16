@@ -2,12 +2,20 @@ import { api } from '@/lib/api';
 import {
   ApiDenuncia,
   buildCreatePayload,
+  buildUpdatePayload,
   mapDenunciaFromApi,
   mapDenunciasFromApi,
   mapPriorityToApi,
   mapStatusToApi,
 } from '@/utils/demandMapper';
-import { Demand, DemandCategory, DemandPriority, DemandRegion, DemandStatus } from '@/types/demand';
+import {
+  Demand,
+  DemandCategory,
+  DemandPriority,
+  DemandRegion,
+  DemandStatus,
+  DemandUpdateInput,
+} from '@/types/demand';
 import { uriToBase64 } from '@/utils/imageUtils';
 
 interface PaginatedResponse<T> {
@@ -15,14 +23,28 @@ interface PaginatedResponse<T> {
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 
+export interface ListOptions {
+  /** Busca no título ou na descrição (`?q=` da API). */
+  q?: string;
+}
+
+function listParams({ q }: ListOptions) {
+  const termo = q?.trim();
+  return { page: 1, limit: 100, ...(termo ? { q: termo } : {}) };
+}
+
 export const demandService = {
-  async getMyDemands(solicitante = ''): Promise<Demand[]> {
-    const { data } = await api.get<PaginatedResponse<ApiDenuncia>>('/demands/my-demands?page=1&limit=100');
+  async getMyDemands(solicitante = '', options: ListOptions = {}): Promise<Demand[]> {
+    const { data } = await api.get<PaginatedResponse<ApiDenuncia>>('/demands/my-demands', {
+      params: listParams(options),
+    });
     return mapDenunciasFromApi(data.data, solicitante);
   },
 
-  async getAllForGestor(): Promise<Demand[]> {
-    const { data } = await api.get<PaginatedResponse<ApiDenuncia>>('/demands/gestor?page=1&limit=100');
+  async getAllForGestor(options: ListOptions = {}): Promise<Demand[]> {
+    const { data } = await api.get<PaginatedResponse<ApiDenuncia>>('/demands/gestor', {
+      params: listParams(options),
+    });
     return mapDenunciasFromApi(data.data);
   },
 
@@ -50,6 +72,22 @@ export const demandService = {
     const payload = buildCreatePayload({ ...input, imagens });
     const { data } = await api.post<ApiDenuncia>('/demands', payload);
     return mapDenunciaFromApi(data, solicitante);
+  },
+
+  /** Edição pelo cidadão dono; a API só aceita enquanto o status é ABERTA. */
+  async update(id: string, input: DemandUpdateInput, solicitante = ''): Promise<Demand> {
+    const { data } = await api.patch<ApiDenuncia>(`/demands/${id}`, buildUpdatePayload(input));
+    return mapDenunciaFromApi(data, solicitante);
+  },
+
+  /** Cidadão remove a própria denúncia (só ABERTA). */
+  async remove(id: string): Promise<void> {
+    await api.delete(`/demands/${id}`);
+  },
+
+  /** Gestor remove qualquer denúncia. */
+  async removeForGestor(id: string): Promise<void> {
+    await api.delete(`/demands/gestor/${id}`);
   },
 
   async updateStatus(id: string, status: DemandStatus): Promise<Demand> {

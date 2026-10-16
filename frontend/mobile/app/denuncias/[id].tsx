@@ -4,20 +4,26 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { GradientHeader } from '@/components/ui/GradientHeader';
 import { DemandCard } from '@/components/ui/DemandCard';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { useAuth } from '@/hooks/useAuth';
 import { useDemandStore } from '@/stores/useDemandStore';
 import { AppColors } from '@/constants/colors';
+import { useExcluirDenuncia } from '@/viewmodels/useExcluirDenuncia';
 
 export default function DenunciaDetalhesScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { userName, logout } = useAuth();
   const fetchDemandById = useDemandStore((s) => s.fetchDemandById);
-  const isLoading = useDemandStore((s) => s.isLoading);
-  const error = useDemandStore((s) => s.error);
+  const isLoading = useDemandStore((s) => s.loadingDetail);
+  const error = useDemandStore((s) => s.detailError);
 
   // Lida do store: nada de copia local, para a tela nao divergir da lista.
   const demand = useDemandStore((s) => s.demands.find((d) => d.id === id) ?? null);
+  const { confirmarExclusao, excluindo, excluida, erroExclusao } = useExcluirDenuncia(
+    id,
+    '/denuncias'
+  );
 
   useEffect(() => {
     if (id) {
@@ -30,9 +36,16 @@ export default function DenunciaDetalhesScreen() {
     router.replace('/');
   };
 
+  if (excluida) {
+    return <LoadingScreen message="Voltando para a lista..." />;
+  }
+
   if (isLoading && !demand) {
     return <LoadingScreen message="Carregando detalhes..." />;
   }
+
+  // A API só aceita editar/excluir enquanto ninguém começou a analisar.
+  const podeAlterar = demand?.status === 'Aberta';
 
   if (!demand) {
     return (
@@ -68,6 +81,30 @@ export default function DenunciaDetalhesScreen() {
           <Text style={styles.infoLabel}>Registrado em</Text>
           <Text style={styles.infoValue}>{demand.dataRegistro}</Text>
         </View>
+
+        {podeAlterar ? (
+          <View style={styles.actions}>
+            {erroExclusao ? <Text style={styles.error}>{erroExclusao}</Text> : null}
+            <View style={styles.actionsRow}>
+              <PrimaryButton
+                label="Editar"
+                onPress={() => router.push(`/denuncias/editar/${demand.id}`)}
+                disabled={excluindo}
+                style={styles.actionBtn}
+              />
+              <PrimaryButton
+                label="Excluir"
+                onPress={confirmarExclusao}
+                loading={excluindo}
+                style={{ ...styles.actionBtn, ...styles.deleteBtn }}
+              />
+            </View>
+          </View>
+        ) : (
+          <Text style={styles.lockedHint}>
+            Denúncias em análise ou resolvidas não podem ser editadas nem excluídas.
+          </Text>
+        )}
       </ScrollView>
     </View>
   );
@@ -110,5 +147,30 @@ const styles = StyleSheet.create({
   infoValue: {
     fontSize: 14,
     color: AppColors.text,
+  },
+  actions: {
+    marginTop: 16,
+    gap: 8,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionBtn: {
+    flex: 1,
+  },
+  deleteBtn: {
+    backgroundColor: '#DC2626',
+  },
+  error: {
+    color: '#DC2626',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  lockedHint: {
+    marginTop: 16,
+    color: AppColors.textMuted,
+    fontSize: 13,
+    textAlign: 'center',
   },
 });
