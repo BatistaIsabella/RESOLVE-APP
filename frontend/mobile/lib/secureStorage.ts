@@ -23,7 +23,11 @@ export const secureStorage: StateStorage = {
   getItem: async (name) => (await SecureStore.getItemAsync(name)) ?? null,
 
   setItem: async (name, value) => {
-    if (!remembered) return;
+    if (!remembered) {
+      // apaga a sessão salva anteriormente, senão ela volta no próximo boot
+      await SecureStore.deleteItemAsync(name);
+      return;
+    }
     await SecureStore.setItemAsync(name, value);
   },
 
