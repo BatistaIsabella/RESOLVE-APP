@@ -3,7 +3,7 @@ import { Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { useAuth } from '@/hooks/useAuth';
-import { useDemandStore } from '@/stores/useDemandStore';
+import { useDemandContext } from '@/contexts/DemandContext';
 import { Demand, DemandCategory, DemandRegion, DemandUpdateInput } from '@/types/demand';
 import { ApiError } from '@/lib/api';
 
@@ -36,27 +36,19 @@ function validar(valores: Record<CampoEditavel, string>): ErrosEdicao {
   return erros;
 }
 
-/**
- * ViewModel da tela "Editar denúncia" (app/denuncias/editar/[id].tsx): o
- * cidadão altera título, descrição, categoria, região e endereço enquanto a
- * denúncia está Aberta. Só os campos alterados vão para a API.
- */
 export function useEditarDenunciaViewModel(id: string | undefined) {
   const router = useRouter();
   const { userName, logout } = useAuth();
-  const fetchDemandById = useDemandStore((s) => s.fetchDemandById);
-  const updateDemand = useDemandStore((s) => s.updateDemand);
-  const isLoading = useDemandStore((s) => s.loadingDetail);
-  const demand = useDemandStore((s) => s.demands.find((d) => d.id === id) ?? null);
+  const fetchDemandById = useDemandContext((s) => s.fetchDemandById);
+  const updateDemand = useDemandContext((s) => s.updateDemand);
+  const isLoading = useDemandContext((s) => s.loadingDetail);
+  const demand = useDemandContext((s) => s.demands.find((d) => d.id === id) ?? null);
 
-  // Guarda só o que o usuário mudou; o resto é lido da denúncia carregada.
-  // Assim o formulário não precisa ser "inicializado" quando a denúncia chega.
   const [alteracoes, setAlteracoes] = useState<Partial<Record<CampoEditavel, string>>>({});
   const [erros, setErros] = useState<ErrosEdicao>({});
   const [erroEnvio, setErroEnvio] = useState('');
   const [salvando, setSalvando] = useState(false);
 
-  // Chega aqui direto do detalhe, então quase sempre já está no store.
   const precisaCarregar = !!id && !demand;
   useEffect(() => {
     if (precisaCarregar && id) fetchDemandById(id);
@@ -107,7 +99,6 @@ export function useEditarDenunciaViewModel(id: string | undefined) {
     setSalvando(true);
     try {
       await updateDemand(id, input);
-      // No react-native-web o Alert ignora os botões (o onPress nunca rodaria).
       if (Platform.OS === 'web') {
         voltar();
         return;

@@ -1,37 +1,52 @@
 import * as SecureStore from 'expo-secure-store';
-import { StateStorage } from 'zustand/middleware';
+
+export interface StoredSession {
+  token: string;
+  role: 'cidadao' | 'gestor';
+  userName: string | null;
+  userEmail: string | null;
+}
+
+const SESSION_KEY = 'resolve-mobile-auth';
 
 let remembered = true;
 
-/**
- * Chamado pela tela de login com o valor do checkbox "Mantenha-me conectado"
- * antes de autenticar.
- */
 export function setRemembered(value: boolean) {
   remembered = value;
 }
 
-/**
- * Storage do Zustand que guarda o token no Keychain/Keystore (via
- * expo-secure-store) em vez de AsyncStorage puro, por ser um JWT de sessão.
- *
- * Não existe um equivalente nativo de sessionStorage: quando o usuário
- * desmarca "Mantenha-me conectado", a sessão simplesmente não é gravada em
- * disco (só vive em memória enquanto o app está aberto).
- */
-export const secureStorage: StateStorage = {
-  getItem: async (name) => (await SecureStore.getItemAsync(name)) ?? null,
+export function isRemembered() {
+  return remembered;
+}
 
-  setItem: async (name, value) => {
-    if (!remembered) {
-      // apaga a sessão salva anteriormente, senão ela volta no próximo boot
-      await SecureStore.deleteItemAsync(name);
-      return;
+export async function loadSession(): Promise<StoredSession | null> {
+  const raw = await SecureStore.getItemAsync(SESSION_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    const data = parsed?.state ?? parsed;
+    if (typeof data?.token !== 'string' || (data.role !== 'cidadao' && data.role !== 'gestor')) {
+      return null;
     }
-    await SecureStore.setItemAsync(name, value);
-  },
+    return {
+      token: data.token,
+      role: data.role,
+      userName: data.userName ?? null,
+      userEmail: data.userEmail ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
 
-  removeItem: async (name) => {
-    await SecureStore.deleteItemAsync(name);
-  },
-};
+export async function saveSession(session: StoredSession): Promise<void> {
+  if (!remembered) {
+    await SecureStore.deleteItemAsync(SESSION_KEY);
+    return;
+  }
+  await SecureStore.setItemAsync(SESSION_KEY, JSON.stringify(session));
+}
+
+export async function clearSession(): Promise<void> {
+  await SecureStore.deleteItemAsync(SESSION_KEY);
+}

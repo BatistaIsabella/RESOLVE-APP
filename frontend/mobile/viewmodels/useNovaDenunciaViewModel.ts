@@ -6,7 +6,7 @@ import * as Location from 'expo-location';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 
 import { useAuth } from '@/hooks/useAuth';
-import { useDemandStore } from '@/stores/useDemandStore';
+import { useDemandContext } from '@/contexts/DemandContext';
 import { PROBLEMAS_POR_CATEGORIA } from '@/constants/demanda';
 import { DemandCategory, DemandRegion } from '@/types/demand';
 import { ApiError } from '@/lib/api';
@@ -18,8 +18,6 @@ export type NovaDenunciaStep = 'foto' | 'categoria' | 'localizacao' | 'descricao
 
 const STEPS: NovaDenunciaStep[] = ['foto', 'categoria', 'localizacao', 'descricao'];
 
-// GPS frio em ambiente fechado pode levar minutos; depois disso o usuário
-// digita o endereço.
 const GPS_TEMPO_LIMITE_MS = 10_000;
 const GEOCODE_TEMPO_LIMITE_MS = 5_000;
 
@@ -38,15 +36,11 @@ function formatarEndereco(
   return `${parts.join(', ')} (${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)})`;
 }
 
-/**
- * ViewModel da tela "Nova Denúncia" (app/denuncias/nova.tsx): estado do
- * formulário em 4 passos, validação, câmera/galeria/GPS e envio.
- */
 export function useNovaDenunciaViewModel() {
   const router = useRouter();
   const { userName, logout } = useAuth();
-  const createDemand = useDemandStore((s) => s.createDemand);
-  const isLoading = useDemandStore((s) => s.isLoading);
+  const createDemand = useDemandContext((s) => s.createDemand);
+  const isLoading = useDemandContext((s) => s.isLoading);
 
   const [step, setStep] = useState<NovaDenunciaStep>('foto');
   const [imageUri, setImageUri] = useState<string | null>(null);
@@ -58,6 +52,7 @@ export function useNovaDenunciaViewModel() {
   const [erro, setErro] = useState('');
   const [locating, setLocating] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [progressoEnvio, setProgressoEnvio] = useState<number | null>(null);
 
   const [showCamera, setShowCamera] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -83,8 +78,6 @@ export function useNovaDenunciaViewModel() {
 
   const closeCamera = () => setShowCamera(false);
 
-  // A ref do CameraView é da View (handle do componente nativo); ela entrega
-  // a câmera aqui no momento do clique.
   const takePicture = async (camera: CameraView | null) => {
     if (!camera) {
       return;
@@ -144,8 +137,6 @@ export function useNovaDenunciaViewModel() {
       );
       const { coords } = position;
 
-      // Com a posição em mãos, falha do geocoder reverso (sem rede, serviço
-      // fora) não deve descartar as coordenadas.
       let geo: Location.LocationGeocodedAddress | undefined;
       try {
         [geo] = await comTempoLimite(
@@ -214,8 +205,6 @@ export function useNovaDenunciaViewModel() {
     }
   };
 
-  // Voltar do Android: fecha a câmera ou recua uma etapa; só sai da tela na
-  // primeira etapa, para não perder o que já foi preenchido.
   useFocusEffect(
     useCallback(() => {
       const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -238,6 +227,7 @@ export function useNovaDenunciaViewModel() {
     if (enviando || !validateStep()) return;
 
     setEnviando(true);
+    setProgressoEnvio(null);
 
     try {
       const imagemUri = imageUri ? await compressImage(imageUri) : null;
@@ -249,7 +239,7 @@ export function useNovaDenunciaViewModel() {
         descricao: descricao.trim(),
         endereco: endereco.trim(),
         imagemUri,
-      });
+      }, (fracao) => setProgressoEnvio(Math.round(fracao * 100)));
 
       Alert.alert('Sucesso', 'Denúncia registrada com sucesso!', [
         {
@@ -261,6 +251,7 @@ export function useNovaDenunciaViewModel() {
       setErro(err instanceof ApiError ? err.message : 'Erro ao salvar denúncia');
     } finally {
       setEnviando(false);
+      setProgressoEnvio(null);
     }
   };
 
@@ -273,7 +264,6 @@ export function useNovaDenunciaViewModel() {
     userName,
     step,
     stepNumber: stepIndex + 1,
-    // Gesto de voltar do iOS só na primeira etapa, pelo mesmo motivo.
     podeSairComGesto: stepIndex === 0 && !showCamera,
     totalSteps: STEPS.length,
     erro,
@@ -301,6 +291,7 @@ export function useNovaDenunciaViewModel() {
     descricao,
     setDescricao,
     salvando: enviando || isLoading,
+    progressoEnvio,
 
     nextStep,
     prevStep,

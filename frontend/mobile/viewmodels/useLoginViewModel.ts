@@ -1,15 +1,14 @@
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 
-import { useAuthStore, getPostLoginRoute } from '@/stores/useAuthStore';
+import { getPostLoginRoute, useAuthContext } from '@/contexts/AuthContext';
 import { setRemembered } from '@/lib/secureStorage';
 import { ApiError } from '@/lib/api';
 
-/** ViewModel da tela de login (app/login.tsx). */
 export function useLoginViewModel() {
   const router = useRouter();
-  const login = useAuthStore((state) => state.login);
-  const isLoading = useAuthStore((state) => state.isLoading);
+  const login = useAuthContext().login;
+  const isLoading = useAuthContext().isLoading;
 
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
@@ -21,8 +20,6 @@ export function useLoginViewModel() {
   const handleLogin = async () => {
     setErro('');
 
-    // O autocompletar do teclado costuma deixar espaço no fim e maiúscula no
-    // início.
     const emailDigitado = email.trim();
     const emailNormalizado = emailDigitado.toLowerCase();
     if (!emailNormalizado || !senha) {
@@ -36,8 +33,6 @@ export function useLoginViewModel() {
       try {
         role = await login(emailNormalizado, senha);
       } catch (err) {
-        // O backend compara o e-mail exatamente e contas antigas (cadastradas
-        // pela web ou antes da normalização) podem ter maiúsculas gravadas.
         const recusado = err instanceof ApiError && err.status === 401;
         if (!recusado || emailDigitado === emailNormalizado) throw err;
         role = await login(emailDigitado, senha);
@@ -48,7 +43,6 @@ export function useLoginViewModel() {
     }
   };
 
-  // Aberta por deep link ou depois do logout, a tela não tem para onde voltar.
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
   const goToCadastro = () => router.push('/cadastro');
 

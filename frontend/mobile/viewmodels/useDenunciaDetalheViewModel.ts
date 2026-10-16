@@ -2,22 +2,17 @@ import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 
 import { useAuth } from '@/hooks/useAuth';
-import { useDemandStore } from '@/stores/useDemandStore';
+import { useDemandContext } from '@/contexts/DemandContext';
 import { useExcluirDenuncia } from '@/viewmodels/useExcluirDenuncia';
 
-/**
- * ViewModel do detalhe da denúncia do cidadão (app/denuncias/[id].tsx):
- * busca a denúncia, diz se ela ainda pode ser alterada e expõe editar/excluir.
- */
 export function useDenunciaDetalheViewModel(id: string | undefined) {
   const router = useRouter();
   const { userName, logout } = useAuth();
-  const fetchDemandById = useDemandStore((s) => s.fetchDemandById);
-  const isLoading = useDemandStore((s) => s.loadingDetail);
-  const error = useDemandStore((s) => s.detailError);
+  const fetchDemandById = useDemandContext((s) => s.fetchDemandById);
+  const isLoading = useDemandContext((s) => s.loadingDetail);
+  const error = useDemandContext((s) => s.detailError);
 
-  // Lida do store: nada de copia local, para a tela nao divergir da lista.
-  const demand = useDemandStore((s) => s.demands.find((d) => d.id === id) ?? null);
+  const demand = useDemandContext((s) => s.demands.find((d) => d.id === id) ?? null);
   const { confirmarExclusao, excluindo, excluida, erroExclusao } = useExcluirDenuncia(
     id,
     '/denuncias'
@@ -43,7 +38,6 @@ export function useDenunciaDetalheViewModel(id: string | undefined) {
     demand,
     error,
     showLoadingScreen: isLoading && !demand,
-    // A API só aceita editar/excluir enquanto ninguém começou a analisar.
     podeAlterar: demand?.status === 'Aberta',
 
     excluida,

@@ -2,28 +2,23 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 
 import { useAuth } from '@/hooks/useAuth';
-import { useDemandStore } from '@/stores/useDemandStore';
+import { useDemandContext } from '@/contexts/DemandContext';
 import { DemandPriority, DemandStatus } from '@/types/demand';
 import { formatPriorityLabel } from '@/utils/demandMapper';
 import { ApiError } from '@/lib/api';
 import { useExcluirDenuncia } from '@/viewmodels/useExcluirDenuncia';
 
-/**
- * ViewModel da tela de gerenciamento de uma demanda pelo gestor
- * (app/gestor/[id].tsx): busca a demanda, muda status e prioridade e exclui.
- */
 export function useGestorDemandaViewModel(id: string | undefined) {
   const router = useRouter();
   const { userName, logout } = useAuth();
 
-  const fetchDemandById = useDemandStore((s) => s.fetchDemandById);
-  const updateDemandStatus = useDemandStore((s) => s.updateDemandStatus);
-  const updateDemandPriority = useDemandStore((s) => s.updateDemandPriority);
-  const isLoading = useDemandStore((s) => s.loadingDetail);
-  const storeError = useDemandStore((s) => s.detailError);
+  const fetchDemandById = useDemandContext((s) => s.fetchDemandById);
+  const updateDemandStatus = useDemandContext((s) => s.updateDemandStatus);
+  const updateDemandPriority = useDemandContext((s) => s.updateDemandPriority);
+  const isLoading = useDemandContext((s) => s.loadingDetail);
+  const storeError = useDemandContext((s) => s.detailError);
 
-  // Lida do store: o otimismo e o rollback vivem la, nao aqui.
-  const demand = useDemandStore((s) => s.demands.find((d) => d.id === id) ?? null);
+  const demand = useDemandContext((s) => s.demands.find((d) => d.id === id) ?? null);
   const [erro, setErro] = useState('');
   const { confirmarExclusao, excluindo, excluida, erroExclusao } = useExcluirDenuncia(
     id,

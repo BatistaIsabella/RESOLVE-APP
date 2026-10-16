@@ -1,22 +1,18 @@
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 
-import { useAuthStore, getPostLoginRoute } from '@/stores/useAuthStore';
+import { getPostLoginRoute, useAuthContext } from '@/contexts/AuthContext';
 import { setRemembered } from '@/lib/secureStorage';
 import { ApiError } from '@/lib/api';
 
 export type Papel = 'cidadao' | 'gestor';
 
-// Validação simples de formato, só pra dar um feedback consistente com o
-// resto do app em vez de depender do popup nativo do navegador (que só
-// aparece rodando em web, não no Expo Go).
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** ViewModel da tela de cadastro (app/cadastro.tsx). */
 export function useCadastroViewModel() {
   const router = useRouter();
-  const register = useAuthStore((state) => state.register);
-  const isLoading = useAuthStore((state) => state.isLoading);
+  const register = useAuthContext().register;
+  const isLoading = useAuthContext().isLoading;
 
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
@@ -72,7 +68,6 @@ export function useCadastroViewModel() {
     }
   };
 
-  // Aberta por deep link ou depois do logout, a tela não tem para onde voltar.
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
   const goToLogin = () => router.push('/login');
 

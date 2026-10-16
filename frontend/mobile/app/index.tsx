@@ -10,7 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
-import { getPostLoginRoute } from '@/stores/useAuthStore';
+import { getPostLoginRoute } from '@/contexts/AuthContext';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
 export default function HomeScreen() {

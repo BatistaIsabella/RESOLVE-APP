@@ -1,14 +1,8 @@
-import { useAuthStore } from '@/stores/useAuthStore';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 export function useAuth() {
-  const token = useAuthStore((s) => s.token);
-  const role = useAuthStore((s) => s.role);
-  const userName = useAuthStore((s) => s.userName);
-  const userEmail = useAuthStore((s) => s.userEmail);
-  const isLoading = useAuthStore((s) => s.isLoading);
-  const hasHydrated = useAuthStore((s) => s._hasHydrated);
-  const login = useAuthStore((s) => s.login);
-  const logout = useAuthStore((s) => s.logout);
+  const { token, role, userName, userEmail, isLoading, hasHydrated, login, register, logout } =
+    useAuthContext();
 
   const isAuthenticated = !!token;
   const isCidadao = role === 'cidadao';
@@ -25,6 +19,7 @@ export function useAuth() {
     isCidadao,
     isGestor,
     login,
+    register,
     logout,
   };
 }

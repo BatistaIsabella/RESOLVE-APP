@@ -2,42 +2,33 @@ import { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { useAuth } from '@/hooks/useAuth';
-import { useDemandStore } from '@/stores/useDemandStore';
+import { useDemandContext } from '@/contexts/DemandContext';
 import { DemandFilters } from '@/types/demand';
 import { buildPeriodSeries, countBy, toSlices } from '@/utils/metricsAggregator';
 import { filterDemands, hasActiveFilters } from '@/utils/demandFilters';
 import { REGIAO_ABREVIADA } from '@/constants/demanda';
 import { ChartPalette, ChartStatusColors } from '@/constants/colors';
 
-/**
- * ViewModel do painel do gestor (app/gestor/index.tsx): carrega demandas e
- * métricas, aplica filtros e entrega os dados dos gráficos prontos para
- * desenhar.
- */
 export function useGestorDashboardViewModel() {
   const router = useRouter();
   const { userName, logout } = useAuth();
 
-  const filters = useDemandStore((s) => s.filters);
-  const metrics = useDemandStore((s) => s.metrics);
-  const isLoading = useDemandStore((s) => s.isLoading);
-  const error = useDemandStore((s) => s.error);
-  const fetchDemands = useDemandStore((s) => s.fetchDemands);
-  const fetchMetrics = useDemandStore((s) => s.fetchMetrics);
-  const setFilters = useDemandStore((s) => s.setFilters);
-  const demands = useDemandStore((s) => s.demands);
+  const filters = useDemandContext((s) => s.filters);
+  const metrics = useDemandContext((s) => s.metrics);
+  const isLoading = useDemandContext((s) => s.isLoading);
+  const error = useDemandContext((s) => s.error);
+  const fetchDemands = useDemandContext((s) => s.fetchDemands);
+  const fetchMetrics = useDemandContext((s) => s.fetchMetrics);
+  const setFilters = useDemandContext((s) => s.setFilters);
+  const demands = useDemandContext((s) => s.demands);
 
   const [refreshing, setRefreshing] = useState(false);
-  // `isLoading` da store é compartilhado pelas duas buscas e volta a false
-  // quando a primeira termina; o painel só está pronto quando as duas acabam.
   const [carregando, setCarregando] = useState(true);
 
   const load = useCallback(async () => {
     await Promise.all([fetchDemands(), fetchMetrics()]);
   }, [fetchDemands, fetchMetrics]);
 
-  // Recarrega a cada foco, não só no mount: ao voltar do detalhe depois de
-  // mudar status/prioridade, total e gráficos precisam refletir a mudança.
   useFocusEffect(
     useCallback(() => {
       load().finally(() => setCarregando(false));
@@ -57,8 +48,6 @@ export function useGestorDashboardViewModel() {
 
   const filteredDemands = useMemo(() => filterDemands(demands, filters), [demands, filters]);
 
-  // Sem filtro os números vêm do /metrics (total histórico). Com filtro o
-  // recorte só existe no cliente, então são derivados da lista.
   const source = useMemo(() => {
     if (filtrosAtivos || !metrics) {
       return {

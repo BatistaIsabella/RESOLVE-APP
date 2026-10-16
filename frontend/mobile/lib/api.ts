@@ -1,5 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { useAuthStore } from '@/stores/useAuthStore';
+import { getAuthToken, notifyUnauthorized } from '@/lib/authToken';
 
 export const API_GATEWAY_URL =
   process.env.EXPO_PUBLIC_API_GATEWAY_URL ?? 'https://smartcity-api.beholder.app.br';
@@ -23,7 +23,7 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = useAuthStore.getState().token;
+  const token = getAuthToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -37,9 +37,8 @@ api.interceptors.response.use(
     const message = error.response?.data?.error ?? error.response?.data?.message;
     const isAuthRequest = AUTH_ENDPOINTS.some((path) => error.config?.url?.includes(path));
 
-    // 401 em login/cadastro é credencial inválida, não sessão expirada.
     if (status === 401 && !isAuthRequest) {
-      useAuthStore.getState().logout();
+      notifyUnauthorized();
     }
 
     if (error.code === 'ECONNABORTED') {

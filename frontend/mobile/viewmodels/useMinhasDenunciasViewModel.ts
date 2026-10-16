@@ -2,25 +2,19 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 
 import { useAuth } from '@/hooks/useAuth';
-import { useDemandStore } from '@/stores/useDemandStore';
+import { useDemandContext } from '@/contexts/DemandContext';
 import { filterDemands } from '@/utils/demandFilters';
 import { DemandFilters } from '@/types/demand';
 
-/**
- * ViewModel da lista de denúncias do cidadão (app/denuncias/index.tsx):
- * carrega as demandas, aplica os filtros e expõe as ações de navegação.
- */
 export function useMinhasDenunciasViewModel() {
   const router = useRouter();
   const { userName, logout } = useAuth();
-  // Seletor por campo: assinar o store inteiro re-renderizava a lista a cada
-  // mudança de qualquer parte do estado.
-  const filters = useDemandStore((s) => s.filters);
-  const demands = useDemandStore((s) => s.demands);
-  const isLoading = useDemandStore((s) => s.isLoading);
-  const error = useDemandStore((s) => s.error);
-  const fetchDemands = useDemandStore((s) => s.fetchDemands);
-  const setFilters = useDemandStore((s) => s.setFilters);
+  const filters = useDemandContext((s) => s.filters);
+  const demands = useDemandContext((s) => s.demands);
+  const isLoading = useDemandContext((s) => s.isLoading);
+  const error = useDemandContext((s) => s.error);
+  const fetchDemands = useDemandContext((s) => s.fetchDemands);
+  const setFilters = useDemandContext((s) => s.setFilters);
 
   const [refreshing, setRefreshing] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<DemandFilters>(filters);
