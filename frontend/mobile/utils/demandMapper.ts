@@ -1,4 +1,4 @@
-import {
+import type {
   Demand,
   DemandCategory,
   DemandPriority,
@@ -163,8 +163,35 @@ export function buildUpdatePayload(input: DemandUpdateInput) {
   };
 }
 
+// "(-8.05000, -34.88000)" que o GPS anexa ao fim do endereço.
+const COORDENADAS_NO_FIM = /\s*\([^)]*\)\s*$/;
+// "Lat: -8.05000, Lng: -34.88000": GPS sem endereço reverso.
+const SO_COORDENADAS = /^\s*Lat:/i;
+
+export const BAIRRO_SO_GPS = 'Localização por GPS';
+
+/**
+ * Bairro para o card, a partir do endereço livre. Formatos conhecidos:
+ * - "Rua, nº - Bairro, Cidade - CEP: ..." (traço com espaços em volta);
+ * - GPS: "Rua, nº, Bairro, Cidade, UF (-8.05, -34.88)" → antepenúltimo item;
+ * - GPS sem endereço: "Lat: ..., Lng: ...".
+ * O sinal de menos das coordenadas e hífens em nomes ("Rua João-Pessoa")
+ * não contam como separador.
+ */
 export function extractBairro(endereco: string): string {
-  const parts = endereco.split('-').map((p) => p.trim());
-  if (parts.length >= 2) return parts[1];
-  return endereco.split(',')[0]?.trim() ?? endereco;
+  if (SO_COORDENADAS.test(endereco)) return BAIRRO_SO_GPS;
+
+  const semCoordenadas = endereco.replace(COORDENADAS_NO_FIM, '').trim();
+
+  const blocos = semCoordenadas.split(' - ');
+  if (blocos.length >= 2) return blocos[1].split(',')[0].trim();
+
+  const partes = semCoordenadas
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const candidato = partes.length >= 4 ? partes[partes.length - 3] : undefined;
+  // Número da casa não é bairro (GPS que devolveu rua e número mas não o bairro).
+  if (candidato && !/^\d/.test(candidato)) return candidato;
+  return partes[0] ?? semCoordenadas;
 }

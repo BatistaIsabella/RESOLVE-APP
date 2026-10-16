@@ -46,7 +46,7 @@ export function useEditarDenunciaViewModel(id: string | undefined) {
   const { userName, logout } = useAuth();
   const fetchDemandById = useDemandStore((s) => s.fetchDemandById);
   const updateDemand = useDemandStore((s) => s.updateDemand);
-  const isLoading = useDemandStore((s) => s.isLoading);
+  const isLoading = useDemandStore((s) => s.loadingDetail);
   const demand = useDemandStore((s) => s.demands.find((d) => d.id === id) ?? null);
 
   // Guarda só o que o usuário mudou; o resto é lido da denúncia carregada.

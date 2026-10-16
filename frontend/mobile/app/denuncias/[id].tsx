@@ -15,8 +15,8 @@ export default function DenunciaDetalhesScreen() {
   const router = useRouter();
   const { userName, logout } = useAuth();
   const fetchDemandById = useDemandStore((s) => s.fetchDemandById);
-  const isLoading = useDemandStore((s) => s.isLoading);
-  const error = useDemandStore((s) => s.error);
+  const isLoading = useDemandStore((s) => s.loadingDetail);
+  const error = useDemandStore((s) => s.detailError);
 
   // Lida do store: nada de copia local, para a tela nao divergir da lista.
   const demand = useDemandStore((s) => s.demands.find((d) => d.id === id) ?? null);

@@ -425,9 +425,12 @@ export async function updateDenunciaStatus(
   }
 
   const resultado = await prisma.$transaction(async (tx) => {
+    // imagens junto: o app troca o item da lista por esta resposta, e sem
+    // elas a foto sumia depois de mudar o status.
     const denunciaAtualizada = await tx.denuncia.update({
       where: { id_denuncia: denunciaId },
       data: { status: novoStatus },
+      include: { imagens: true },
     });
 
     const historico = await tx.historico.create({
@@ -544,62 +547,36 @@ export async function updateDenunciaPrioridade(
   denunciaId: number,
   novaPrioridade: NivelPrioridade
 ) {
-  console.log("=== INICIANDO UPDATE DE PRIORIDADE ===");
-  console.log("-> ID do Usuário Recebido:", usuarioId);
-  console.log("-> ID da Denúncia Recebido:", denunciaId);
-  console.log("-> Nova Prioridade Recebida:", novaPrioridade);
-
   const gestorId = await resolveGestorId(usuarioId);
-  console.log("-> ID do Gestor Resolvido no Banco:", gestorId);
 
   const denunciaExistente = await prisma.denuncia.findUnique({
     where: { id_denuncia: denunciaId },
   });
-
-  console.log("-> Denúncia encontrada no banco?:", denunciaExistente ? "SIM" : "NÃO");
-  
-  if (denunciaExistente) {
-    console.log("-> Prioridade ATUAL no banco:", denunciaExistente.prioridade);
-  }
 
   if (!denunciaExistente) {
     throw httpError('Denúncia não encontrada', 404);
   }
 
   if (denunciaExistente.prioridade === novaPrioridade) {
-    console.log("⚠️ Parando: A prioridade já é igual à nova!");
     throw httpError('A denúncia já possui este nível de prioridade', 400);
   }
 
-  try {
-    console.log("-> Tentando abrir a transação com o Supabase...");
-    const resultado = await prisma.$transaction(async (tx) => {
-      const denunciaAtualizada = await tx.denuncia.update({
-        where: { id_denuncia: denunciaId },
-        data: { prioridade: novaPrioridade },
-      });
-
-      console.log("-> [Prisma] Tabela denuncia atualizada com sucesso!");
-
-      const historico = await tx.historico.create({
-        data: {
-          status: denunciaAtualizada.status,
-          prioridade: novaPrioridade,
-          denuncia_id: denunciaId,
-          gestor_id: gestorId,
-        },
-      });
-
-      console.log("-> [Prisma] Tabela historico criada com sucesso!");
-
-      return { denuncia: denunciaAtualizada, historico };
+  return prisma.$transaction(async (tx) => {
+    const denunciaAtualizada = await tx.denuncia.update({
+      where: { id_denuncia: denunciaId },
+      data: { prioridade: novaPrioridade },
+      include: { imagens: true },
     });
 
-    console.log("=== UPDATE CONCLUÍDO COM SUCESSO COMFIRMADO PELO BANCO ===");
-    return resultado;
+    const historico = await tx.historico.create({
+      data: {
+        status: denunciaAtualizada.status,
+        prioridade: novaPrioridade,
+        denuncia_id: denunciaId,
+        gestor_id: gestorId,
+      },
+    });
 
-  } catch (error: any) {
-    console.error("❌ ERRO CAPTURADO DENTRO DA TRANSAÇÃO:", error);
-    throw error;
-  }
+    return { denuncia: denunciaAtualizada, historico };
+  });
 }

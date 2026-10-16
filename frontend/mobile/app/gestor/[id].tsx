@@ -23,8 +23,8 @@ export default function GestorDemandaScreen() {
   const fetchDemandById = useDemandStore((s) => s.fetchDemandById);
   const updateDemandStatus = useDemandStore((s) => s.updateDemandStatus);
   const updateDemandPriority = useDemandStore((s) => s.updateDemandPriority);
-  const isLoading = useDemandStore((s) => s.isLoading);
-  const storeError = useDemandStore((s) => s.error);
+  const isLoading = useDemandStore((s) => s.loadingDetail);
+  const storeError = useDemandStore((s) => s.detailError);
 
   // Lida do store: o otimismo e o rollback vivem la, nao aqui.
   const demand = useDemandStore((s) => s.demands.find((d) => d.id === id) ?? null);

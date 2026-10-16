@@ -13,12 +13,31 @@ import { ApiError } from '@/lib/api';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { filterDemands } from '@/utils/demandFilters';
 
-interface DemandStore {
+interface DemandState {
   demands: Demand[];
   filters: DemandFilters;
   metrics: MetricsKpis | null;
+
+  // Cada operação tem o seu flag: o gestor carrega lista e métricas em
+  // paralelo, e com um flag só quem terminava primeiro desligava o loading.
+  loadingList: boolean;
+  loadingMetrics: boolean;
+  loadingDetail: boolean;
+  /** Criação de denúncia em andamento. */
+  saving: boolean;
+
+  listError: string | null;
+  metricsError: string | null;
+  /** Erro ao abrir um detalhe; fica fora de `error` para não virar banner na lista. */
+  detailError: string | null;
+
+  /** Derivado: lista, métricas ou criação em andamento. Mantido para as telas que já o leem. */
   isLoading: boolean;
+  /** Derivado: erro da lista ou das métricas (o banner das telas de lista). */
   error: string | null;
+}
+
+interface DemandStore extends DemandState {
   fetchDemands: () => Promise<void>;
   fetchMetrics: () => Promise<void>;
   fetchDemandById: (id: string) => Promise<Demand | null>;
@@ -40,6 +59,8 @@ interface DemandStore {
   setFilters: (filters: Partial<DemandFilters>) => void;
   resetFilters: () => void;
   getFilteredDemands: () => Demand[];
+  /** Volta ao estado inicial. Chamado sozinho quando a sessão muda (ver o fim do arquivo). */
+  reset: () => void;
 }
 
 function upsert(demands: Demand[], demand: Demand): Demand[] {
@@ -50,17 +71,50 @@ function upsert(demands: Demand[], demand: Demand): Demand[] {
   return next;
 }
 
+/**
+ * Substitui o item pela resposta da API sem perder a foto: respostas que vêm
+ * sem `imagens` (versões antigas do PATCH de status/prioridade) mantêm as que
+ * já estavam na lista.
+ */
+function upsertMantendoFoto(demands: Demand[], updated: Demand): Demand[] {
+  const anterior = demands.find((d) => d.id === updated.id);
+  if (!anterior || updated.imagens.length > 0) return upsert(demands, updated);
+  return upsert(demands, { ...updated, imagens: anterior.imagens, fotoUrl: anterior.fotoUrl });
+}
+
+function mensagem(err: unknown, padrao: string): string {
+  return err instanceof ApiError ? err.message : padrao;
+}
+
 const defaultFilters: DemandFilters = {
   status: '',
   category: '',
   region: '',
   priority: '',
   search: '',
-  };
+};
 
-// Só a resposta da busca mais recente entra no store: uma resposta lenta de
-// uma busca antiga não pode sobrescrever o resultado da atual.
+const initialState: DemandState = {
+  demands: [],
+  filters: defaultFilters,
+  metrics: null,
+  loadingList: false,
+  loadingMetrics: false,
+  loadingDetail: false,
+  saving: false,
+  listError: null,
+  metricsError: null,
+  detailError: null,
+  isLoading: false,
+  error: null,
+};
+
+// Só a resposta da carga de lista mais recente entra no store: uma resposta
+// lenta de uma busca antiga não pode sobrescrever o resultado da atual.
 let ultimaBusca = 0;
+// Muda a cada reset (troca de sessão): respostas que chegam depois disso são
+// do usuário anterior e são descartadas.
+let sessao = 0;
 
 async function loadDemands(search: string | undefined): Promise<Demand[]> {
   const { role, userEmail } = useAuthStore.getState();
@@ -70,82 +124,87 @@ async function loadDemands(search: string | undefined): Promise<Demand[]> {
     : demandService.getMyDemands(userEmail ?? '', options);
 }
 
-export const useDemandStore = create<DemandStore>((set, get) => {
-  // Busca por texto vai para a API sem mexer em `isLoading`: as telas trocam a
-  // lista inteira por um LoadingScreen quando ele liga, o que desmontaria o
-  // campo de busca no meio da digitação. O filtro local já atualiza a lista.
-  const refetchSearch = async () => {
+export const useDemandStore = create<DemandStore>((rawSet, get) => {
+  // Todo set passa por aqui para recalcular `isLoading` e `error`.
+  const set = (patch: Partial<DemandState> | ((state: DemandStore) => Partial<DemandState>)) =>
+    rawSet((state) => {
+      const parcial = typeof patch === 'function' ? patch(state) : patch;
+      const next = { ...state, ...parcial };
+      return {
+        ...parcial,
+        isLoading: next.loadingList || next.loadingMetrics || next.saving,
+        error: next.listError ?? next.metricsError,
+      };
+    });
+
+  const carregarLista = async (mostrarLoading: boolean) => {
     const busca = ++ultimaBusca;
+    const sessaoAtual = sessao;
+    if (mostrarLoading) set({ loadingList: true, listError: null });
     try {
       const demands = await loadDemands(get().filters.search);
-      if (busca !== ultimaBusca) return;
-      set({ demands, error: null });
+      if (busca !== ultimaBusca || sessaoAtual !== sessao) return;
+      set({ demands, loadingList: false, listError: null });
     } catch (err) {
-      if (busca !== ultimaBusca) return;
-      const message = err instanceof ApiError ? err.message : 'Erro ao buscar demandas';
-      set({ error: message });
+      if (busca !== ultimaBusca || sessaoAtual !== sessao) return;
+      set({ loadingList: false, listError: mensagem(err, 'Erro ao carregar demandas') });
     }
   };
 
-  return {
-    demands: [],
-    filters: defaultFilters,
-    metrics: null,
-    isLoading: false,
-    error: null,
+  // Busca por texto vai para a API sem ligar o loading: as telas trocam a
+  // lista inteira por um LoadingScreen quando ele liga, o que desmontaria o
+  // campo de busca no meio da digitação. O filtro local já atualiza a lista.
+  const refetchSearch = () => carregarLista(false);
 
-    fetchDemands: async () => {
-      const busca = ++ultimaBusca;
-      set({ isLoading: true, error: null });
-      try {
-        const demands = await loadDemands(get().filters.search);
-        if (busca !== ultimaBusca) return;
-        set({ demands, isLoading: false });
-      } catch (err) {
-        if (busca !== ultimaBusca) return;
-        const message = err instanceof ApiError ? err.message : 'Erro ao carregar demandas';
-        set({ isLoading: false, error: message });
-      }
-    },
+  return {
+    ...initialState,
+
+    fetchDemands: () => carregarLista(true),
 
     fetchMetrics: async () => {
-      set({ isLoading: true, error: null });
+      const sessaoAtual = sessao;
+      set({ loadingMetrics: true, metricsError: null });
       try {
         const metrics = await metricsService.getKpis();
-        set({ metrics, isLoading: false });
+        if (sessaoAtual !== sessao) return;
+        set({ metrics, loadingMetrics: false });
       } catch (err) {
-        const message = err instanceof ApiError ? err.message : 'Erro ao carregar métricas';
-        set({ isLoading: false, error: message });
+        if (sessaoAtual !== sessao) return;
+        set({ loadingMetrics: false, metricsError: mensagem(err, 'Erro ao carregar métricas') });
       }
     },
 
     fetchDemandById: async (id: string) => {
       const { role, userEmail } = useAuthStore.getState();
-      set({ isLoading: true, error: null });
+      const sessaoAtual = sessao;
+      set({ loadingDetail: true, detailError: null });
       try {
         const demand =
           role === 'gestor'
             ? await demandService.getByIdForGestor(id)
             : await demandService.getById(id, userEmail ?? '');
-        set((state) => ({ demands: upsert(state.demands, demand), isLoading: false }));
+        if (sessaoAtual !== sessao) return null;
+        set((state) => ({ demands: upsert(state.demands, demand), loadingDetail: false }));
         return demand;
       } catch (err) {
-        const message = err instanceof ApiError ? err.message : 'Erro ao carregar demanda';
-        set({ isLoading: false, error: message });
+        if (sessaoAtual !== sessao) return null;
+        set({ loadingDetail: false, detailError: mensagem(err, 'Erro ao carregar demanda') });
         return null;
       }
     },
 
+    // Criar, mudar status/prioridade, editar e excluir não escrevem nos erros
+    // do store: a falha é relançada e mostrada pela tela que chamou, em vez de
+    // virar banner na lista.
     createDemand: async (input) => {
       const { userEmail } = useAuthStore.getState();
-      set({ isLoading: true, error: null });
+      set({ saving: true });
       try {
         const demand = await demandService.create(input, userEmail ?? '');
-        set((state) => ({ demands: [demand, ...state.demands], isLoading: false }));
+        set((state) => ({ demands: [demand, ...state.demands], saving: false }));
         return demand;
       } catch (err) {
-        const message = err instanceof ApiError ? err.message : 'Erro ao criar demanda';
-        set({ isLoading: false, error: message });
+        set({ saving: false });
         throw err;
       }
     },
@@ -156,16 +215,13 @@ export const useDemandStore = create<DemandStore>((set, get) => {
       // manter copia propria para fazer rollback.
       set((state) => ({
         demands: state.demands.map((d) => (d.id === id ? { ...d, status } : d)),
-        error: null,
       }));
       try {
         const updated = await demandService.updateStatus(id, status);
-        set((state) => ({ demands: upsert(state.demands, updated) }));
+        set((state) => ({ demands: upsertMantendoFoto(state.demands, updated) }));
       } catch (err) {
-        const message = err instanceof ApiError ? err.message : 'Erro ao atualizar status';
         set((state) => ({
           demands: anterior ? upsert(state.demands, anterior) : state.demands,
-          error: message,
         }));
         throw err;
       }
@@ -175,27 +231,22 @@ export const useDemandStore = create<DemandStore>((set, get) => {
       const anterior = get().demands.find((d) => d.id === id) ?? null;
       set((state) => ({
         demands: state.demands.map((d) => (d.id === id ? { ...d, priority } : d)),
-        error: null,
       }));
       try {
         const updated = await demandService.updatePriority(id, priority);
-        set((state) => ({ demands: upsert(state.demands, updated) }));
+        set((state) => ({ demands: upsertMantendoFoto(state.demands, updated) }));
       } catch (err) {
-        const message = err instanceof ApiError ? err.message : 'Erro ao atualizar prioridade';
         set((state) => ({
           demands: anterior ? upsert(state.demands, anterior) : state.demands,
-          error: message,
         }));
         throw err;
       }
     },
 
-    // Editar e excluir não escrevem em `error`: ele é o banner da lista, e a
-    // falha aqui é mostrada pela própria tela que chamou (o erro é relançado).
     updateDemand: async (id, input) => {
       const { userEmail } = useAuthStore.getState();
       const updated = await demandService.update(id, input, userEmail ?? '');
-      set((state) => ({ demands: upsert(state.demands, updated) }));
+      set((state) => ({ demands: upsertMantendoFoto(state.demands, updated) }));
       return updated;
     },
 
@@ -227,5 +278,20 @@ export const useDemandStore = create<DemandStore>((set, get) => {
       const { demands, filters } = get();
       return filterDemands(demands, filters);
     },
+
+    reset: () => {
+      sessao++;
+      ultimaBusca++;
+      rawSet(initialState);
+    },
   };
+});
+
+// Sair (ou entrar com outra conta) troca o token: sem isto, a lista, as
+// métricas e os filtros do usuário anterior continuavam aparecendo para o
+// próximo. Fica aqui para não acoplar o useAuthStore a este store.
+useAuthStore.subscribe((state, prev) => {
+  if (state.token !== prev.token) {
+    useDemandStore.getState().reset();
+  }
 });
