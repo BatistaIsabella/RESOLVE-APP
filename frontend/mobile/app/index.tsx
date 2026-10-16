@@ -13,8 +13,6 @@ import { useRouter } from 'expo-router';
 export default function HomeScreen() {
   const router = useRouter();
 
-  console.log('ESTOU NO INDEX DA SMART CITY');
-
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
@@ -22,7 +20,7 @@ export default function HomeScreen() {
       <View style={styles.background}>
 
         <Image
-          source={require('../../assets/images/cidade.png')}
+          source={require('../assets/images/cidade.png')}
           style={styles.cityImage}
           resizeMode="cover"
         />
