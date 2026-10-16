@@ -19,8 +19,6 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
 
     let target: '/' | '/gestor' | '/denuncias' | null = null;
     if (!token) {
-      // Mesmo destino do logout manual (router.replace('/')): evita que o
-      // guard sobrescreva a navegação do logout com outro replace.
       target = '/';
     } else if (requiredRole && role !== requiredRole) {
       target = role === 'gestor' ? '/gestor' : '/denuncias';

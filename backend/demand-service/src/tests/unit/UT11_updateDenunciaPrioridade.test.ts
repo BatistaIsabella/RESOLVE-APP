@@ -1,8 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// updateDenunciaPrioridade: mesmo encadeamento do status (gestor → findUnique
-// → $transaction), sem evento no Redis.
-
 vi.mock('../../lib/prisma', () => ({
   prisma: {
     gestor:   { upsert: vi.fn() },

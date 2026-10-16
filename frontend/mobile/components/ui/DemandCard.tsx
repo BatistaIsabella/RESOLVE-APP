@@ -12,8 +12,6 @@ interface DemandCardProps {
   showImage?: boolean;
 }
 
-// Resolvida é sempre verde, mesmo com prioridade Alta; antes a prioridade
-// vinha primeiro e uma denúncia resolvida aparecia vermelha.
 export function getStatusDotColor(demand: Pick<Demand, 'status' | 'priority'>): string {
   if (demand.status === 'Resolvida') return AppColors.dotGreen;
   if (demand.status === 'Aberta' || demand.priority === 'Alta') return AppColors.dotRed;

@@ -17,11 +17,6 @@ export function filterDemands(demands: Demand[], filters: DemandFilters): Demand
   });
 }
 
-/**
- * Mesmo critério do `?q=` da API (título OU descrição, sem diferenciar
- * maiúsculas). Filtrar aqui também deixa a lista responder na hora, antes da
- * resposta da API chegar.
- */
 function matchesSearch(demand: Demand, search: string | undefined): boolean {
   const termo = search?.trim().toLowerCase();
   if (!termo) return true;

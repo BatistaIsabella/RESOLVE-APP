@@ -152,7 +152,6 @@ export function buildCreatePayload(input: {
   };
 }
 
-/** Só os campos informados vão no PATCH; os enums seguem o formato da API. */
 export function buildUpdatePayload(input: DemandUpdateInput) {
   return {
     ...(input.titulo !== undefined ? { titulo: input.titulo.slice(0, 50) } : {}),
@@ -163,21 +162,11 @@ export function buildUpdatePayload(input: DemandUpdateInput) {
   };
 }
 
-// "(-8.05000, -34.88000)" que o GPS anexa ao fim do endereço.
 const COORDENADAS_NO_FIM = /\s*\([^)]*\)\s*$/;
-// "Lat: -8.05000, Lng: -34.88000": GPS sem endereço reverso.
 const SO_COORDENADAS = /^\s*Lat:/i;
 
 export const BAIRRO_SO_GPS = 'Localização por GPS';
 
-/**
- * Bairro para o card, a partir do endereço livre. Formatos conhecidos:
- * - "Rua, nº - Bairro, Cidade - CEP: ..." (traço com espaços em volta);
- * - GPS: "Rua, nº, Bairro, Cidade, UF (-8.05, -34.88)" → antepenúltimo item;
- * - GPS sem endereço: "Lat: ..., Lng: ...".
- * O sinal de menos das coordenadas e hífens em nomes ("Rua João-Pessoa")
- * não contam como separador.
- */
 export function extractBairro(endereco: string): string {
   if (SO_COORDENADAS.test(endereco)) return BAIRRO_SO_GPS;
 
@@ -191,7 +180,6 @@ export function extractBairro(endereco: string): string {
     .map((p) => p.trim())
     .filter(Boolean);
   const candidato = partes.length >= 4 ? partes[partes.length - 3] : undefined;
-  // Número da casa não é bairro (GPS que devolveu rua e número mas não o bairro).
   if (candidato && !/^\d/.test(candidato)) return candidato;
   return partes[0] ?? semCoordenadas;
 }

@@ -13,10 +13,6 @@
 //
 // Os conflitos de merge foram resolvidos. O JWT usa o campo `papel` em todos os testes.
 //
-// FILTROS SUPORTADOS PELO BACKEND (parsePagination + parseListFilters):
-//   ✅ ?page=N&limit=N
-//   ✅ ?categoria=, ?status=, ?regiao=, ?prioridade=  (validados contra os enums; inválido → 400)
-//   ✅ ?q=  (busca no título ou na descrição — coberto no TS09)
 //
 // COMANDO:
 //   cd backend/demand-service && npx vitest run src/tests/TS04_filtros_avancados.test.ts
@@ -245,7 +241,6 @@ describe('TS04 - Filtros avançados combinados', () => {
   });
 
   // ────────────────────────────────────────────────────────────────────────────
-  // FILTROS AVANÇADOS
   // ────────────────────────────────────────────────────────────────────────────
 
   describe('Cenário: Filtro por categoria', () => {

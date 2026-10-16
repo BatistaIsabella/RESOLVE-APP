@@ -1,4 +1,3 @@
-/** Rejeita se a promise não resolver em `ms` milissegundos. */
 export function comTempoLimite<T>(promise: Promise<T>, ms: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const limite = new Promise<never>((_, reject) => {

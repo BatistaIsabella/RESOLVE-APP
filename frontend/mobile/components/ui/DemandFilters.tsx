@@ -17,10 +17,6 @@ export function DemandFiltersPanel({ filters, onApply }: DemandFiltersProps) {
   const [temp, setTemp] = useState<Filters>(filters);
   const [search, setSearch] = useState(filters.search ?? '');
 
-  // A busca é aplicada sozinha depois de uma pausa na digitação, sem esperar o
-  // botão. Os refs evitam reiniciar o timer a cada render da tela (onApply é
-  // recriado a cada render) e garantem que só a busca muda: selects
-  // escolhidos e ainda não aplicados continuam pendentes.
   const filtersRef = useRef(filters);
   const onApplyRef = useRef(onApply);
   useEffect(() => {

@@ -2,7 +2,7 @@
 
 Aplicativo mobile do **RESOLVE**, plataforma de demandas urbanas: o **cidadão** registra ocorrências (com foto e localização GPS) e o **gestor** acompanha e atualiza o andamento.
 
-Feito com **React Native + Expo (SDK 57)**, **Expo Router**, **Zustand** e **axios**. O app é gerado **somente para Android e iOS** (sem versão web/PWA).
+Feito com **React Native + Expo (SDK 57)**, **Expo Router**, **Context API** (`useState` + `useEffect`) e **axios**. O app é gerado **somente para Android e iOS** (sem versão web/PWA).
 
 ## Pré-requisitos
 
@@ -100,7 +100,8 @@ frontend/mobile
 ├── hooks/           # Hooks compartilhados (ex.: useAuth)
 ├── lib/             # Infra: cliente axios (api.ts) e armazenamento seguro
 ├── services/        # Chamadas à API (camada de dados)
-├── stores/          # Estado global com Zustand
+├── contexts/        # Estado global (AuthContext e DemandContext)
+├── viewmodels/      # ViewModels das telas (MVVM)
 ├── types/           # Tipos TypeScript
 ├── utils/           # Funções utilitárias
 ├── assets/          # Ícones, splash e imagens

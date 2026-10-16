@@ -1,8 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 
-// Validações puras da edição pelo cidadão e dos filtros de listagem (?q=, enums).
-// Nenhuma delas toca no banco, mas o módulo importa prisma e redis no topo.
-
 vi.mock('../../lib/prisma', () => ({
   prisma: {},
 }));
@@ -17,8 +14,6 @@ import {
   parseListFilters,
   buildListWhere,
 } from '../../services/denunciaService';
-
-// ─── validateUpdateDenunciaInput ─────────────────────────────────────────────
 
 describe('validateUpdateDenunciaInput', () => {
 
@@ -86,8 +81,6 @@ describe('validateUpdateDenunciaInput', () => {
   });
 });
 
-// ─── parseListFilters ────────────────────────────────────────────────────────
-
 describe('parseListFilters', () => {
 
   it('retorna objeto vazio sem query', () => {
@@ -144,8 +137,6 @@ describe('parseListFilters', () => {
     expect(parseListFilters({ status: '' })).toEqual({});
   });
 });
-
-// ─── buildListWhere ──────────────────────────────────────────────────────────
 
 describe('buildListWhere', () => {
 

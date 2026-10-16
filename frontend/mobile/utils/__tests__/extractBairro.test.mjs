@@ -1,6 +1,3 @@
-// Sem test runner no app: roda com o test runner do próprio Node (>= 22.18,
-// que executa .ts direto):
-//   node --test utils/__tests__/*.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { extractBairro, BAIRRO_SO_GPS } from '../demandMapper.ts';

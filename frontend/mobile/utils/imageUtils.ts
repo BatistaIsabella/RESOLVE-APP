@@ -1,16 +1,9 @@
 import { File } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
-// Foto de celular sai com 3000-4000 px e vários MB; o backend só precisa de
-// uma imagem legível no detalhe da demanda.
 const LADO_MAIOR_MAX = 1280;
 const QUALIDADE_JPEG = 0.6;
 
-/**
- * Reduz a foto antes do envio: lado maior em até 1280 px e JPEG ~0.6.
- * Também converte HEIC/PNG da galeria para JPEG, que é o que o backend espera.
- * Se a manipulação falhar, devolve a URI original para não travar o envio.
- */
 export async function compressImage(uri: string): Promise<string> {
   try {
     const original = await ImageManipulator.manipulate(uri).renderAsync();

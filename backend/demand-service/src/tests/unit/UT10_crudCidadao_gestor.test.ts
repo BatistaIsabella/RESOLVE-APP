@@ -1,8 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Edição e exclusão de denúncias (cidadão dono, só ABERTA; gestor exclui
-// qualquer uma) e a busca nas listagens. Prisma e Redis são mockados.
-
 vi.mock('../../lib/prisma', () => ({
   prisma: {
     cidadao: { upsert: vi.fn() },
@@ -68,8 +65,6 @@ beforeEach(() => {
   redisDel.mockResolvedValue(1);
 });
 
-// ─── updateDenunciaCidadao ───────────────────────────────────────────────────
-
 describe('updateDenunciaCidadao', () => {
 
   it('procura a denúncia filtrando pelo cidadão dono', async () => {
@@ -125,8 +120,6 @@ describe('updateDenunciaCidadao', () => {
   });
 });
 
-// ─── deleteDenunciaCidadao ───────────────────────────────────────────────────
-
 describe('deleteDenunciaCidadao', () => {
 
   it('exclui a própria denúncia ABERTA', async () => {
@@ -156,8 +149,6 @@ describe('deleteDenunciaCidadao', () => {
   });
 });
 
-// ─── deleteDenunciaGestor ────────────────────────────────────────────────────
-
 describe('deleteDenunciaGestor', () => {
 
   it('exclui denúncia de qualquer status', async () => {
@@ -178,8 +169,6 @@ describe('deleteDenunciaGestor', () => {
     expect(db.denuncia.delete).not.toHaveBeenCalled();
   });
 });
-
-// ─── busca nas listagens ─────────────────────────────────────────────────────
 
 describe('busca e filtros nas listagens', () => {
 

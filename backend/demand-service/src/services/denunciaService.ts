@@ -61,7 +61,6 @@ async function resolveGestorId(usuarioId: number): Promise<number> {
   return gestor.id_gestor;
 }
 
-// Regras de cada campo, usadas tanto na criação quanto na edição pelo cidadão.
 function assertTitulo(titulo: unknown): asserts titulo is string {
   if (typeof titulo !== 'string' || titulo.length > 50) {
     throw httpError('titulo deve ser uma string com no máximo 50 caracteres', 400);
@@ -200,7 +199,6 @@ function parseEnumFilter<T extends string>(
   return valor.toUpperCase() as T;
 }
 
-/** Lê `q`, `categoria`, `status`, `regiao` e `prioridade` da query string das listagens. */
 export function parseListFilters(query: Record<string, unknown>): DenunciaListFilters {
   const filtros: DenunciaListFilters = {};
 
@@ -321,9 +319,6 @@ export async function getDenunciaById(usuarioId: number, denunciaId: number) {
   return denuncia;
 }
 
-// O cache de KPIs do metrics-service conta por categoria/região/status, então
-// editar ou excluir uma denúncia precisa invalidá-lo. Falha no Redis não
-// impede a operação.
 async function invalidarCacheMetricas() {
   try {
     await Promise.race([
@@ -340,8 +335,6 @@ async function invalidarCacheMetricas() {
 async function findDenunciaDoCidadaoEmAberto(usuarioId: number, denunciaId: number, acao: string) {
   const cidadaoId = await resolveCidadaoId(usuarioId);
 
-  // Denúncia de outro cidadão responde 404, igual a uma inexistente,
-  // para não revelar quais IDs existem.
   const denuncia = await prisma.denuncia.findFirst({
     where: { id_denuncia: denunciaId, cidadao_id: cidadaoId },
   });
@@ -381,7 +374,6 @@ export async function updateDenunciaCidadao(
 export async function deleteDenunciaCidadao(usuarioId: number, denunciaId: number) {
   await findDenunciaDoCidadaoEmAberto(usuarioId, denunciaId, 'excluir');
 
-  // imagens e historicos saem junto (onDelete: Cascade no schema)
   await prisma.denuncia.delete({ where: { id_denuncia: denunciaId } });
 
   await invalidarCacheMetricas();
@@ -425,8 +417,6 @@ export async function updateDenunciaStatus(
   }
 
   const resultado = await prisma.$transaction(async (tx) => {
-    // imagens junto: o app troca o item da lista por esta resposta, e sem
-    // elas a foto sumia depois de mudar o status.
     const denunciaAtualizada = await tx.denuncia.update({
       where: { id_denuncia: denunciaId },
       data: { status: novoStatus },

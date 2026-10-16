@@ -1,11 +1,3 @@
-// TS09 — CRUD das ocorrências: edição e exclusão pelo cidadão dono (só ABERTA),
-// exclusão pelo gestor, detalhe restrito ao dono e busca por texto (?q=).
-//
-// PRÉ-REQUISITOS: os mesmos do TS05/TS06 (Postgres com o schema aplicado,
-// tabela auxiliar `usuarios`, Redis e JWT_SECRET).
-//
-// COMANDO:
-//   cd backend/demand-service && npx vitest run src/tests/TS09_crud_cidadao.test.ts
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
@@ -16,8 +8,6 @@ import app from '../app';
 const prisma = new PrismaClient();
 const SECRET = process.env.JWT_SECRET || 'change-me';
 
-// Termo que só aparece nas denúncias deste arquivo, para a busca não pegar
-// registros das outras suítes que rodam no mesmo banco.
 const TERMO = 'ts09zebra';
 
 let tokenDono: string;
