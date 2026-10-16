@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
 
 import { useAuth } from '@/hooks/useAuth';
 import { useDemandStore } from '@/stores/useDemandStore';
@@ -36,9 +36,13 @@ export function useGestorDashboardViewModel() {
     await Promise.all([fetchDemands(), fetchMetrics()]);
   }, [fetchDemands, fetchMetrics]);
 
-  useEffect(() => {
-    load().finally(() => setCarregando(false));
-  }, [load]);
+  // Recarrega a cada foco, não só no mount: ao voltar do detalhe depois de
+  // mudar status/prioridade, total e gráficos precisam refletir a mudança.
+  useFocusEffect(
+    useCallback(() => {
+      load().finally(() => setCarregando(false));
+    }, [load])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
