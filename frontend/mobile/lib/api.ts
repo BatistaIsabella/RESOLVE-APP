@@ -4,6 +4,8 @@ import { useAuthStore } from '@/stores/useAuthStore';
 export const API_GATEWAY_URL =
   process.env.EXPO_PUBLIC_API_GATEWAY_URL ?? 'https://smartcity-api.beholder.app.br';
 
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/register'];
+
 export class ApiError extends Error {
   status: number;
 
@@ -30,11 +32,13 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<{ error?: string }>) => {
+  (error: AxiosError<{ error?: string; message?: string }>) => {
     const status = error.response?.status ?? 0;
-    const message = error.response?.data?.error;
+    const message = error.response?.data?.error ?? error.response?.data?.message;
+    const isAuthRequest = AUTH_ENDPOINTS.some((path) => error.config?.url?.includes(path));
 
-    if (status === 401) {
+    // 401 em login/cadastro é credencial inválida, não sessão expirada.
+    if (status === 401 && !isAuthRequest) {
       useAuthStore.getState().logout();
     }
 
@@ -48,7 +52,9 @@ api.interceptors.response.use(
 
     const friendlyMessages: Record<number, string> = {
       400: message ?? 'Dados inválidos. Verifique os campos.',
-      401: 'Sessão expirada. Faça login novamente.',
+      401: isAuthRequest
+        ? (message ?? 'E-mail ou senha incorretos')
+        : (message ?? 'Sessão expirada. Faça login novamente.'),
       403: message ?? 'Você não tem permissão para esta ação.',
       404: message ?? 'Recurso não encontrado.',
       409: message ?? 'Conflito ao processar a solicitação.',
