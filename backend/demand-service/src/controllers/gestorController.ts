@@ -6,7 +6,8 @@ import { parsePagination } from '../utils/pagination';
 export async function listarTodasDenuncias(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const pagination = parsePagination(req.query as Record<string, unknown>);
-    const resultado = await denunciaService.listAllDenuncias(pagination);
+    const filtros = denunciaService.parseListFilters(req.query as Record<string, unknown>);
+    const resultado = await denunciaService.listAllDenuncias(pagination, filtros);
     return res.json(resultado);
   } catch (err) {
     next(err);
@@ -18,6 +19,16 @@ export async function getDenunciaDetalhesGestor(req: AuthRequest, res: Response,
     const denunciaId = denunciaService.parseDenunciaId(req.params.id);
     const denuncia = await denunciaService.getDenunciaByIdForGestor(denunciaId);
     return res.json(denuncia);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function excluirDenunciaGestor(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const denunciaId = denunciaService.parseDenunciaId(req.params.id);
+    await denunciaService.deleteDenunciaGestor(denunciaId);
+    return res.status(204).send();
   } catch (err) {
     next(err);
   }

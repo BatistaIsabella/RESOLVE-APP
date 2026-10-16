@@ -3,11 +3,12 @@ import {
   Regioes,
   StatusDenuncia,
   NivelPrioridade,
+  Prisma,
 } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { httpError } from '../utils/httpError';
 import { buildPaginatedResult, PaginatedResult, PaginationParams } from '../utils/pagination';
-import { publishDenunciaStatusEvent } from '../config/redis';
+import { getRedisPublisher, publishDenunciaStatusEvent } from '../config/redis';
 
 export interface CreateDenunciaInput {
   titulo: string;
@@ -18,6 +19,22 @@ export interface CreateDenunciaInput {
   prioridade?: NivelPrioridade;
   imagens?: string[];
 }
+
+export type UpdateDenunciaInput = Partial<
+  Pick<CreateDenunciaInput, 'titulo' | 'descricao' | 'categoria' | 'regiao' | 'endereco'>
+>;
+
+export interface DenunciaListFilters {
+  q?: string;
+  categoria?: Categorias;
+  status?: StatusDenuncia;
+  regiao?: Regioes;
+  prioridade?: NivelPrioridade;
+}
+
+const METRICS_CACHE_KEY = 'smartcity:metrics:kpis';
+const CAMPOS_EDITAVEIS = ['titulo', 'descricao', 'categoria', 'regiao', 'endereco'] as const;
+const TAMANHO_MAXIMO_BUSCA = 100;
 
 const CATEGORIAS_VALIDAS = new Set<string>(Object.values(Categorias));
 const REGIOES_VALIDAS = new Set<string>(Object.values(Regioes));
@@ -42,6 +59,31 @@ async function resolveGestorId(usuarioId: number): Promise<number> {
   });
 
   return gestor.id_gestor;
+}
+
+// Regras de cada campo, usadas tanto na criação quanto na edição pelo cidadão.
+function assertTitulo(titulo: unknown): asserts titulo is string {
+  if (typeof titulo !== 'string' || titulo.length > 50) {
+    throw httpError('titulo deve ser uma string com no máximo 50 caracteres', 400);
+  }
+}
+
+function assertCategoria(categoria: unknown): asserts categoria is Categorias {
+  if (typeof categoria !== 'string' || !CATEGORIAS_VALIDAS.has(categoria)) {
+    throw httpError('categoria inválida', 400);
+  }
+}
+
+function assertRegiao(regiao: unknown): asserts regiao is Regioes {
+  if (typeof regiao !== 'string' || !REGIOES_VALIDAS.has(regiao)) {
+    throw httpError('regiao inválida', 400);
+  }
+}
+
+function assertTexto(campo: string, valor: unknown): asserts valor is string {
+  if (typeof valor !== 'string') {
+    throw httpError(`${campo} deve ser uma string`, 400);
+  }
 }
 
 export function validateCreateDenunciaInput(body: Record<string, unknown>): CreateDenunciaInput {
@@ -72,25 +114,11 @@ export function validateCreateDenunciaInput(body: Record<string, unknown>): Crea
     throw httpError(`Campos obrigatórios: ${faltando.join(', ')}`, 400);
   }
 
-  if (typeof titulo !== 'string' || titulo.length > 50) {
-    throw httpError('titulo deve ser uma string com no máximo 50 caracteres', 400);
-  }
-
-  if (typeof categoria !== 'string' || !CATEGORIAS_VALIDAS.has(categoria)) {
-    throw httpError('categoria inválida', 400);
-  }
-
-  if (typeof regiao !== 'string' || !REGIOES_VALIDAS.has(regiao)) {
-    throw httpError('regiao inválida', 400);
-  }
-
-  if (typeof descricao !== 'string') {
-    throw httpError('descricao deve ser uma string', 400);
-  }
-
-  if (typeof endereco !== 'string') {
-    throw httpError('endereco deve ser uma string', 400);
-  }
+  assertTitulo(titulo);
+  assertCategoria(categoria);
+  assertRegiao(regiao);
+  assertTexto('descricao', descricao);
+  assertTexto('endereco', endereco);
 
   if (prioridade !== undefined) {
     if (typeof prioridade !== 'string' || !PRIORIDADES_VALIDAS.has(prioridade)) {
@@ -107,6 +135,114 @@ export function validateCreateDenunciaInput(body: Record<string, unknown>): Crea
     prioridade: prioridade as NivelPrioridade | undefined,
     imagens: Array.isArray(imagens) ? (imagens as string[]) : undefined,
   };
+}
+
+export function validateUpdateDenunciaInput(body: Record<string, unknown>): UpdateDenunciaInput {
+  const naoEditaveis = Object.keys(body).filter(
+    (campo) => !(CAMPOS_EDITAVEIS as readonly string[]).includes(campo)
+  );
+  if (naoEditaveis.length > 0) {
+    throw httpError(
+      `Campos não editáveis: ${naoEditaveis.join(', ')}. Editáveis: ${CAMPOS_EDITAVEIS.join(', ')}`,
+      400
+    );
+  }
+
+  const input: UpdateDenunciaInput = {};
+
+  for (const campo of CAMPOS_EDITAVEIS) {
+    const valor = body[campo];
+    if (valor === undefined) continue;
+
+    if (valor === null || (typeof valor === 'string' && valor.trim() === '')) {
+      throw httpError(`${campo} não pode ser vazio`, 400);
+    }
+
+    switch (campo) {
+      case 'titulo':
+        assertTitulo(valor);
+        input.titulo = valor;
+        break;
+      case 'categoria':
+        assertCategoria(valor);
+        input.categoria = valor;
+        break;
+      case 'regiao':
+        assertRegiao(valor);
+        input.regiao = valor;
+        break;
+      case 'descricao':
+      case 'endereco':
+        assertTexto(campo, valor);
+        input[campo] = valor;
+        break;
+    }
+  }
+
+  if (Object.keys(input).length === 0) {
+    throw httpError(`Informe ao menos um campo para atualizar: ${CAMPOS_EDITAVEIS.join(', ')}`, 400);
+  }
+
+  return input;
+}
+
+function parseEnumFilter<T extends string>(
+  nome: string,
+  valor: unknown,
+  validos: Set<string>
+): T | undefined {
+  if (valor === undefined || valor === '') return undefined;
+
+  if (typeof valor !== 'string' || !validos.has(valor.toUpperCase())) {
+    throw httpError(`${nome} inválido. Valores aceitos: ${[...validos].join(', ')}`, 400);
+  }
+
+  return valor.toUpperCase() as T;
+}
+
+/** Lê `q`, `categoria`, `status`, `regiao` e `prioridade` da query string das listagens. */
+export function parseListFilters(query: Record<string, unknown>): DenunciaListFilters {
+  const filtros: DenunciaListFilters = {};
+
+  if (query.q !== undefined) {
+    if (typeof query.q !== 'string') {
+      throw httpError('q deve ser um texto', 400);
+    }
+    const q = query.q.trim();
+    if (q.length > TAMANHO_MAXIMO_BUSCA) {
+      throw httpError(`q deve ter no máximo ${TAMANHO_MAXIMO_BUSCA} caracteres`, 400);
+    }
+    if (q) filtros.q = q;
+  }
+
+  const categoria = parseEnumFilter<Categorias>('categoria', query.categoria, CATEGORIAS_VALIDAS);
+  const status = parseEnumFilter<StatusDenuncia>('status', query.status, STATUS_VALIDOS);
+  const regiao = parseEnumFilter<Regioes>('regiao', query.regiao, REGIOES_VALIDAS);
+  const prioridade = parseEnumFilter<NivelPrioridade>('prioridade', query.prioridade, PRIORIDADES_VALIDAS);
+
+  if (categoria) filtros.categoria = categoria;
+  if (status) filtros.status = status;
+  if (regiao) filtros.regiao = regiao;
+  if (prioridade) filtros.prioridade = prioridade;
+
+  return filtros;
+}
+
+export function buildListWhere(filtros: DenunciaListFilters): Prisma.DenunciaWhereInput {
+  const where: Prisma.DenunciaWhereInput = {};
+
+  if (filtros.q) {
+    where.OR = [
+      { titulo: { contains: filtros.q, mode: 'insensitive' } },
+      { descricao: { contains: filtros.q, mode: 'insensitive' } },
+    ];
+  }
+  if (filtros.categoria) where.categoria = filtros.categoria;
+  if (filtros.status) where.status = filtros.status;
+  if (filtros.regiao) where.regiao = filtros.regiao;
+  if (filtros.prioridade) where.prioridade = filtros.prioridade;
+
+  return where;
 }
 
 export async function createDenuncia(usuarioId: number, input: CreateDenunciaInput, emailSolicitante?: string) {
@@ -141,11 +277,12 @@ export async function createDenuncia(usuarioId: number, input: CreateDenunciaInp
 
 export async function listDenunciasByCidadao(
   usuarioId: number,
-  pagination: PaginationParams
+  pagination: PaginationParams,
+  filtros: DenunciaListFilters = {}
 ): Promise<PaginatedResult<Awaited<ReturnType<typeof prisma.denuncia.findMany>>[number]>> {
   const cidadaoId = await resolveCidadaoId(usuarioId);
 
-  const where = { cidadao_id: cidadaoId };
+  const where = { ...buildListWhere(filtros), cidadao_id: cidadaoId };
 
   const [total, data] = await Promise.all([
     prisma.denuncia.count({ where }),
@@ -182,6 +319,86 @@ export async function getDenunciaById(usuarioId: number, denunciaId: number) {
   }
 
   return denuncia;
+}
+
+// O cache de KPIs do metrics-service conta por categoria/região/status, então
+// editar ou excluir uma denúncia precisa invalidá-lo. Falha no Redis não
+// impede a operação.
+async function invalidarCacheMetricas() {
+  try {
+    await Promise.race([
+      getRedisPublisher().then((redis) => redis.del(METRICS_CACHE_KEY)),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Redis timeout')), 3000)
+      ),
+    ]);
+  } catch (err) {
+    console.error('[demand] Falha ao invalidar cache de métricas:', err);
+  }
+}
+
+async function findDenunciaDoCidadaoEmAberto(usuarioId: number, denunciaId: number, acao: string) {
+  const cidadaoId = await resolveCidadaoId(usuarioId);
+
+  // Denúncia de outro cidadão responde 404, igual a uma inexistente,
+  // para não revelar quais IDs existem.
+  const denuncia = await prisma.denuncia.findFirst({
+    where: { id_denuncia: denunciaId, cidadao_id: cidadaoId },
+  });
+
+  if (!denuncia) {
+    throw httpError('Denúncia não encontrada', 404);
+  }
+
+  if (denuncia.status !== StatusDenuncia.ABERTA) {
+    throw httpError(
+      `Só é possível ${acao} denúncias com status ABERTA (status atual: ${denuncia.status})`,
+      409
+    );
+  }
+
+  return denuncia;
+}
+
+export async function updateDenunciaCidadao(
+  usuarioId: number,
+  denunciaId: number,
+  input: UpdateDenunciaInput
+) {
+  await findDenunciaDoCidadaoEmAberto(usuarioId, denunciaId, 'editar');
+
+  const denuncia = await prisma.denuncia.update({
+    where: { id_denuncia: denunciaId },
+    data: input,
+    include: { imagens: true },
+  });
+
+  await invalidarCacheMetricas();
+
+  return denuncia;
+}
+
+export async function deleteDenunciaCidadao(usuarioId: number, denunciaId: number) {
+  await findDenunciaDoCidadaoEmAberto(usuarioId, denunciaId, 'excluir');
+
+  // imagens e historicos saem junto (onDelete: Cascade no schema)
+  await prisma.denuncia.delete({ where: { id_denuncia: denunciaId } });
+
+  await invalidarCacheMetricas();
+}
+
+export async function deleteDenunciaGestor(denunciaId: number) {
+  const denuncia = await prisma.denuncia.findUnique({
+    where: { id_denuncia: denunciaId },
+  });
+
+  if (!denuncia) {
+    throw httpError('Denúncia não encontrada', 404);
+  }
+
+  await prisma.denuncia.delete({ where: { id_denuncia: denunciaId } });
+
+  await invalidarCacheMetricas();
 }
 
 export async function updateDenunciaStatus(
@@ -255,10 +472,16 @@ export function validateStatusInput(status: unknown): StatusDenuncia {
   return status as StatusDenuncia;
 }
 
-export async function listAllDenuncias(pagination: PaginationParams) {
+export async function listAllDenuncias(
+  pagination: PaginationParams,
+  filtros: DenunciaListFilters = {}
+) {
+  const where = buildListWhere(filtros);
+
   const [total, data] = await Promise.all([
-    prisma.denuncia.count(),
+    prisma.denuncia.count({ where }),
     prisma.denuncia.findMany({
+      where,
       orderBy: { data_registro: 'desc' },
       skip: pagination.skip,
       take: pagination.limit,
