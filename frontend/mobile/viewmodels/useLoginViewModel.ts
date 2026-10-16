@@ -21,23 +21,35 @@ export function useLoginViewModel() {
   const handleLogin = async () => {
     setErro('');
 
-    // O autocompletar do teclado costuma deixar um espaço no fim do e-mail.
-    const emailLimpo = email.trim();
-    if (!emailLimpo || !senha) {
+    // O autocompletar do teclado costuma deixar espaço no fim e maiúscula no
+    // início.
+    const emailDigitado = email.trim();
+    const emailNormalizado = emailDigitado.toLowerCase();
+    if (!emailNormalizado || !senha) {
       setErro('Preencha todos os campos obrigatórios');
       return;
     }
 
     try {
       setRemembered(manterConectado);
-      const role = await login(emailLimpo, senha);
+      let role;
+      try {
+        role = await login(emailNormalizado, senha);
+      } catch (err) {
+        // O backend compara o e-mail exatamente e contas antigas (cadastradas
+        // pela web ou antes da normalização) podem ter maiúsculas gravadas.
+        const recusado = err instanceof ApiError && err.status === 401;
+        if (!recusado || emailDigitado === emailNormalizado) throw err;
+        role = await login(emailDigitado, senha);
+      }
       router.replace(getPostLoginRoute(role));
     } catch (err) {
       setErro(err instanceof ApiError ? err.message : 'Erro ao fazer login');
     }
   };
 
-  const goBack = () => router.back();
+  // Aberta por deep link ou depois do logout, a tela não tem para onde voltar.
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
   const goToCadastro = () => router.push('/cadastro');
 
   return {

@@ -35,7 +35,7 @@ export function useCadastroViewModel() {
     setErro('');
 
     const nomeLimpo = nome.trim();
-    const emailLimpo = email.trim();
+    const emailLimpo = email.trim().toLowerCase();
 
     if (!nomeLimpo || !emailLimpo || !senha || !confirmarSenha) {
       setErro('Preencha todos os campos obrigatórios');
@@ -72,7 +72,8 @@ export function useCadastroViewModel() {
     }
   };
 
-  const goBack = () => router.back();
+  // Aberta por deep link ou depois do logout, a tela não tem para onde voltar.
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
   const goToLogin = () => router.push('/login');
 
   return {
