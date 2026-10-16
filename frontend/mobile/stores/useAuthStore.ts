@@ -40,12 +40,13 @@ export const useAuthStore = create<AuthState>()(
       login: async (email, senha) => {
         set({ isLoading: true, error: null });
         try {
-          const result = await authService.login(email, senha);
+          const emailNormalizado = email.trim().toLowerCase();
+          const result = await authService.login(emailNormalizado, senha);
           set({
             token: result.token,
             role: result.papel,
             userName: result.nome,
-            userEmail: email,
+            userEmail: emailNormalizado,
             isLoading: false,
           });
           return result.papel;
@@ -63,12 +64,13 @@ export const useAuthStore = create<AuthState>()(
           // então após criar a conta reaproveitamos o login para autenticar
           // a sessão, igual ao fluxo já existente na tela de login.
           await authService.register(nome, email, senha, papel, codigoAcesso);
-          const result = await authService.login(email, senha);
+          const emailNormalizado = email.trim().toLowerCase();
+          const result = await authService.login(emailNormalizado, senha);
           set({
             token: result.token,
             role: result.papel,
             userName: result.nome,
-            userEmail: email,
+            userEmail: emailNormalizado,
             isLoading: false,
           });
           return result.papel;
@@ -91,8 +93,14 @@ export const useAuthStore = create<AuthState>()(
         userName: state.userName,
         userEmail: state.userEmail,
       }),
+      // Chamado também quando a leitura falha (state undefined); sem isso o
+      // app ficaria preso em "Restaurando sessão...".
       onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
+        if (state) {
+          state.setHasHydrated(true);
+        } else {
+          useAuthStore.setState({ _hasHydrated: true });
+        }
       },
     }
   )
