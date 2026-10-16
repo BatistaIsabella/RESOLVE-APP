@@ -1,6 +1,7 @@
 import React from 'react';
 import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
 import { ChartInk } from '@/constants/colors';
+import { axisPadding, fitLabel, niceScale } from './chartScale';
 import { ChartSlice } from '@/utils/metricsAggregator';
 
 interface LineChartProps {
@@ -10,22 +11,15 @@ interface LineChartProps {
   color?: string;
 }
 
-function niceMax(value: number): number {
-  if (value <= 0) return 4;
-  const magnitude = Math.pow(10, Math.floor(Math.log10(value)));
-  return Math.ceil(value / magnitude) * magnitude;
-}
-
 export function LineChart({ data, width, height = 170, color = ChartInk.primary }: LineChartProps) {
-  const paddingLeft = 28;
   const paddingBottom = 26;
   const paddingTop = 10;
 
+  const { max, ticks } = niceScale(Math.max(...data.map((d) => d.value), 0));
+  const paddingLeft = axisPadding(max);
+
   const plotWidth = width - paddingLeft - 12;
   const plotHeight = height - paddingBottom - paddingTop;
-
-  const max = niceMax(Math.max(...data.map((d) => d.value), 0));
-  const ticks = [0, max / 2, max];
 
   const stepX = data.length > 1 ? plotWidth / (data.length - 1) : 0;
   const pointAt = (index: number, value: number) => ({
@@ -51,7 +45,7 @@ export function LineChart({ data, width, height = 170, color = ChartInk.primary 
               strokeWidth={1}
             />
             <SvgText x={paddingLeft - 6} y={y + 4} fontSize={9} fill={ChartInk.secondary} textAnchor="end">
-              {String(Math.round(tick))}
+              {String(tick)}
             </SvgText>
           </React.Fragment>
         );
@@ -88,7 +82,7 @@ export function LineChart({ data, width, height = 170, color = ChartInk.primary 
           fill={ChartInk.secondary}
           textAnchor="middle"
         >
-          {item.label}
+          {fitLabel(item.label, stepX || plotWidth)}
         </SvgText>
       ))}
     </Svg>

@@ -41,6 +41,15 @@ export interface DemandFilters {
   category: DemandCategory | '';
   region: DemandRegion | '';
   priority: DemandPriority | '';
+  search?: string;
+}
+
+export interface DemandUpdateInput {
+  titulo?: string;
+  descricao?: string;
+  categoria?: DemandCategory;
+  regiao?: DemandRegion;
+  endereco?: string;
 }
 
 export interface MetricsKpis {

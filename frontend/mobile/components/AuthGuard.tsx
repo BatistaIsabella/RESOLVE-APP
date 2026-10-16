@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
@@ -12,17 +12,26 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
   const router = useRouter();
   const { token, role, hasHydrated } = useAuth();
 
+  const redirectedTo = useRef<string | null>(null);
+
   useEffect(() => {
     if (!hasHydrated) return;
 
+    let target: '/' | '/gestor' | '/denuncias' | null = null;
     if (!token) {
-      router.replace('/login');
-      return;
+      target = '/';
+    } else if (requiredRole && role !== requiredRole) {
+      target = role === 'gestor' ? '/gestor' : '/denuncias';
     }
 
-    if (requiredRole && role !== requiredRole) {
-      router.replace(role === 'gestor' ? '/gestor' : '/denuncias');
+    if (!target) {
+      redirectedTo.current = null;
+      return;
     }
+    if (redirectedTo.current === target) return;
+
+    redirectedTo.current = target;
+    router.replace(target);
   }, [hasHydrated, token, role, requiredRole, router]);
 
   if (!hasHydrated) {

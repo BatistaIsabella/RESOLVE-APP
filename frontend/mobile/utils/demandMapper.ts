@@ -1,9 +1,10 @@
-import {
+import type {
   Demand,
   DemandCategory,
   DemandPriority,
   DemandRegion,
   DemandStatus,
+  DemandUpdateInput,
 } from '@/types/demand';
 
 export interface ApiDenuncia {
@@ -151,8 +152,34 @@ export function buildCreatePayload(input: {
   };
 }
 
+export function buildUpdatePayload(input: DemandUpdateInput) {
+  return {
+    ...(input.titulo !== undefined ? { titulo: input.titulo.slice(0, 50) } : {}),
+    ...(input.descricao !== undefined ? { descricao: input.descricao } : {}),
+    ...(input.categoria ? { categoria: mapCategoryToApi(input.categoria) } : {}),
+    ...(input.regiao ? { regiao: mapRegionToApi(input.regiao) } : {}),
+    ...(input.endereco !== undefined ? { endereco: input.endereco } : {}),
+  };
+}
+
+const COORDENADAS_NO_FIM = /\s*\([^)]*\)\s*$/;
+const SO_COORDENADAS = /^\s*Lat:/i;
+
+export const BAIRRO_SO_GPS = 'Localização por GPS';
+
 export function extractBairro(endereco: string): string {
-  const parts = endereco.split('-').map((p) => p.trim());
-  if (parts.length >= 2) return parts[1];
-  return endereco.split(',')[0]?.trim() ?? endereco;
+  if (SO_COORDENADAS.test(endereco)) return BAIRRO_SO_GPS;
+
+  const semCoordenadas = endereco.replace(COORDENADAS_NO_FIM, '').trim();
+
+  const blocos = semCoordenadas.split(' - ');
+  if (blocos.length >= 2) return blocos[1].split(',')[0].trim();
+
+  const partes = semCoordenadas
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const candidato = partes.length >= 4 ? partes[partes.length - 3] : undefined;
+  if (candidato && !/^\d/.test(candidato)) return candidato;
+  return partes[0] ?? semCoordenadas;
 }

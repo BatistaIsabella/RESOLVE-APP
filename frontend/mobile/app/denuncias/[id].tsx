@@ -1,36 +1,35 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { GradientHeader } from '@/components/ui/GradientHeader';
 import { DemandCard } from '@/components/ui/DemandCard';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import { useAuth } from '@/hooks/useAuth';
-import { useDemandStore } from '@/stores/useDemandStore';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { AppColors } from '@/constants/colors';
+import { useDenunciaDetalheViewModel } from '@/viewmodels/useDenunciaDetalheViewModel';
 
 export default function DenunciaDetalhesScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
-  const { userName, logout } = useAuth();
-  const fetchDemandById = useDemandStore((s) => s.fetchDemandById);
-  const isLoading = useDemandStore((s) => s.isLoading);
-  const error = useDemandStore((s) => s.error);
+  const {
+    userName,
+    demand,
+    error,
+    showLoadingScreen,
+    podeAlterar,
+    excluida,
+    excluindo,
+    erroExclusao,
+    confirmarExclusao,
+    editar,
+    goBack,
+    handleLogout,
+  } = useDenunciaDetalheViewModel(id);
 
-  // Lida do store: nada de copia local, para a tela nao divergir da lista.
-  const demand = useDemandStore((s) => s.demands.find((d) => d.id === id) ?? null);
+  if (excluida) {
+    return <LoadingScreen message="Voltando para a lista..." />;
+  }
 
-  useEffect(() => {
-    if (id) {
-      fetchDemandById(id);
-    }
-  }, [id, fetchDemandById]);
-
-  const handleLogout = () => {
-    logout();
-    router.replace('/');
-  };
-
-  if (isLoading && !demand) {
+  if (showLoadingScreen) {
     return <LoadingScreen message="Carregando detalhes..." />;
   }
 
@@ -40,7 +39,7 @@ export default function DenunciaDetalhesScreen() {
         <GradientHeader
           title="Detalhes"
           profileLabel={userName ?? 'Usuário'}
-          onBack={() => router.back()}
+          onBack={goBack}
           onLogout={handleLogout}
         />
         <View style={styles.center}>
@@ -55,7 +54,7 @@ export default function DenunciaDetalhesScreen() {
       <GradientHeader
         title="Detalhes"
         profileLabel={userName ?? 'Usuário'}
-        onBack={() => router.back()}
+        onBack={goBack}
         onLogout={handleLogout}
       />
       <ScrollView contentContainerStyle={styles.content}>
@@ -68,6 +67,30 @@ export default function DenunciaDetalhesScreen() {
           <Text style={styles.infoLabel}>Registrado em</Text>
           <Text style={styles.infoValue}>{demand.dataRegistro}</Text>
         </View>
+
+        {podeAlterar ? (
+          <View style={styles.actions}>
+            {erroExclusao ? <Text style={styles.error}>{erroExclusao}</Text> : null}
+            <View style={styles.actionsRow}>
+              <PrimaryButton
+                label="Editar"
+                onPress={editar}
+                disabled={excluindo}
+                style={styles.actionBtn}
+              />
+              <PrimaryButton
+                label="Excluir"
+                onPress={confirmarExclusao}
+                loading={excluindo}
+                style={{ ...styles.actionBtn, ...styles.deleteBtn }}
+              />
+            </View>
+          </View>
+        ) : (
+          <Text style={styles.lockedHint}>
+            Denúncias em análise ou resolvidas não podem ser editadas nem excluídas.
+          </Text>
+        )}
       </ScrollView>
     </View>
   );
@@ -110,5 +133,30 @@ const styles = StyleSheet.create({
   infoValue: {
     fontSize: 14,
     color: AppColors.text,
+  },
+  actions: {
+    marginTop: 16,
+    gap: 8,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionBtn: {
+    flex: 1,
+  },
+  deleteBtn: {
+    backgroundColor: '#DC2626',
+  },
+  error: {
+    color: '#DC2626',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  lockedHint: {
+    marginTop: 16,
+    color: AppColors.textMuted,
+    fontSize: 13,
+    textAlign: 'center',
   },
 });

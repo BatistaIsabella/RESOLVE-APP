@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React from 'react';
 import {
   FlatList,
   RefreshControl,
@@ -6,63 +6,18 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { GradientHeader } from '@/components/ui/GradientHeader';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { DemandCard } from '@/components/ui/DemandCard';
 import { DemandFiltersPanel } from '@/components/ui/DemandFilters';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import { useAuth } from '@/hooks/useAuth';
-import { useDemandStore } from '@/stores/useDemandStore';
-import { filterDemands } from '@/utils/demandFilters';
-import { DemandFilters } from '@/types/demand';
 import { AppColors } from '@/constants/colors';
+import { useMinhasDenunciasViewModel } from '@/viewmodels/useMinhasDenunciasViewModel';
 
 export default function DenunciasScreen() {
-  const router = useRouter();
-  const { userName, logout } = useAuth();
-  // Seletor por campo: assinar o store inteiro re-renderizava a lista a cada
-  // mudança de qualquer parte do estado.
-  const filters = useDemandStore((s) => s.filters);
-  const demands = useDemandStore((s) => s.demands);
-  const isLoading = useDemandStore((s) => s.isLoading);
-  const error = useDemandStore((s) => s.error);
-  const fetchDemands = useDemandStore((s) => s.fetchDemands);
-  const setFilters = useDemandStore((s) => s.setFilters);
+  const vm = useMinhasDenunciasViewModel();
 
-  const [refreshing, setRefreshing] = useState(false);
-  const [appliedFilters, setAppliedFilters] = useState<DemandFilters>(filters);
-
-  const load = useCallback(async () => {
-    await fetchDemands();
-  }, [fetchDemands]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchDemands();
-    setRefreshing(false);
-  };
-
-  const handleApplyFilters = (next: DemandFilters) => {
-    setAppliedFilters(next);
-    setFilters(next);
-  };
-
-  const visibleDemands = useMemo(
-    () => filterDemands(demands, filters),
-    [demands, filters]
-  );
-
-  const handleLogout = () => {
-    logout();
-    router.replace('/');
-  };
-
-  if (isLoading && visibleDemands.length === 0 && !refreshing) {
+  if (vm.showLoadingScreen) {
     return <LoadingScreen message="Carregando denúncias..." />;
   }
 
@@ -70,33 +25,33 @@ export default function DenunciasScreen() {
     <View style={styles.container}>
       <GradientHeader
         title="Denúncias"
-        profileLabel={userName ?? 'Usuário'}
-        onBack={() => router.replace('/')}
-        onLogout={handleLogout}
+        profileLabel={vm.userName ?? 'Usuário'}
+        onBack={vm.goHome}
+        onLogout={vm.handleLogout}
       />
 
       <View style={styles.content}>
         <PrimaryButton
           label="Criar nova solicitação"
-          onPress={() => router.push('/denuncias/nova')}
+          onPress={vm.novaDenuncia}
           style={styles.createBtn}
         />
 
-        <DemandFiltersPanel filters={appliedFilters} onApply={handleApplyFilters} />
+        <DemandFiltersPanel filters={vm.appliedFilters} onApply={vm.applyFilters} />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {vm.error ? <Text style={styles.error}>{vm.error}</Text> : null}
 
         <FlatList
-          data={visibleDemands}
+          data={vm.visibleDemands}
           keyExtractor={(item) => item.id}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={AppColors.primary} />
+            <RefreshControl refreshing={vm.refreshing} onRefresh={vm.onRefresh} tintColor={AppColors.primary} />
           }
           renderItem={({ item }) => (
-            <DemandCard demand={item} onViewDetails={(id) => router.push(`/denuncias/${id}`)} />
+            <DemandCard demand={item} onViewDetails={vm.openDemand} />
           )}
           ListEmptyComponent={
-            !isLoading ? (
+            vm.showEmptyState ? (
               <View style={styles.empty}>
                 <Text style={styles.emptyText}>Nenhuma denúncia encontrada.</Text>
               </View>

@@ -12,10 +12,26 @@ export function filterDemands(demands: Demand[], filters: DemandFilters): Demand
     if (filters.category && demand.category !== filters.category) return false;
     if (filters.region && demand.region !== filters.region) return false;
     if (filters.priority && demand.priority !== filters.priority) return false;
+    if (!matchesSearch(demand, filters.search)) return false;
     return true;
   });
 }
 
+function matchesSearch(demand: Demand, search: string | undefined): boolean {
+  const termo = search?.trim().toLowerCase();
+  if (!termo) return true;
+  return (
+    demand.titulo.toLowerCase().includes(termo) ||
+    demand.description.toLowerCase().includes(termo)
+  );
+}
+
 export function hasActiveFilters(filters: DemandFilters): boolean {
-  return !!(filters.status || filters.category || filters.region || filters.priority);
+  return !!(
+    filters.status ||
+    filters.category ||
+    filters.region ||
+    filters.priority ||
+    filters.search?.trim()
+  );
 }

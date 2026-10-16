@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Image,
   Pressable,
@@ -9,11 +9,26 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
+import { useAuth } from '@/hooks/useAuth';
+import { getPostLoginRoute } from '@/contexts/AuthContext';
+import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { token, role, hasHydrated } = useAuth();
 
-  console.log('ESTOU NO INDEX DA SMART CITY');
+  // Sessão já restaurada: pula a home e vai direto para a área do perfil.
+  const hasSession = hasHydrated && !!token && !!role;
+
+  useEffect(() => {
+    if (hasSession) {
+      router.replace(getPostLoginRoute(role!));
+    }
+  }, [hasSession, role, router]);
+
+  if (!hasHydrated || hasSession) {
+    return <LoadingScreen message="Restaurando sessão..." />;
+  }
 
   return (
     <View style={styles.container}>
@@ -22,7 +37,7 @@ export default function HomeScreen() {
       <View style={styles.background}>
 
         <Image
-          source={require('../../assets/images/cidade.png')}
+          source={require('../assets/images/cidade.png')}
           style={styles.cityImage}
           resizeMode="cover"
         />
@@ -72,7 +87,7 @@ export default function HomeScreen() {
                 styles.gestorButton,
                 pressed && styles.buttonPressed,
               ]}
-              onPress={() => router.push('/denuncias')}
+              onPress={() => router.push('/login')}
             >
               <Text style={styles.buttonText}>
                 Sou gestor

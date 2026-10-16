@@ -13,13 +13,6 @@
 //
 // Os conflitos de merge foram resolvidos. O JWT usa o campo `papel` em todos os testes.
 //
-// FILTROS SUPORTADOS PELO BACKEND ATUAL:
-//   ✅ ?page=N&limit=N  (paginação — implementada em parsePagination)
-//   ❌ ?categoria=      (NÃO implementado em listAllDenuncias / listDenunciasByCidadao)
-//   ❌ ?status=         (NÃO implementado)
-//   ❌ ?regiao=         (NÃO implementado)
-//   ❌ ?prioridade=     (NÃO implementado)
-//   Os testes de filtro ficam como it.skip() até o backend implementar os query params.
 //
 // COMANDO:
 //   cd backend/demand-service && npx vitest run src/tests/TS04_filtros_avancados.test.ts
@@ -248,12 +241,11 @@ describe('TS04 - Filtros avançados combinados', () => {
   });
 
   // ────────────────────────────────────────────────────────────────────────────
-  // FILTROS AVANÇADOS — NÃO suportados pelo backend atual
   // ────────────────────────────────────────────────────────────────────────────
 
   describe('Cenário: Filtro por categoria', () => {
 
-    it.skip(
+    it(
       'Given denúncias de categorias diferentes, When GET /demandas/demands/feed com ?categoria=ILUMINACAO_PUBLICA, Then retorna apenas da categoria filtrada',
       async () => {
         const res = await request(app)
@@ -272,7 +264,7 @@ describe('TS04 - Filtros avançados combinados', () => {
 
   describe('Cenário: Filtro por status', () => {
 
-    it.skip(
+    it(
       'Given denúncias com status diferentes, When GET /demandas/demands/feed com ?status=ABERTA, Then retorna apenas as abertas',
       async () => {
         const res = await request(app)
@@ -291,7 +283,7 @@ describe('TS04 - Filtros avançados combinados', () => {
 
   describe('Cenário: Filtro por região', () => {
 
-    it.skip(
+    it(
       'Given denúncias de regiões diferentes, When GET /demandas/demands/feed com ?regiao=AGRESTE, Then retorna apenas do Agreste',
       async () => {
         const res = await request(app)
@@ -310,7 +302,7 @@ describe('TS04 - Filtros avançados combinados', () => {
 
   describe('Cenário: Filtro por prioridade', () => {
 
-    it.skip(
+    it(
       'Given denúncias com prioridades diferentes, When GET /demandas/demands/feed com ?prioridade=ALTA, Then retorna apenas as de prioridade alta',
       async () => {
         const res = await request(app)
@@ -329,7 +321,7 @@ describe('TS04 - Filtros avançados combinados', () => {
 
   describe('Cenário: Múltiplos filtros combinados', () => {
 
-    it.skip(
+    it(
       'Given denúncias variadas, When aplica categoria + status ao mesmo tempo, Then retorna apenas registros que atendem ambos os filtros',
       async () => {
         const res = await request(app)
@@ -381,7 +373,7 @@ describe('TS04 - Filtros avançados combinados', () => {
       }
     );
 
-    it.skip(
+    it(
       'Given denúncias cadastradas, When aplica filtro que não corresponde a nenhum registro, Then retorna data vazio com total = 0',
       async () => {
         const res = await request(app)

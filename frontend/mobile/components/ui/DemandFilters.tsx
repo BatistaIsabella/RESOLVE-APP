@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { DemandFilters as Filters } from '@/types/demand';
 import { CATEGORIAS, PRIORIDADES, REGIOES, STATUS } from '@/constants/demanda';
 import { SelectField } from '@/components/ui/SelectField';
@@ -11,12 +11,42 @@ interface DemandFiltersProps {
   onApply: (filters: Filters) => void;
 }
 
+const SEARCH_DEBOUNCE_MS = 300;
+
 export function DemandFiltersPanel({ filters, onApply }: DemandFiltersProps) {
   const [temp, setTemp] = useState<Filters>(filters);
+  const [search, setSearch] = useState(filters.search ?? '');
+
+  const filtersRef = useRef(filters);
+  const onApplyRef = useRef(onApply);
+  useEffect(() => {
+    filtersRef.current = filters;
+    onApplyRef.current = onApply;
+  });
+
+  useEffect(() => {
+    const termo = search.trim();
+    if (termo === (filtersRef.current.search ?? '').trim()) return;
+    const timer = setTimeout(() => {
+      onApplyRef.current({ ...filtersRef.current, search: termo });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>Filtros</Text>
+      <TextInput
+        style={styles.search}
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Buscar no título ou na descrição"
+        placeholderTextColor={AppColors.textMuted}
+        returnKeyType="search"
+        autoCorrect={false}
+        clearButtonMode="while-editing"
+        accessibilityLabel="Buscar denúncias"
+      />
       <View style={styles.grid}>
         <View style={styles.gridItem}>
           <SelectField
@@ -60,7 +90,7 @@ export function DemandFiltersPanel({ filters, onApply }: DemandFiltersProps) {
           />
         </View>
       </View>
-      <PrimaryButton label="Aplicar filtro" onPress={() => onApply(temp)} style={styles.applyBtn} />
+      <PrimaryButton label="Aplicar filtro" onPress={() => onApply({ ...temp, search: search.trim() })} style={styles.applyBtn} />
     </View>
   );
 }
@@ -73,6 +103,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: AppColors.text,
+    marginBottom: 10,
+  },
+  search: {
+    borderWidth: 1,
+    borderColor: AppColors.border,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: AppColors.text,
+    backgroundColor: AppColors.white,
     marginBottom: 10,
   },
   grid: {

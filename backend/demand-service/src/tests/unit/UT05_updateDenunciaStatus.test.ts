@@ -116,6 +116,16 @@ describe('updateDenunciaStatus', () => {
     );
   });
 
+  it('devolve a denúncia com as imagens (o app substitui o item da lista por ela)', async () => {
+    const txFake = setupTransactionMock();
+
+    await updateDenunciaStatus(USUARIO_ID, DENUNCIA_ID, 'EM_ANALISE');
+
+    expect(txFake.denuncia.update).toHaveBeenCalledWith(
+      expect.objectContaining({ include: { imagens: true } })
+    );
+  });
+
   it('cria o registro de histórico com o gestor correto dentro do tx', async () => {
     const txFake = setupTransactionMock();
 

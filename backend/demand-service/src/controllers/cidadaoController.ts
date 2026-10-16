@@ -16,7 +16,8 @@ export async function createDenuncia(req: AuthRequest, res: Response, next: Next
 export async function listMinhasDenuncias(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const pagination = parsePagination(req.query as Record<string, unknown>);
-    const resultado = await denunciaService.listDenunciasByCidadao(req.user!.userId, pagination);
+    const filtros = denunciaService.parseListFilters(req.query as Record<string, unknown>);
+    const resultado = await denunciaService.listDenunciasByCidadao(req.user!.userId, pagination, filtros);
     return res.json(resultado);
   } catch (err) {
     next(err);
@@ -26,7 +27,8 @@ export async function listMinhasDenuncias(req: AuthRequest, res: Response, next:
 export async function listarFeedDenuncias(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const pagination = parsePagination(req.query as Record<string, unknown>);
-    const resultado = await denunciaService.listAllDenuncias(pagination);
+    const filtros = denunciaService.parseListFilters(req.query as Record<string, unknown>);
+    const resultado = await denunciaService.listAllDenuncias(pagination, filtros);
     return res.json(resultado);
   } catch (err) {
     next(err);
@@ -36,8 +38,29 @@ export async function listarFeedDenuncias(req: AuthRequest, res: Response, next:
 export async function getDenunciaDetalhes(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const denunciaId = denunciaService.parseDenunciaId(req.params.id);
-    const denuncia = await denunciaService.getDenunciaByIdForGestor(denunciaId);
+    const denuncia = await denunciaService.getDenunciaById(req.user!.userId, denunciaId);
     return res.json(denuncia);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function atualizarDenuncia(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const denunciaId = denunciaService.parseDenunciaId(req.params.id);
+    const input = denunciaService.validateUpdateDenunciaInput(req.body ?? {});
+    const denuncia = await denunciaService.updateDenunciaCidadao(req.user!.userId, denunciaId, input);
+    return res.json(denuncia);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function excluirDenuncia(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const denunciaId = denunciaService.parseDenunciaId(req.params.id);
+    await denunciaService.deleteDenunciaCidadao(req.user!.userId, denunciaId);
+    return res.status(204).send();
   } catch (err) {
     next(err);
   }
