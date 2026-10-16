@@ -39,7 +39,11 @@ Versão ASCII:
   │ app/cadastro.tsx             │ ─▶ │ useCadastroViewModel      │ ─▶ │ stores/useDemandStore           │
   │ app/denuncias/nova.tsx       │ ◀─ │ useNovaDenunciaViewModel  │    │ services/* ─▶ lib/api.ts ─▶ API │
   │ app/gestor/index.tsx         │    │ useGestorDashboardVM      │    │ utils/* (mappers, métricas,     │
-  │ components/ui/*              │    │                           │    │   filtros, imagem)  types/*     │
+  │ app/denuncias/index.tsx      │    │ useMinhasDenunciasVM      │    │   filtros, imagem)  types/*     │
+  │ app/denuncias/[id].tsx       │    │ useDenunciaDetalheVM      │    │                                 │
+  │ app/denuncias/editar/[id]    │    │ useEditarDenunciaVM       │    │                                 │
+  │ app/gestor/[id].tsx          │    │ useGestorDemandaVM        │    │                                 │
+  │ components/ui/*              │    │ useExcluirDenuncia        │    │                                 │
   └──────────────────────────────┘    └───────────────────────────┘    └─────────────────────────────────┘
        só layout, estilos e              estado da tela, validação,         dados, regras de domínio,
        chamadas da ViewModel             permissões, câmera/GPS,            persistência e rede
@@ -80,11 +84,14 @@ um handle do componente nativo; a View a entrega para `vm.takePicture(camera)` n
 | `useCadastroViewModel` | `app/cadastro.tsx` | campos, papel cidadão/gestor e código de acesso, validação (e-mail, senhas iguais), cadastro |
 | `useNovaDenunciaViewModel` | `app/denuncias/nova.tsx` | 4 passos (foto → categoria → localização → descrição), validação por passo, câmera/galeria, GPS com tempo limite de 10 s e endereço reverso, alertas de permissão com "Abrir Ajustes", compressão da foto, envio e voltar (Android/gesto iOS) recuando uma etapa |
 | `useGestorDashboardViewModel` | `app/gestor/index.tsx` | recarregar demandas + métricas a cada foco da tela, pull-to-refresh, filtros, dados dos gráficos (categoria, status, região, período) e total |
+| `useMinhasDenunciasViewModel` | `app/denuncias/index.tsx` | carregar as denúncias do cidadão, pull-to-refresh, filtros e busca, navegação para detalhe e nova denúncia |
+| `useDenunciaDetalheViewModel` | `app/denuncias/[id].tsx` | buscar a denúncia, dizer se ainda pode ser alterada (só Aberta), editar e excluir |
+| `useGestorDemandaViewModel` | `app/gestor/[id].tsx` | buscar a demanda, mudar status e prioridade com mensagem de erro, excluir |
+| `useEditarDenunciaViewModel` | `app/denuncias/editar/[id].tsx` | campos editáveis, validação, envio só do que mudou |
+| `useExcluirDenuncia` | detalhes do cidadão e do gestor | confirmação, exclusão e volta para a lista |
 | `useAuth` (`hooks/`) | várias | atalho de leitura da sessão (nome, papel, logout) usado pelas ViewModels e pelo `AuthGuard` |
 
-**Pendente:** `app/denuncias/index.tsx`, `app/denuncias/[id].tsx` e `app/gestor/[id].tsx` ainda leem
-as stores direto na tela; o próximo passo é extrair `useMinhasDenunciasViewModel`,
-`useDenunciaDetalheViewModel` e `useGestorDemandaViewModel` no mesmo padrão.
+Todas as telas de `app/` usam uma ViewModel; nenhuma lê as stores direto.
 
 ## Fluxo de exemplo: registrar uma denúncia
 

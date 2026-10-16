@@ -1,77 +1,39 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { GradientHeader } from '@/components/ui/GradientHeader';
 import { DemandCard } from '@/components/ui/DemandCard';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { SelectField } from '@/components/ui/SelectField';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { useAuth } from '@/hooks/useAuth';
-import { useDemandStore } from '@/stores/useDemandStore';
-import { DemandPriority, DemandStatus } from '@/types/demand';
 import { PRIORIDADES, STATUS } from '@/constants/demanda';
-import { formatPriorityLabel } from '@/utils/demandMapper';
-import { ApiError } from '@/lib/api';
 import { AppColors } from '@/constants/colors';
-import { useExcluirDenuncia } from '@/viewmodels/useExcluirDenuncia';
+import { useGestorDemandaViewModel } from '@/viewmodels/useGestorDemandaViewModel';
 
 export default function GestorDemandaScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
-  const { userName, logout } = useAuth();
-
-  const fetchDemandById = useDemandStore((s) => s.fetchDemandById);
-  const updateDemandStatus = useDemandStore((s) => s.updateDemandStatus);
-  const updateDemandPriority = useDemandStore((s) => s.updateDemandPriority);
-  const isLoading = useDemandStore((s) => s.loadingDetail);
-  const storeError = useDemandStore((s) => s.detailError);
-
-  // Lida do store: o otimismo e o rollback vivem la, nao aqui.
-  const demand = useDemandStore((s) => s.demands.find((d) => d.id === id) ?? null);
-  const [erro, setErro] = useState('');
-  const { confirmarExclusao, excluindo, excluida, erroExclusao } = useExcluirDenuncia(
-    id,
-    '/gestor'
-  );
-
-  useEffect(() => {
-    if (id) {
-      fetchDemandById(id);
-    }
-  }, [id, fetchDemandById]);
-
-  const handleStatusChange = async (value: string) => {
-    if (!id || !demand || value === demand.status) return;
-    setErro('');
-    try {
-      await updateDemandStatus(id, value as DemandStatus);
-    } catch (err) {
-      setErro(err instanceof ApiError ? err.message : 'Erro ao atualizar status');
-    }
-  };
-
-  const handlePriorityChange = async (value: string) => {
-    if (!id || !demand) return;
-    const priority = (value === 'Média' ? 'Media' : value) as DemandPriority;
-    if (priority === demand.priority) return;
-    setErro('');
-    try {
-      await updateDemandPriority(id, priority);
-    } catch (err) {
-      setErro(err instanceof ApiError ? err.message : 'Erro ao atualizar prioridade');
-    }
-  };
-
-  const handleLogout = () => {
-    logout();
-    router.replace('/');
-  };
+  const {
+    userName,
+    demand,
+    priorityLabel,
+    showLoadingScreen,
+    notFoundMessage,
+    erro,
+    changeStatus,
+    changePriority,
+    excluida,
+    excluindo,
+    erroExclusao,
+    confirmarExclusao,
+    goBack,
+    handleLogout,
+  } = useGestorDemandaViewModel(id);
 
   if (excluida) {
     return <LoadingScreen message="Voltando para o painel..." />;
   }
 
-  if (isLoading && !demand) {
+  if (showLoadingScreen) {
     return <LoadingScreen message="Carregando demanda..." />;
   }
 
@@ -82,11 +44,11 @@ export default function GestorDemandaScreen() {
           title="Demanda"
           profileLabel={userName ?? 'Gestor'}
           variant="gestor"
-          onBack={() => router.back()}
+          onBack={goBack}
           onLogout={handleLogout}
         />
         <View style={styles.center}>
-          <Text style={styles.notFound}>{storeError ?? 'Demanda não encontrada.'}</Text>
+          <Text style={styles.notFound}>{notFoundMessage}</Text>
         </View>
       </View>
     );
@@ -98,7 +60,7 @@ export default function GestorDemandaScreen() {
         title="Gerenciar"
         profileLabel={userName ?? 'Gestor'}
         variant="gestor"
-        onBack={() => router.back()}
+        onBack={goBack}
         onLogout={handleLogout}
       />
 
@@ -114,16 +76,16 @@ export default function GestorDemandaScreen() {
             label="Status"
             value={demand.status}
             options={[...STATUS]}
-            onChange={handleStatusChange}
+            onChange={changeStatus}
           />
 
           <View style={styles.spacer} />
 
           <SelectField
             label="Prioridade"
-            value={formatPriorityLabel(demand.priority)}
+            value={priorityLabel}
             options={[...PRIORIDADES]}
-            onChange={handlePriorityChange}
+            onChange={changePriority}
           />
         </View>
 

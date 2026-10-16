@@ -1,51 +1,37 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { GradientHeader } from '@/components/ui/GradientHeader';
 import { DemandCard } from '@/components/ui/DemandCard';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { useAuth } from '@/hooks/useAuth';
-import { useDemandStore } from '@/stores/useDemandStore';
 import { AppColors } from '@/constants/colors';
-import { useExcluirDenuncia } from '@/viewmodels/useExcluirDenuncia';
+import { useDenunciaDetalheViewModel } from '@/viewmodels/useDenunciaDetalheViewModel';
 
 export default function DenunciaDetalhesScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
-  const { userName, logout } = useAuth();
-  const fetchDemandById = useDemandStore((s) => s.fetchDemandById);
-  const isLoading = useDemandStore((s) => s.loadingDetail);
-  const error = useDemandStore((s) => s.detailError);
-
-  // Lida do store: nada de copia local, para a tela nao divergir da lista.
-  const demand = useDemandStore((s) => s.demands.find((d) => d.id === id) ?? null);
-  const { confirmarExclusao, excluindo, excluida, erroExclusao } = useExcluirDenuncia(
-    id,
-    '/denuncias'
-  );
-
-  useEffect(() => {
-    if (id) {
-      fetchDemandById(id);
-    }
-  }, [id, fetchDemandById]);
-
-  const handleLogout = () => {
-    logout();
-    router.replace('/');
-  };
+  const {
+    userName,
+    demand,
+    error,
+    showLoadingScreen,
+    podeAlterar,
+    excluida,
+    excluindo,
+    erroExclusao,
+    confirmarExclusao,
+    editar,
+    goBack,
+    handleLogout,
+  } = useDenunciaDetalheViewModel(id);
 
   if (excluida) {
     return <LoadingScreen message="Voltando para a lista..." />;
   }
 
-  if (isLoading && !demand) {
+  if (showLoadingScreen) {
     return <LoadingScreen message="Carregando detalhes..." />;
   }
-
-  // A API só aceita editar/excluir enquanto ninguém começou a analisar.
-  const podeAlterar = demand?.status === 'Aberta';
 
   if (!demand) {
     return (
@@ -53,7 +39,7 @@ export default function DenunciaDetalhesScreen() {
         <GradientHeader
           title="Detalhes"
           profileLabel={userName ?? 'Usuário'}
-          onBack={() => router.back()}
+          onBack={goBack}
           onLogout={handleLogout}
         />
         <View style={styles.center}>
@@ -68,7 +54,7 @@ export default function DenunciaDetalhesScreen() {
       <GradientHeader
         title="Detalhes"
         profileLabel={userName ?? 'Usuário'}
-        onBack={() => router.back()}
+        onBack={goBack}
         onLogout={handleLogout}
       />
       <ScrollView contentContainerStyle={styles.content}>
@@ -88,7 +74,7 @@ export default function DenunciaDetalhesScreen() {
             <View style={styles.actionsRow}>
               <PrimaryButton
                 label="Editar"
-                onPress={() => router.push(`/denuncias/editar/${demand.id}`)}
+                onPress={editar}
                 disabled={excluindo}
                 style={styles.actionBtn}
               />
