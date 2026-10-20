@@ -1,11 +1,11 @@
 import { getRedisQueueClient, getRedisSubscriber, REDIS_CHANNEL, REDIS_QUEUE } from '../config/redis';
-import { refreshMetricsCache } from '../services/metricsService';
+import { renovarCacheAposMudanca } from '../services/metricsService';
 import { withRetry } from '../utils/retry';
 
 async function processEvent(message: string) {
   const event = JSON.parse(message) as { type: string; denunciaId?: number };
   console.log(`[metrics] Evento processado: ${event.type}`, event.denunciaId ?? '');
-  await withRetry(() => refreshMetricsCache());
+  await withRetry(() => renovarCacheAposMudanca());
 }
 
 export async function startEventSubscriber() {
