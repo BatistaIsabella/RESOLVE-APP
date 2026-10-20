@@ -3,6 +3,7 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import app from '../app';
+import { hashIdentificador } from '../services/auditoriaService';
 import { limparRedisFalso } from './helpers/redisFalso';
 import { SENHA_FORTE, TERMOS } from './helpers/dados';
 
@@ -260,6 +261,23 @@ describe('TS12 - Conta do usuário e sessões', () => {
 
       expect(res.status).toBe(502);
       expect(await prisma.usuario.findUnique({ where: { id } })).not.toBeNull();
+    });
+
+    it('apaga dos registros de segurança tudo o que liga os eventos à pessoa (usuário, IP, aparelho, hash do e-mail)', async () => {
+      const { token, email, id } = await criarEUsuarioLogado();
+      await request(app).post('/auth/login').set('User-Agent', 'RESOLVE-App/1.0').send({ email, senha: 'Errada#Senha123' });
+      const antes = await prisma.eventoAuth.count({ where: { usuario_id: id } });
+      expect(antes).toBeGreaterThan(1);
+
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }));
+      await request(app).delete('/auth/me').set(comToken(token)).send({ senha: SENHA_FORTE });
+
+      expect(await prisma.eventoAuth.count({ where: { usuario_id: id } })).toBe(0);
+      const porHash = await prisma.eventoAuth.count({ where: { identificador: hashIdentificador(email) } });
+      expect(porHash).toBe(0);
+
+      const exclusao = await prisma.eventoAuth.findFirst({ where: { tipo: 'CONTA_EXCLUIDA' }, orderBy: { id: 'desc' } });
+      expect(exclusao).toMatchObject({ usuario_id: null, ip: null, user_agent: null, identificador: null });
     });
 
     it('o token da conta excluída deixa de funcionar', async () => {
