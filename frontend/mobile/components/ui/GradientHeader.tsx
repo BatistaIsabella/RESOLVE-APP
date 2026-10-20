@@ -10,6 +10,8 @@ interface GradientHeaderProps {
   variant?: 'default' | 'gestor';
   onBack?: () => void;
   onLogout?: () => void;
+  // Quando informado, o nome do usuário vira um botão (ex.: abrir "Meus dados").
+  onProfile?: () => void;
 }
 
 export function GradientHeader({
@@ -18,6 +20,7 @@ export function GradientHeader({
   variant = 'default',
   onBack,
   onLogout,
+  onProfile,
 }: GradientHeaderProps) {
   const insets = useSafeAreaInsets();
   const colors =
@@ -36,7 +39,9 @@ export function GradientHeader({
         <Pressable onPress={onBack} hitSlop={12}>
           <Text style={styles.navText}>Voltar</Text>
         </Pressable>
-        <Text style={styles.navText}>{profileLabel}</Text>
+        <Pressable onPress={onProfile} disabled={!onProfile} hitSlop={12}>
+          <Text style={[styles.navText, onProfile && styles.navTextLink]}>{profileLabel}</Text>
+        </Pressable>
         <Pressable onPress={onLogout} hitSlop={12}>
           <Text style={styles.navText}>Sair</Text>
         </Pressable>
@@ -61,6 +66,9 @@ const styles = StyleSheet.create({
     color: AppColors.white,
     fontSize: 15,
     fontWeight: '600',
+  },
+  navTextLink: {
+    textDecorationLine: 'underline',
   },
   title: {
     color: AppColors.white,

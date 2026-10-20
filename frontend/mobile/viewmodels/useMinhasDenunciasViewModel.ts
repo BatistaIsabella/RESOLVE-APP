@@ -63,6 +63,7 @@ export function useMinhasDenunciasViewModel() {
     openDemand: (id: string) => router.push(`/denuncias/${id}`),
     novaDenuncia: () => router.push('/denuncias/nova'),
     goHome: () => router.replace('/'),
+    goToPerfil: () => router.push('/perfil'),
     handleLogout,
   };
 }

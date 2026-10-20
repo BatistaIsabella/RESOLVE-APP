@@ -28,6 +28,7 @@ export default function DenunciasScreen() {
         profileLabel={vm.userName ?? 'Usuário'}
         onBack={vm.goHome}
         onLogout={vm.handleLogout}
+        onProfile={vm.goToPerfil}
       />
 
       <View style={styles.content}>

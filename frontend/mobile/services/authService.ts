@@ -5,6 +5,8 @@ export interface AuthResponse {
   papel: 'cidadao' | 'gestor';
   userId: number;
   nome: string;
+  orgao?: string;
+  termosPendentes: boolean;
 }
 
 export interface RegisterResponse {
@@ -12,6 +14,16 @@ export interface RegisterResponse {
   nome: string;
   email: string;
   papel: 'cidadao' | 'gestor';
+  orgao?: string;
+}
+
+export interface CadastroInput {
+  nome: string;
+  email: string;
+  senha: string;
+  papel: 'cidadao' | 'gestor';
+  codigoAcesso?: string;
+  versaoTermos: string;
 }
 
 export const authService = {
@@ -24,22 +36,36 @@ export const authService = {
     }
   },
 
-  async register(
-    nome: string,
-    email: string,
-    senha: string,
-    papel: 'cidadao' | 'gestor',
-    codigoAcesso?: string
-  ): Promise<RegisterResponse> {
+  async register(input: CadastroInput): Promise<RegisterResponse> {
     try {
       const { data } = await api.post<RegisterResponse>('/auth/register', {
-        nome,
-        email,
-        senha,
-        papel,
-        codigoAcesso,
+        ...input,
+        aceiteTermos: true,
       });
       return data;
+    } catch (err) {
+      throw toApiError(err);
+    }
+  },
+
+  // O token é passado à parte porque a sessão local já foi apagada quando o logout é enviado.
+  async logout(token: string): Promise<void> {
+    await api.post('/auth/logout', null, { headers: { Authorization: `Bearer ${token}` } });
+  },
+
+  async forgotPassword(email: string): Promise<string> {
+    try {
+      const { data } = await api.post<{ message: string }>('/auth/forgot-password', { email });
+      return data.message;
+    } catch (err) {
+      throw toApiError(err);
+    }
+  },
+
+  async resetPassword(token: string, novaSenha: string): Promise<string> {
+    try {
+      const { data } = await api.post<{ message: string }>('/auth/reset-password', { token, novaSenha });
+      return data.message;
     } catch (err) {
       throw toApiError(err);
     }

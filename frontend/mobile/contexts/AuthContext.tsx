@@ -1,29 +1,37 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { authService } from '@/services/authService';
+import { contaService } from '@/services/contaService';
 import { ApiError } from '@/lib/api';
 import { setAuthSnapshot, setUnauthorizedHandler } from '@/lib/authToken';
 import { clearSession, loadSession, saveSession, StoredSession } from '@/lib/secureStorage';
+import { VERSAO_TERMOS } from '@/constants/termos';
 
 type Papel = 'cidadao' | 'gestor';
+
+interface CadastroDados {
+  nome: string;
+  email: string;
+  senha: string;
+  papel: Papel;
+  codigoAcesso?: string;
+}
 
 interface AuthContextValue {
   token: string | null;
   role: Papel | null;
   userName: string | null;
   userEmail: string | null;
+  orgao: string | null;
+  termosPendentes: boolean;
   isLoading: boolean;
   error: string | null;
   hasHydrated: boolean;
   login: (email: string, senha: string) => Promise<Papel>;
-  register: (
-    nome: string,
-    email: string,
-    senha: string,
-    papel: Papel,
-    codigoAcesso?: string
-  ) => Promise<Papel>;
+  register: (dados: CadastroDados) => Promise<Papel>;
   logout: () => void;
+  aceitarTermos: () => Promise<void>;
+  atualizarSessao: (parcial: { token?: string; userName?: string; userEmail?: string }) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -34,9 +42,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mudouDuranteRestauracao = useRef(false);
+  const sessionRef = useRef<StoredSession | null>(null);
 
   const applySession = useCallback((next: StoredSession | null) => {
     mudouDuranteRestauracao.current = true;
+    sessionRef.current = next;
     setAuthSnapshot(next);
     setSession(next);
   }, []);
@@ -46,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadSession()
       .then((salva) => {
         if (!ativo || mudouDuranteRestauracao.current) return;
+        sessionRef.current = salva;
         setAuthSnapshot(salva);
         setSession(salva);
       })
@@ -63,15 +74,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     (session ? saveSession(session) : clearSession()).catch(() => {});
   }, [session, hasHydrated]);
 
-  const logout = useCallback(() => {
+  // Sessão recusada pelo servidor (token vencido ou encerrado): só limpa o aparelho.
+  const encerrarLocalmente = useCallback(() => {
     setError(null);
     applySession(null);
   }, [applySession]);
 
+  // Saída pedida pelo usuário: avisa o servidor (para o registro de auditoria) e limpa o aparelho.
+  const logout = useCallback(() => {
+    const token = sessionRef.current?.token;
+    if (token) authService.logout(token).catch(() => {});
+    encerrarLocalmente();
+  }, [encerrarLocalmente]);
+
   useEffect(() => {
-    setUnauthorizedHandler(logout);
+    setUnauthorizedHandler(encerrarLocalmente);
     return () => setUnauthorizedHandler(null);
-  }, [logout]);
+  }, [encerrarLocalmente]);
 
   const autenticar = useCallback(
     async (email: string, senha: string): Promise<Papel> => {
@@ -82,6 +101,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: result.papel,
         userName: result.nome,
         userEmail: emailNormalizado,
+        orgao: result.orgao ?? null,
+        termosPendentes: result.termosPendentes,
       });
       return result.papel;
     },
@@ -105,12 +126,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const register = useCallback(
-    async (nome: string, email: string, senha: string, papel: Papel, codigoAcesso?: string) => {
+    async (dados: CadastroDados) => {
       setIsLoading(true);
       setError(null);
       try {
-        await authService.register(nome, email, senha, papel, codigoAcesso);
-        return await autenticar(email, senha);
+        await authService.register({ ...dados, versaoTermos: VERSAO_TERMOS });
+        return await autenticar(dados.email, dados.senha);
       } catch (err) {
         setError(err instanceof ApiError ? err.message : 'Erro ao criar conta');
         throw err;
@@ -121,20 +142,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [autenticar]
   );
 
+  const aceitarTermos = useCallback(async () => {
+    await contaService.aceitarTermos(VERSAO_TERMOS);
+    const atual = sessionRef.current;
+    if (atual) applySession({ ...atual, termosPendentes: false });
+  }, [applySession]);
+
+  const atualizarSessao = useCallback(
+    (parcial: { token?: string; userName?: string; userEmail?: string }) => {
+      const atual = sessionRef.current;
+      if (!atual) return;
+      applySession({
+        ...atual,
+        token: parcial.token ?? atual.token,
+        userName: parcial.userName ?? atual.userName,
+        userEmail: parcial.userEmail ?? atual.userEmail,
+      });
+    },
+    [applySession]
+  );
+
   const value = useMemo<AuthContextValue>(
     () => ({
       token: session?.token ?? null,
       role: session?.role ?? null,
       userName: session?.userName ?? null,
       userEmail: session?.userEmail ?? null,
+      orgao: session?.orgao ?? null,
+      termosPendentes: session?.termosPendentes ?? false,
       isLoading,
       error,
       hasHydrated,
       login,
       register,
       logout,
+      aceitarTermos,
+      atualizarSessao,
     }),
-    [session, isLoading, error, hasHydrated, login, register, logout]
+    [session, isLoading, error, hasHydrated, login, register, logout, aceitarTermos, atualizarSessao]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

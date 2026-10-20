@@ -1,6 +1,14 @@
 import { File } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
+// Reprocessar a imagem também remove os metadados da foto (EXIF), que podem incluir a localização do aparelho.
+export class FotoInvalidaError extends Error {
+  constructor() {
+    super('Não foi possível processar a foto. Tire outra foto ou remova a imagem.');
+    this.name = 'FotoInvalidaError';
+  }
+}
+
 const LADO_MAIOR_MAX = 1280;
 const QUALIDADE_JPEG = 0.6;
 
@@ -23,7 +31,8 @@ export async function compressImage(uri: string): Promise<string> {
     });
     return resultado.uri;
   } catch {
-    return uri;
+    // Enviar o arquivo original levaria os metadados junto; é melhor pedir outra foto.
+    throw new FotoInvalidaError();
   }
 }
 

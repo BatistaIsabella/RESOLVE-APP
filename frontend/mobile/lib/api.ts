@@ -4,7 +4,8 @@ import { getAuthToken, notifyUnauthorized } from '@/lib/authToken';
 export const API_GATEWAY_URL =
   process.env.EXPO_PUBLIC_API_GATEWAY_URL ?? 'https://smartcity-api.beholder.app.br';
 
-const AUTH_ENDPOINTS = ['/auth/login', '/auth/register'];
+// Nestas rotas um 401 é erro de credencial/código, não sessão expirada.
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/reset-password'];
 
 export class ApiError extends Error {
   status: number;
@@ -32,9 +33,14 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<{ error?: string; message?: string }>) => {
+  (error: AxiosError<{ error?: string; message?: string; detalhes?: string[] }>) => {
     const status = error.response?.status ?? 0;
-    const message = error.response?.data?.error ?? error.response?.data?.message;
+    // Quando a senha não atende à política o servidor devolve cada motivo em `detalhes`.
+    const detalhes = error.response?.data?.detalhes;
+    const message =
+      detalhes && detalhes.length > 0
+        ? detalhes.join('\n')
+        : (error.response?.data?.error ?? error.response?.data?.message);
     const isAuthRequest = AUTH_ENDPOINTS.some((path) => error.config?.url?.includes(path));
 
     if (status === 401 && !isAuthRequest) {
@@ -57,6 +63,8 @@ api.interceptors.response.use(
       403: message ?? 'Você não tem permissão para esta ação.',
       404: message ?? 'Recurso não encontrado.',
       409: message ?? 'Conflito ao processar a solicitação.',
+      429: message ?? 'Muitas tentativas. Aguarde alguns minutos e tente de novo.',
+      502: message ?? 'Não foi possível concluir agora. Tente novamente em instantes.',
       500: 'Erro interno do servidor. Tente mais tarde.',
     };
 

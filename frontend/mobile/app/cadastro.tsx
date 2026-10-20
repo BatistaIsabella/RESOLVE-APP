@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
+import { SenhaRequisitos } from '@/components/ui/SenhaRequisitos';
 import { useCadastroViewModel } from '@/viewmodels/useCadastroViewModel';
 
 export default function CadastroScreen() {
@@ -83,6 +84,7 @@ export default function CadastroScreen() {
                 value={vm.senha}
                 onChangeText={vm.setSenha}
               />
+              <SenhaRequisitos senha={vm.senha} />
             </View>
 
             <View style={styles.field}>
@@ -134,6 +136,18 @@ export default function CadastroScreen() {
                 />
               </View>
             )}
+
+            <Pressable style={styles.checkboxRow} onPress={vm.toggleAceiteTermos}>
+              <View style={[styles.checkbox, vm.aceiteTermos && styles.checkboxChecked]}>
+                {vm.aceiteTermos && <Text style={styles.checkboxMark}>✓</Text>}
+              </View>
+              <Text style={styles.checkboxLabel}>
+                Li e aceito a{' '}
+                <Text style={styles.link} onPress={vm.goToPrivacidade}>
+                  Política de Privacidade e os Termos de Uso
+                </Text>
+              </Text>
+            </Pressable>
 
             <Pressable
               style={({ pressed }) => [
@@ -287,6 +301,39 @@ const styles = StyleSheet.create({
   radioLabel: {
     color: '#374151',
     fontSize: 14,
+  },
+
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: '#9B8AC4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  checkboxChecked: {
+    backgroundColor: '#7B2BEF',
+    borderColor: '#7B2BEF',
+  },
+
+  checkboxMark: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  checkboxLabel: {
+    flex: 1,
+    color: '#374151',
+    fontSize: 13,
   },
 
   criarButton: {

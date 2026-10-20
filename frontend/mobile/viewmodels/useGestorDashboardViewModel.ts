@@ -99,6 +99,7 @@ export function useGestorDashboardViewModel() {
   const openDemand = (id: string) => router.push(`/gestor/${id}`);
 
   const goHome = () => router.replace('/');
+  const goToPerfil = () => router.push('/perfil');
 
   const handleLogout = () => {
     logout();
@@ -127,6 +128,7 @@ export function useGestorDashboardViewModel() {
 
     openDemand,
     goHome,
+    goToPerfil,
     handleLogout,
   };
 }

@@ -10,16 +10,18 @@ interface AuthGuardProps {
 
 export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
   const router = useRouter();
-  const { token, role, hasHydrated } = useAuth();
+  const { token, role, termosPendentes, hasHydrated } = useAuth();
 
   const redirectedTo = useRef<string | null>(null);
 
   useEffect(() => {
     if (!hasHydrated) return;
 
-    let target: '/' | '/gestor' | '/denuncias' | null = null;
+    let target: '/' | '/gestor' | '/denuncias' | '/aceite-termos' | null = null;
     if (!token) {
       target = '/';
+    } else if (termosPendentes) {
+      target = '/aceite-termos';
     } else if (requiredRole && role !== requiredRole) {
       target = role === 'gestor' ? '/gestor' : '/denuncias';
     }
@@ -32,13 +34,13 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
 
     redirectedTo.current = target;
     router.replace(target);
-  }, [hasHydrated, token, role, requiredRole, router]);
+  }, [hasHydrated, token, role, termosPendentes, requiredRole, router]);
 
   if (!hasHydrated) {
     return <LoadingScreen message="Restaurando sessão..." />;
   }
 
-  if (!token) return null;
+  if (!token || termosPendentes) return null;
   if (requiredRole && role !== requiredRole) return null;
 
   return <>{children}</>;

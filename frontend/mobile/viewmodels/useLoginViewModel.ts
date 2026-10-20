@@ -45,6 +45,7 @@ export function useLoginViewModel() {
 
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
   const goToCadastro = () => router.push('/cadastro');
+  const goToEsqueciSenha = () => router.push('/esqueci-senha');
 
   return {
     email,
@@ -58,5 +59,6 @@ export function useLoginViewModel() {
     handleLogin,
     goBack,
     goToCadastro,
+    goToEsqueciSenha,
   };
 }

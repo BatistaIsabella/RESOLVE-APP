@@ -5,6 +5,9 @@ export interface StoredSession {
   role: 'cidadao' | 'gestor';
   userName: string | null;
   userEmail: string | null;
+  orgao: string | null;
+  // Verdadeiro enquanto o usuário não aceitou a versão vigente da política e dos termos.
+  termosPendentes: boolean;
 }
 
 const SESSION_KEY = 'resolve-mobile-auth';
@@ -33,6 +36,8 @@ export async function loadSession(): Promise<StoredSession | null> {
       role: data.role,
       userName: data.userName ?? null,
       userEmail: data.userEmail ?? null,
+      orgao: data.orgao ?? null,
+      termosPendentes: data.termosPendentes === true,
     };
   } catch {
     return null;

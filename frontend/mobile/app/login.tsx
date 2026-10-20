@@ -122,6 +122,12 @@ export default function LoginScreen() {
               <Text style={styles.checkboxLabel}>Mantenha-me conectado</Text>
             </Pressable>
 
+            <Text style={styles.helperText}>
+              <Text style={styles.link} onPress={vm.goToEsqueciSenha}>
+                Esqueci minha senha
+              </Text>
+            </Text>
+
             <Pressable
               style={({ pressed }) => [
                 styles.enterButton,

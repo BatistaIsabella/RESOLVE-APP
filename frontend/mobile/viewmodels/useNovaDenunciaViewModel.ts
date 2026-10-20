@@ -10,7 +10,7 @@ import { useDemandContext } from '@/contexts/DemandContext';
 import { PROBLEMAS_POR_CATEGORIA } from '@/constants/demanda';
 import { DemandCategory, DemandRegion } from '@/types/demand';
 import { ApiError } from '@/lib/api';
-import { compressImage } from '@/utils/imageUtils';
+import { compressImage, FotoInvalidaError } from '@/utils/imageUtils';
 import { alertPermissaoNegada } from '@/utils/permissionAlert';
 import { comTempoLimite } from '@/utils/timeout';
 
@@ -248,7 +248,7 @@ export function useNovaDenunciaViewModel() {
         },
       ]);
     } catch (err) {
-      setErro(err instanceof ApiError ? err.message : 'Erro ao salvar denúncia');
+      setErro(err instanceof ApiError || err instanceof FotoInvalidaError ? err.message : 'Erro ao salvar denúncia');
     } finally {
       setEnviando(false);
       setProgressoEnvio(null);

@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { getPostLoginRoute, useAuthContext } from '@/contexts/AuthContext';
 import { setRemembered } from '@/lib/secureStorage';
 import { ApiError } from '@/lib/api';
+import { primeiroRequisitoPendente } from '@/utils/senha';
 
 export type Papel = 'cidadao' | 'gestor';
 
@@ -20,6 +21,7 @@ export function useCadastroViewModel() {
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [papel, setPapel] = useState<Papel>('cidadao');
   const [codigoAcesso, setCodigoAcesso] = useState('');
+  const [aceiteTermos, setAceiteTermos] = useState(false);
   const [erro, setErro] = useState('');
 
   const selecionarPapel = (novo: Papel) => {
@@ -43,8 +45,19 @@ export function useCadastroViewModel() {
       return;
     }
 
+    const requisitoPendente = primeiroRequisitoPendente(senha);
+    if (requisitoPendente) {
+      setErro(requisitoPendente);
+      return;
+    }
+
     if (senha !== confirmarSenha) {
       setErro('As senhas não coincidem');
+      return;
+    }
+
+    if (!aceiteTermos) {
+      setErro('É necessário aceitar a Política de Privacidade e os Termos de Uso');
       return;
     }
 
@@ -55,13 +68,13 @@ export function useCadastroViewModel() {
 
     try {
       setRemembered(true);
-      const role = await register(
-        nomeLimpo,
-        emailLimpo,
+      const role = await register({
+        nome: nomeLimpo,
+        email: emailLimpo,
         senha,
         papel,
-        papel === 'gestor' ? codigoAcesso.trim() : undefined
-      );
+        codigoAcesso: papel === 'gestor' ? codigoAcesso.trim() : undefined,
+      });
       router.replace(getPostLoginRoute(role));
     } catch (err) {
       setErro(err instanceof ApiError ? err.message : 'Erro ao criar conta');
@@ -70,6 +83,8 @@ export function useCadastroViewModel() {
 
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
   const goToLogin = () => router.push('/login');
+  const goToPrivacidade = () => router.push('/privacidade');
+  const toggleAceiteTermos = () => setAceiteTermos((v) => !v);
 
   return {
     nome,
@@ -84,6 +99,9 @@ export function useCadastroViewModel() {
     selecionarPapel,
     codigoAcesso,
     setCodigoAcesso,
+    aceiteTermos,
+    toggleAceiteTermos,
+    goToPrivacidade,
     erro,
     isLoading,
     handleCadastro,
