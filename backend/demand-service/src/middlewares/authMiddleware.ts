@@ -1,13 +1,23 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../config/env';
+import { sessaoValida } from '../services/sessaoService';
 
-const SECRET = process.env.JWT_SECRET || 'change-me';
-
-export interface AuthRequest extends Request {
-  user?: { userId: number; papel: 'cidadao' | 'gestor'; email?: string };
+export interface UsuarioToken {
+  userId: number;
+  papel: 'cidadao' | 'gestor';
+  email?: string;
+  orgao?: string;
+  // Categorias que o gestor pode ver. Ausente = todas (gestão geral).
+  categorias?: string[];
+  sv?: number;
 }
 
-export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
+export interface AuthRequest extends Request {
+  user?: UsuarioToken;
+}
+
+export async function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
 
   if (!authHeader?.startsWith('Bearer ')) {
@@ -16,13 +26,19 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
 
   const token = authHeader.split(' ')[1];
 
+  let decoded: UsuarioToken;
   try {
-    const decoded = jwt.verify(token, SECRET) as { userId: number; papel: 'cidadao' | 'gestor'; email?: string };
-    req.user = decoded;
-    next();
+    decoded = jwt.verify(token, getJwtSecret()) as UsuarioToken;
   } catch {
     return res.status(401).json({ error: 'Token inválido ou expirado' });
   }
+
+  if (!(await sessaoValida(decoded.userId, decoded.sv))) {
+    return res.status(401).json({ error: 'Sessão encerrada. Faça login novamente' });
+  }
+
+  req.user = decoded;
+  next();
 }
 
 // Garante que apenas cidadãos acessem a rota

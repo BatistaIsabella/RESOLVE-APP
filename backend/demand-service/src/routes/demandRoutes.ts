@@ -17,6 +17,7 @@ import {
   excluirDenunciaGestor,
 } from '../controllers/gestorController';
 import { createDemand } from '../controllers/demandController';
+import { exportarMeusDados, excluirMeusDados } from '../controllers/titularController';
 
 const router = Router();
 
@@ -35,6 +36,10 @@ router.get('/demands/feed', authMiddleware, roleMiddleware('cidadao'), listarFee
 router.get('/demands', authMiddleware, roleMiddleware('cidadao'), listMinhasDenuncias);
 router.get('/my-demands', authMiddleware, roleMiddleware('cidadao'), listMinhasDenuncias);
 router.get('/feed', authMiddleware, roleMiddleware('cidadao'), listarFeedDenuncias);
+
+// Direitos do titular (acesso/portabilidade e eliminação). Precisam vir antes das rotas com :id.
+router.get('/me/export', authMiddleware, roleMiddleware('cidadao', 'gestor'), exportarMeusDados);
+router.delete('/me', authMiddleware, roleMiddleware('cidadao', 'gestor'), excluirMeusDados);
 
 // 3. ROTA DINÂMICA COMPLETA (Sempre por ÚLTIMO no arquivo)
 // Se essa rota ficar em cima, ela tenta "comer" o /gestor/:id achando que "gestor" é o ID da denúncia.

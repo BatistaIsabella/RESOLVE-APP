@@ -37,5 +37,7 @@ export async function publishDenunciaStatusEvent(event: Omit<DenunciaStatusEvent
   const message = JSON.stringify(payload);
   const redis = await getRedisPublisher();
   await redis.lPush(REDIS_QUEUE, message);
+  // A fila é só um aviso para o metrics-service; se ninguém consumir, os eventos somem em 1 hora.
+  await redis.expire(REDIS_QUEUE, 60 * 60);
   await redis.publish(REDIS_CHANNEL, message);
 }

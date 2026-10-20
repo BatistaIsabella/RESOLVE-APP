@@ -9,6 +9,8 @@ import { prisma } from '../lib/prisma';
 import { httpError } from '../utils/httpError';
 import { buildPaginatedResult, PaginatedResult, PaginationParams } from '../utils/pagination';
 import { getRedisPublisher, publishDenunciaStatusEvent } from '../config/redis';
+import { generalizarEndereco } from '../utils/endereco';
+import { limparCacheMetricas } from '../utils/metricsCache';
 
 export interface CreateDenunciaInput {
   titulo: string;
@@ -32,7 +34,6 @@ export interface DenunciaListFilters {
   prioridade?: NivelPrioridade;
 }
 
-const METRICS_CACHE_KEY = 'smartcity:metrics:kpis';
 const CAMPOS_EDITAVEIS = ['titulo', 'descricao', 'categoria', 'regiao', 'endereco'] as const;
 const TAMANHO_MAXIMO_BUSCA = 100;
 
@@ -40,6 +41,21 @@ const CATEGORIAS_VALIDAS = new Set<string>(Object.values(Categorias));
 const REGIOES_VALIDAS = new Set<string>(Object.values(Regioes));
 const STATUS_VALIDOS = new Set<string>(Object.values(StatusDenuncia));
 const PRIORIDADES_VALIDAS = new Set<string>(Object.values(NivelPrioridade));
+
+
+// Categorias que o gestor pode ver, vindas do token (órgão). `undefined` = todas.
+export type CategoriasPermitidas = readonly string[] | undefined;
+
+function foraDoEscopo(categoria: string, permitidas: CategoriasPermitidas): boolean {
+  return permitidas !== undefined && !permitidas.includes(categoria);
+}
+
+// Denúncia de outro órgão responde igual a uma que não existe, para não revelar sua existência.
+function assegurarEscopo(denuncia: { categoria: string }, permitidas: CategoriasPermitidas) {
+  if (foraDoEscopo(denuncia.categoria, permitidas)) {
+    throw httpError('Denúncia não encontrada', 404);
+  }
+}
 
 async function resolveCidadaoId(usuarioId: number): Promise<number> {
   const cidadao = await prisma.cidadao.upsert({
@@ -322,7 +338,7 @@ export async function getDenunciaById(usuarioId: number, denunciaId: number) {
 async function invalidarCacheMetricas() {
   try {
     await Promise.race([
-      getRedisPublisher().then((redis) => redis.del(METRICS_CACHE_KEY)),
+      getRedisPublisher().then((redis) => limparCacheMetricas(redis)),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Redis timeout')), 3000)
       ),
@@ -379,7 +395,7 @@ export async function deleteDenunciaCidadao(usuarioId: number, denunciaId: numbe
   await invalidarCacheMetricas();
 }
 
-export async function deleteDenunciaGestor(denunciaId: number) {
+export async function deleteDenunciaGestor(denunciaId: number, permitidas?: CategoriasPermitidas) {
   const denuncia = await prisma.denuncia.findUnique({
     where: { id_denuncia: denunciaId },
   });
@@ -387,6 +403,7 @@ export async function deleteDenunciaGestor(denunciaId: number) {
   if (!denuncia) {
     throw httpError('Denúncia não encontrada', 404);
   }
+  assegurarEscopo(denuncia, permitidas);
 
   await prisma.denuncia.delete({ where: { id_denuncia: denunciaId } });
 
@@ -396,7 +413,8 @@ export async function deleteDenunciaGestor(denunciaId: number) {
 export async function updateDenunciaStatus(
   usuarioId: number,
   denunciaId: number,
-  novoStatus: StatusDenuncia
+  novoStatus: StatusDenuncia,
+  permitidas?: CategoriasPermitidas
 ) {
   if (!STATUS_VALIDOS.has(novoStatus)) {
     throw httpError('status inválido', 400);
@@ -411,6 +429,7 @@ export async function updateDenunciaStatus(
   if (!denunciaExistente) {
     throw httpError('Denúncia não encontrada', 404);
   }
+  assegurarEscopo(denunciaExistente, permitidas);
 
   if (denunciaExistente.status === novoStatus) {
     throw httpError('A denúncia já possui este status', 400);
@@ -419,7 +438,10 @@ export async function updateDenunciaStatus(
   const resultado = await prisma.$transaction(async (tx) => {
     const denunciaAtualizada = await tx.denuncia.update({
       where: { id_denuncia: denunciaId },
-      data: { status: novoStatus },
+      data: {
+        status: novoStatus,
+        data_conclusao: novoStatus === StatusDenuncia.RESOLVIDA ? new Date() : null,
+      },
       include: { imagens: true },
     });
 
@@ -467,9 +489,13 @@ export function validateStatusInput(status: unknown): StatusDenuncia {
 
 export async function listAllDenuncias(
   pagination: PaginationParams,
-  filtros: DenunciaListFilters = {}
+  filtros: DenunciaListFilters = {},
+  permitidas?: CategoriasPermitidas
 ) {
   const where = buildListWhere(filtros);
+  if (permitidas !== undefined) {
+    where.AND = [{ categoria: { in: permitidas as Categorias[] } }];
+  }
 
   const [total, data] = await Promise.all([
     prisma.denuncia.count({ where }),
@@ -485,7 +511,7 @@ export async function listAllDenuncias(
   return buildPaginatedResult(data, total, pagination);
 }
 
-export async function getDenunciaByIdForGestor(denunciaId: number) {
+export async function getDenunciaByIdForGestor(denunciaId: number, permitidas?: CategoriasPermitidas) {
   const denuncia = await prisma.denuncia.findUnique({
     where: { id_denuncia: denunciaId },
     include: {
@@ -499,6 +525,7 @@ export async function getDenunciaByIdForGestor(denunciaId: number) {
   if (!denuncia) {
     throw httpError('Denúncia não encontrada', 404);
   }
+  assegurarEscopo(denuncia, permitidas);
 
   return denuncia;
 }
@@ -535,7 +562,8 @@ export function validatePrioridadeInput(prioridade: unknown): NivelPrioridade {
 export async function updateDenunciaPrioridade(
   usuarioId: number,
   denunciaId: number,
-  novaPrioridade: NivelPrioridade
+  novaPrioridade: NivelPrioridade,
+  permitidas?: CategoriasPermitidas
 ) {
   const gestorId = await resolveGestorId(usuarioId);
 
@@ -546,6 +574,7 @@ export async function updateDenunciaPrioridade(
   if (!denunciaExistente) {
     throw httpError('Denúncia não encontrada', 404);
   }
+  assegurarEscopo(denunciaExistente, permitidas);
 
   if (denunciaExistente.prioridade === novaPrioridade) {
     throw httpError('A denúncia já possui este nível de prioridade', 400);
@@ -569,4 +598,36 @@ export async function updateDenunciaPrioridade(
 
     return { denuncia: denunciaAtualizada, historico };
   });
+}
+
+// Feed visto por cidadãos: mostra o problema e o andamento, sem dados de quem registrou
+// (e-mail e identificador do solicitante) e com coordenadas menos precisas.
+export async function listFeedPublico(pagination: PaginationParams, filtros: DenunciaListFilters = {}) {
+  const where = buildListWhere(filtros);
+
+  const [total, data] = await Promise.all([
+    prisma.denuncia.count({ where }),
+    prisma.denuncia.findMany({
+      where,
+      orderBy: { data_registro: 'desc' },
+      skip: pagination.skip,
+      take: pagination.limit,
+      select: {
+        id_denuncia: true,
+        titulo: true,
+        categoria: true,
+        regiao: true,
+        descricao: true,
+        status: true,
+        prioridade: true,
+        data_registro: true,
+        endereco: true,
+        imagens: true,
+      },
+    }),
+  ]);
+
+  const publicos = data.map((denuncia) => ({ ...denuncia, endereco: generalizarEndereco(denuncia.endereco) }));
+
+  return buildPaginatedResult(publicos, total, pagination);
 }

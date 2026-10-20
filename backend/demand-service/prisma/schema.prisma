@@ -38,6 +38,7 @@ model Denuncia {
   data_registro DateTime        @default(now())
   endereco           String
   email_solicitante  String?
+  data_conclusao     DateTime?
 
   cidadao_id    Int
   cidadao       Cidadao         @relation(fields: [cidadao_id], references: [id_cidadao])
@@ -48,6 +49,7 @@ model Denuncia {
   @@index([status])
   @@index([prioridade])
   @@index([regiao])
+  @@index([data_conclusao])
   @@map("denuncias")
   @@schema("demand")
 }
