@@ -26,6 +26,7 @@ Atalhos:
 | `npm run android` | Inicia e abre no emulador/dispositivo Android |
 | `npm run ios`     | Inicia e abre no simulador iOS (macOS)    |
 | `npm run lint`    | Roda o ESLint                             |
+| `npm test`        | Testes dos utilitários (senha, endereço)  |
 | `npx tsc --noEmit`| Checagem de tipos                         |
 
 ### Expo Go x development build
@@ -90,7 +91,12 @@ frontend/mobile
 | ------------------- | -------------------------- | ------------------------------------------- | -------- |
 | `/`                 | `app/index.tsx`            | Tela inicial ("Faça sua denúncia" / "Sou gestor") | Público |
 | `/login`            | `app/login.tsx`            | Login                                       | Público  |
-| `/cadastro`         | `app/cadastro.tsx`         | Cadastro de cidadão                         | Público  |
+| `/cadastro`         | `app/cadastro.tsx`         | Cadastro (senha forte e aceite dos termos)  | Público  |
+| `/esqueci-senha`    | `app/esqueci-senha.tsx`    | Pede o código de redefinição por e-mail     | Público  |
+| `/redefinir-senha`  | `app/redefinir-senha.tsx`  | Define a senha nova com o código recebido   | Público  |
+| `/privacidade`      | `app/privacidade.tsx`      | Política de Privacidade e Termos de Uso     | Público  |
+| `/aceite-termos`    | `app/aceite-termos.tsx`    | Aceite da versão vigente dos termos         | Logado   |
+| `/perfil`           | `app/perfil.tsx`           | Meus dados: corrigir, trocar senha, exportar, excluir conta | Logado |
 | `/denuncias`        | `app/denuncias/index.tsx`  | Lista das denúncias do cidadão              | Cidadão  |
 | `/denuncias/nova`   | `app/denuncias/nova.tsx`   | Nova denúncia (foto + GPS)                  | Cidadão  |
 | `/denuncias/[id]`   | `app/denuncias/[id].tsx`   | Detalhe da denúncia                         | Cidadão  |
