@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { Request } from 'express';
 import { versaoTermosAtual } from '../config/env';
 import { httpError } from '../utils/httpError';
-import { registrarEvento } from './auditoriaService';
+import { anonimizarEventosDoTitular, registrarEvento } from './auditoriaService';
 import { emailValido, normalizarEmail, termosPendentes } from './authService';
 import { assegurarSenhaAceitavel, hashSenha } from './senhaService';
 import { invalidarSessoes } from './sessaoService';
@@ -150,7 +150,7 @@ async function anonimizarOcorrencias(authorization: string) {
   }
 }
 
-export async function excluirConta(usuarioId: number, senha: unknown, authorization: string, req?: Request) {
+export async function excluirConta(usuarioId: number, senha: unknown, authorization: string) {
   const usuario = await buscarUsuario(usuarioId);
   await conferirSenhaAtual(senha, usuario.senha);
 
@@ -161,6 +161,7 @@ export async function excluirConta(usuarioId: number, senha: unknown, authorizat
   // Os tokens ainda não expirados deixam de valer para os três serviços.
   await invalidarSessoes(usuarioId);
 
-  // O evento fica sem usuário associado: o titular foi eliminado e o registro guarda só o tipo e a data.
-  await registrarEvento({ tipo: 'CONTA_EXCLUIDA', req });
+  // Os registros de segurança antigos perdem a ligação com a pessoa, e o da exclusão guarda só tipo e data.
+  await anonimizarEventosDoTitular(usuarioId, usuario.email);
+  await registrarEvento({ tipo: 'CONTA_EXCLUIDA' });
 }

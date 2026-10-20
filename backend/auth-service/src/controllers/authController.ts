@@ -131,7 +131,7 @@ export async function aceitarTermos(req: AuthRequest, res: Response, next: NextF
 
 export async function excluirConta(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    await contaService.excluirConta(req.user!.userId, req.body?.senha, req.headers.authorization!, req);
+    await contaService.excluirConta(req.user!.userId, req.body?.senha, req.headers.authorization!);
     return res.status(204).send();
   } catch (err) {
     next(err);

@@ -58,3 +58,13 @@ export async function removerEventosAntigos(dias: number): Promise<number> {
   const { count } = await prisma.eventoAuth.deleteMany({ where: { criado_em: { lt: limite } } });
   return count;
 }
+
+// Eliminação do titular: os registros de segurança continuam existindo (tipo e data), mas sem
+// nenhum dado que ligue a uma pessoa: usuário, IP, aparelho e hash do e-mail são apagados.
+export async function anonimizarEventosDoTitular(usuarioId: number, email: string): Promise<number> {
+  const { count } = await prisma.eventoAuth.updateMany({
+    where: { OR: [{ usuario_id: usuarioId }, { identificador: hashIdentificador(email) }] },
+    data: { usuario_id: null, identificador: null, ip: null, user_agent: null, detalhe: null },
+  });
+  return count;
+}
