@@ -18,7 +18,14 @@ const redisDel = vi.fn();
 
 vi.mock('../../config/redis', () => ({
   publishDenunciaStatusEvent: vi.fn(),
-  getRedisPublisher: vi.fn(async () => ({ del: redisDel })),
+  getRedisPublisher: vi.fn(async () => ({
+    del: redisDel,
+    // O cache do metrics-service é um por órgão; a invalidação varre as chaves com o prefixo.
+    scanIterator: async function* () {
+      yield 'smartcity:metrics:kpis:GERAL';
+      yield 'smartcity:metrics:kpis:ILUMINACAO';
+    },
+  })),
 }));
 
 import { prisma } from '../../lib/prisma';
@@ -108,7 +115,8 @@ describe('updateDenunciaCidadao', () => {
   it('invalida o cache de KPIs do metrics-service', async () => {
     await updateDenunciaCidadao(USUARIO_ID, DENUNCIA_ID, { categoria: 'SANEAMENTO' });
 
-    expect(redisDel).toHaveBeenCalledWith('smartcity:metrics:kpis');
+    expect(redisDel).toHaveBeenCalledWith('smartcity:metrics:kpis:GERAL');
+    expect(redisDel).toHaveBeenCalledWith('smartcity:metrics:kpis:ILUMINACAO');
   });
 
   it('não falha se o Redis estiver fora do ar', async () => {
@@ -126,7 +134,7 @@ describe('deleteDenunciaCidadao', () => {
     await deleteDenunciaCidadao(USUARIO_ID, DENUNCIA_ID);
 
     expect(db.denuncia.delete).toHaveBeenCalledWith({ where: { id_denuncia: DENUNCIA_ID } });
-    expect(redisDel).toHaveBeenCalledWith('smartcity:metrics:kpis');
+    expect(redisDel).toHaveBeenCalledWith('smartcity:metrics:kpis:GERAL');
   });
 
   it('responde 404 para denúncia de outro cidadão', async () => {

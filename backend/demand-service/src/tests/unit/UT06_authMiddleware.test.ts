@@ -1,7 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import jwt from 'jsonwebtoken';
 import type { Response, NextFunction } from 'express';
+import { getJwtSecret } from '../../config/env';
+import { sessaoValida } from '../../services/sessaoService';
 import { authMiddleware, apenascidadao, AuthRequest } from '../../middlewares/authMiddleware';
+
+vi.mock('../../services/sessaoService', () => ({ sessaoValida: vi.fn() }));
+
+beforeEach(() => {
+  vi.mocked(sessaoValida).mockResolvedValue(true);
+});
 
 // ─── NÍVEL 3: MIDDLEWARES COM req/res/next FALSOS ────────────────────────────
 //
@@ -18,7 +26,7 @@ import { authMiddleware, apenascidadao, AuthRequest } from '../../middlewares/au
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Mesmo segredo que o middleware usa por padrão
-const SECRET = 'change-me';
+const SECRET = getJwtSecret();
 
 // ─── FÁBRICAS ─────────────────────────────────────────────────────────────────
 
@@ -42,12 +50,12 @@ function makeNext(): NextFunction {
 
 describe('authMiddleware', () => {
 
-  it('responde 401 quando o header Authorization está ausente', () => {
+  it('responde 401 quando o header Authorization está ausente', async () => {
     const req        = makeReq({});          // sem Authorization
     const { res, status, json } = makeRes();
     const next       = makeNext();
 
-    authMiddleware(req, res, next);
+    await authMiddleware(req, res, next);
 
     expect(status).toHaveBeenCalledWith(401);
     expect(json).toHaveBeenCalledWith({ error: 'Token não fornecido' });
@@ -55,19 +63,19 @@ describe('authMiddleware', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('responde 401 quando o header existe mas não começa com "Bearer "', () => {
+  it('responde 401 quando o header existe mas não começa com "Bearer "', async () => {
     const req        = makeReq({ authorization: 'Basic dXNlcjpwYXNz' });
     const { res, status, json } = makeRes();
     const next       = makeNext();
 
-    authMiddleware(req, res, next);
+    await authMiddleware(req, res, next);
 
     expect(status).toHaveBeenCalledWith(401);
     expect(json).toHaveBeenCalledWith({ error: 'Token não fornecido' });
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('chama next() com token válido e popula req.user corretamente', () => {
+  it('chama next() com token válido e popula req.user corretamente', async () => {
     // Criamos um JWT real — o middleware vai verificá-lo com a mesma lib
     const payload = { userId: 42, papel: 'cidadao' as const, email: 'cidadao@test.com' };
     const token   = jwt.sign(payload, SECRET);
@@ -76,7 +84,7 @@ describe('authMiddleware', () => {
     const { res, status } = makeRes();
     const next       = makeNext();
 
-    authMiddleware(req, res, next);
+    await authMiddleware(req, res, next);
 
     // next() foi chamado — middleware liberou o acesso
     expect(next).toHaveBeenCalledOnce();
@@ -86,57 +94,57 @@ describe('authMiddleware', () => {
     expect(status).not.toHaveBeenCalled();
   });
 
-  it('popula req.user com papel "gestor" quando o token carrega esse papel', () => {
+  it('popula req.user com papel "gestor" quando o token carrega esse papel', async () => {
     const token = jwt.sign({ userId: 7, papel: 'gestor' }, SECRET);
     const req   = makeReq({ authorization: `Bearer ${token}` });
     const { res } = makeRes();
     const next  = makeNext();
 
-    authMiddleware(req, res, next);
+    await authMiddleware(req, res, next);
 
     expect(req.user?.papel).toBe('gestor');
     expect(next).toHaveBeenCalledOnce();
   });
 
-  it('responde 401 para token assinado com secret diferente', () => {
+  it('responde 401 para token assinado com secret diferente', async () => {
     // Token legítimo mas assinado com outro secret — verificação vai falhar
     const token = jwt.sign({ userId: 1, papel: 'cidadao' }, 'secret-errado');
     const req   = makeReq({ authorization: `Bearer ${token}` });
     const { res, status, json } = makeRes();
     const next  = makeNext();
 
-    authMiddleware(req, res, next);
+    await authMiddleware(req, res, next);
 
     expect(status).toHaveBeenCalledWith(401);
     expect(json).toHaveBeenCalledWith({ error: 'Token inválido ou expirado' });
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('responde 401 para token expirado', () => {
+  it('responde 401 para token expirado', async () => {
     // expiresIn: -1 gera um token que já nasceu expirado
     const token = jwt.sign({ userId: 1, papel: 'cidadao' }, SECRET, { expiresIn: -1 });
     const req   = makeReq({ authorization: `Bearer ${token}` });
     const { res, status } = makeRes();
     const next  = makeNext();
 
-    authMiddleware(req, res, next);
+    await authMiddleware(req, res, next);
 
     expect(status).toHaveBeenCalledWith(401);
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('responde 401 para token malformado (string aleatória no lugar do JWT)', () => {
+  it('responde 401 para token malformado (string aleatória no lugar do JWT)', async () => {
     const req  = makeReq({ authorization: 'Bearer isto.nao.e.um.jwt.valido' });
     const { res, status } = makeRes();
     const next = makeNext();
 
-    authMiddleware(req, res, next);
+    await authMiddleware(req, res, next);
 
     expect(status).toHaveBeenCalledWith(401);
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('responde 401 para token com segmentos corretos mas payload adulterado', () => {
+  it('responde 401 para token com segmentos corretos mas payload adulterado', async () => {
     // Cria token válido, depois troca o payload (segmento do meio) por outro em base64
     const token  = jwt.sign({ userId: 1, papel: 'cidadao' }, SECRET);
     const partes = token.split('.');
@@ -148,11 +156,41 @@ describe('authMiddleware', () => {
     const { res, status } = makeRes();
     const next = makeNext();
 
-    authMiddleware(req, res, next);
+    await authMiddleware(req, res, next);
 
     expect(status).toHaveBeenCalledWith(401);
     expect(next).not.toHaveBeenCalled();
   });
+  it('responde 401 quando a sessão foi encerrada (senha trocada depois da emissão do token)', async () => {
+    vi.mocked(sessaoValida).mockResolvedValue(false);
+    const token = jwt.sign({ userId: 5, papel: 'cidadao', sv: 0 }, SECRET);
+    const req   = makeReq({ authorization: `Bearer ${token}` });
+    const { res, status, json } = makeRes();
+    const next  = makeNext();
+
+    await authMiddleware(req, res, next);
+
+    expect(sessaoValida).toHaveBeenCalledWith(5, 0);
+    expect(status).toHaveBeenCalledWith(401);
+    expect(json).toHaveBeenCalledWith({ error: 'Sessão encerrada. Faça login novamente' });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('repassa categorias e órgão do token para req.user', async () => {
+    const token = jwt.sign(
+      { userId: 8, papel: 'gestor', orgao: 'ILUMINACAO', categorias: ['ILUMINACAO_PUBLICA'] },
+      SECRET
+    );
+    const req   = makeReq({ authorization: `Bearer ${token}` });
+    const { res } = makeRes();
+    const next  = makeNext();
+
+    await authMiddleware(req, res, next);
+
+    expect(req.user?.categorias).toEqual(['ILUMINACAO_PUBLICA']);
+    expect(req.user?.orgao).toBe('ILUMINACAO');
+  });
+
 });
 
 // ─── apenascidadao ────────────────────────────────────────────────────────────
