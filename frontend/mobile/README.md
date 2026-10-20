@@ -41,44 +41,19 @@ Atalhos:
 
   Depois, rode `npm start` e abra o app instalado.
 
-## Configuração
-
-A URL do backend vem da variável `EXPO_PUBLIC_API_GATEWAY_URL` (lida em `lib/api.ts`). Se não for definida, o padrão é `https://smartcity-api.beholder.app.br`.
-
-Para sobrescrever localmente:
+## backend
 
 ```bash
-cp .env.example .env
-# edite o .env
-```
+cd backend
+copy .env.example .env.local
+docker compose --env-file .env.local up -d --build
 
-Valores comuns:
+docker compose --env-file .env.local exec auth-service npx prisma generate
+docker compose --env-file .env.local exec auth-service npx prisma migrate deploy
 
-- Gateway em produção: `https://smartcity-api.beholder.app.br`
-- Gateway local + emulador Android: `http://10.0.2.2:8080`
-- Gateway local + celular físico (mesma rede Wi‑Fi): `http://<IP-da-sua-máquina>:8080`
-
-Reinicie o Metro (`npm start -c`) após mudar o `.env`. Nos builds EAS, a variável é definida por perfil em `eas.json`.
-
-## Gerar o APK (Android)
-
-O perfil `preview` gera um **APK** instalável diretamente no celular, apontando para o gateway de produção:
-
-```bash
-npm install -g eas-cli
-eas login
-eas build -p android --profile preview
-```
-
-Ao final, o EAS devolve um link para baixar o `.apk`. Perfis disponíveis em `eas.json`:
-
-| Perfil        | Uso                                                | API                                  |
-| ------------- | -------------------------------------------------- | ------------------------------------ |
-| `development` | Development build (`developmentClient`)            | `http://localhost:8080`              |
-| `preview`     | APK de distribuição interna (testes/entrega)       | `https://smartcity-api.beholder.app.br` |
-| `production`  | Build de loja (AAB no Android / IPA no iOS)        | `https://smartcity-api.beholder.app.br` |
-
-Para iOS: `eas build -p ios --profile production` (requer conta Apple Developer).
+docker compose --env-file .env.local exec demand-service npx prisma generate
+docker compose --env-file .env.local exec demand-service npx prisma migrate deploy
+ ```
 
 ## Permissões nativas
 
