@@ -11,7 +11,7 @@ jobs:
     env:
       DATABASE_URL_AUTH: postgresql://postgres:postgrespassword@localhost:5432/postgres
       DATABASE_URL_DEMAND: postgresql://postgres:postgrespassword@localhost:5432/postgres?schema=demand
-      REDIS_URL: redis://localhost:6379
+      REDIS_URL: redis://:redis-dev@localhost:6379
       JWT_SECRET: ci-secret-resolve-app
 
     steps:
@@ -38,7 +38,7 @@ jobs:
       - name: Aguardar PostgreSQL e Redis ficarem prontos
         run: |
           timeout 60 bash -c 'until docker exec smartcity_postgres pg_isready -U postgres; do sleep 2; done'
-          timeout 30 bash -c 'until docker exec smartcity_redis redis-cli ping | grep -q PONG; do sleep 2; done'
+          timeout 30 bash -c 'until docker exec smartcity_redis redis-cli -a redis-dev --no-auth-warning ping | grep -q PONG; do sleep 2; done'
 
       - name: Instalar dependências — demand-service
         working-directory: resolve-app/backend/demand-service

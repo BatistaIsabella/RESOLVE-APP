@@ -9,11 +9,20 @@ const AUTH_URL = process.env.AUTH_SERVICE_URL ?? 'http://auth-service:3001';
 const DEMAND_URL = process.env.DEMAND_SERVICE_URL ?? 'http://demand-service:3002';
 const METRICS_URL = process.env.METRICS_SERVICE_URL ?? 'http://metrics-service:3003';
 
-// Configuração de CORS
-app.use((_req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PATCH, PUT, DELETE, OPTIONS');
+// Atrás do Cloudflare/proxy, o IP real do cliente vem em X-Forwarded-For.
+app.set('trust proxy', Number(process.env.TRUST_PROXY ?? 1));
+
+// O app mobile não depende de CORS. Origens só são liberadas se configuradas.
+const origensPermitidas = (process.env.CORS_ORIGINS ?? '').split(',').map((o) => o.trim()).filter(Boolean);
+
+app.use((req, res, next) => {
+  const origem = req.headers.origin;
+  if (origem && origensPermitidas.includes(origem)) {
+    res.header('Access-Control-Allow-Origin', origem);
+    res.header('Vary', 'Origin');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PATCH, PUT, DELETE, OPTIONS');
+  }
   next();
 });
 
@@ -23,11 +32,21 @@ app.options('*', (_req, res) => res.sendStatus(204));
 app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 5000, 
+    max: Number(process.env.RATE_LIMIT_MAX ?? 5000),
     standardHeaders: true,
     legacyHeaders: false,
   })
 );
+
+// Limite mais curto para as rotas de autenticação (login, cadastro, recuperação de senha).
+// O bloqueio por conta, depois de 3 falhas, fica no auth-service.
+const limiteAuth = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: Number(process.env.AUTH_RATE_LIMIT_MAX ?? 100),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas requisições. Tente novamente em alguns minutos.' },
+});
 
 // Função auxiliar modificada para testar a saúde dos microsserviços usando os caminhos corretos
 async function checkService(name: string, url: string) {
@@ -70,9 +89,11 @@ app.get('/health', async (_req, res) => {
 // Proxy para o Serviço de Autenticação
 app.use(
   '/auth',
+  limiteAuth,
   createProxyMiddleware({
     target: AUTH_URL,
     changeOrigin: true,
+    xfwd: true,
   })
 );
 
@@ -82,6 +103,7 @@ app.use(
   createProxyMiddleware({
     target: METRICS_URL,
     changeOrigin: true,
+    xfwd: true,
   })
 );
 
@@ -91,6 +113,7 @@ app.use(
   createProxyMiddleware({
     target: DEMAND_URL,
     changeOrigin: true,
+    xfwd: true,
     pathRewrite: {
       '^/demands': '/demandas', // ← era '', agora mapeia certo
     },
