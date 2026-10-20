@@ -10,13 +10,58 @@ generator client {
 }
 
 model Usuario {
-  id    Int    @id @default(autoincrement())
-  nome  String @db.VarChar(100)
-  email String @db.VarChar(35) @unique
-  senha String @db.VarChar(60)
-  papel Papel  @default(CIDADAO)
+  id               Int       @id @default(autoincrement())
+  nome             String    @db.VarChar(100)
+  email            String    @unique @db.VarChar(254)
+  senha            String    @db.VarChar(60)
+  papel            Papel     @default(CIDADAO)
+  orgao            String?   @db.VarChar(40)
+  aceite_termos_em DateTime?
+  versao_termos    String?   @db.VarChar(20)
+
+  tokensRedefinicao TokenRedefinicao[]
 
   @@map("usuarios")
+  @@schema("auth")
+}
+
+model TokenRedefinicao {
+  id         Int       @id @default(autoincrement())
+  usuario_id Int
+  token_hash String    @unique @db.VarChar(64)
+  expira_em  DateTime
+  usado_em   DateTime?
+  criado_em  DateTime  @default(now())
+  usuario    Usuario   @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@index([usuario_id])
+  @@map("tokens_redefinicao")
+  @@schema("auth")
+}
+
+model TentativaLogin {
+  chave         String    @id @db.VarChar(64)
+  falhas        Int       @default(0)
+  bloqueado_ate DateTime?
+  atualizado_em DateTime  @updatedAt
+
+  @@map("tentativas_login")
+  @@schema("auth")
+}
+
+model EventoAuth {
+  id            Int      @id @default(autoincrement())
+  tipo          String   @db.VarChar(40)
+  usuario_id    Int?
+  identificador String?  @db.VarChar(64)
+  ip            String?  @db.VarChar(64)
+  user_agent    String?  @db.VarChar(255)
+  detalhe       String?  @db.VarChar(255)
+  criado_em     DateTime @default(now())
+
+  @@index([criado_em])
+  @@index([usuario_id])
+  @@map("eventos_auth")
   @@schema("auth")
 }
 
