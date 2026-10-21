@@ -420,6 +420,51 @@ describe('TS14 - Chave de cifra do segredo', () => {
   });
 });
 
+describe('TS14 - Recurso desligado (MFA_HABILITADO diferente de true)', () => {
+  it('ninguém consegue configurar nem ativar', async () => {
+    const { token } = await criarGestor();
+    process.env.MFA_HABILITADO = 'false';
+
+    const configurar = await request(app).post('/auth/mfa/configurar').set(comToken(token)).send({});
+    const ativar = await request(app).post('/auth/mfa/ativar').set(comToken(token)).send({ codigo: '123456' });
+
+    expect(configurar.status).toBe(403);
+    expect(ativar.status).toBe(403);
+  });
+
+  it('a conta informa que a MFA não está disponível, e o app esconde a opção', async () => {
+    const { token } = await criarGestor();
+    delete process.env.MFA_HABILITADO;
+
+    const res = await request(app).get('/auth/me').set(comToken(token));
+
+    expect(res.body.mfa).toMatchObject({ disponivel: false, ativa: false, obrigatoria: false });
+  });
+
+  it('o login do gestor segue só com e-mail e senha, mesmo com MFA_OBRIGATORIO_GESTOR ligada', async () => {
+    const { email } = await criarGestor();
+    delete process.env.MFA_HABILITADO;
+    process.env.MFA_OBRIGATORIO_GESTOR = 'true';
+
+    const res = await entrar(email);
+
+    expect(res.body.token).toBeTruthy();
+    expect(res.body.mfaConfiguracaoNecessaria).toBeUndefined();
+  });
+
+  it('quem já tinha a MFA ativa continua sendo desafiado e ainda vê a opção para desativar', async () => {
+    const { email, token } = await criarGestor();
+    await ativarMfa(token);
+    process.env.MFA_HABILITADO = 'false';
+
+    const login = await entrar(email);
+    const conta = await request(app).get('/auth/me').set(comToken(token));
+
+    expect(login.body.mfaNecessaria).toBe(true);
+    expect(conta.body.mfa).toMatchObject({ disponivel: true, ativa: true });
+  });
+});
+
 describe('TS14 - Registro de eventos e exclusão', () => {
   it('registra desafio, ativação, código recusado e desativação, sem guardar códigos nem segredo', async () => {
     const { email, token, id } = await criarGestor();
