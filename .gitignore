@@ -15,7 +15,7 @@ node_modules/
 *.tsbuildinfo
 next-env.d.ts
 
-# ───── Backend (FastAPI) ─────
+# ───── Python (resíduos de ferramentas) ─────
 __pycache__/
 **/__pycache__/
 *.pyc
@@ -52,6 +52,7 @@ result-*
 /e2e/test-results/
 /e2e/playwright-report/
 /e2e/blob-report/
+/test-results/
 
 # ───── Claude Code ─────
 .claude/

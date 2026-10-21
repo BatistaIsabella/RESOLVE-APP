@@ -154,7 +154,7 @@ npx playwright test tests/04-validacao-filtros.spec.ts
 
 ## Entrega individual — Beatriz Paredes (C5)
 
-**Arquivo:** `tests/05-navegacao_e_paginacao_da_listagem_de_solicitacoes.spec.ts`
+**Arquivo:** `tests/05-navegacao-e-paginacao-da-listagem-de-solicitacoes.spec.ts`
 
 **Cenário 5 — Cidadão navega pelas páginas da listagem de solicitações**
 
@@ -174,7 +174,7 @@ O teste:
 
 ```bash
 cd e2e
-npx playwright test tests/05-navegacao_e_paginacao_da_listagem_de_solicitacoes.spec.ts
+npx playwright test tests/05-navegacao-e-paginacao-da-listagem-de-solicitacoes.spec.ts
 ```
 
 ---
@@ -318,7 +318,7 @@ existe. Por isso o arquivo tem dois testes:
 > 🐛 **Achado rodando localmente:** o primeiro teste (indicadores de
 > total/categoria/região) é instável nessa suíte — descobrimos que ele cai,
 > às vezes, no mesmo bug do Cenário 10 (**BUG-04**, ver
-> `RELATORIO_BUGS.md`): o guard da rota `/gestor/dashboard` roda antes do
+> `docs/testes/RELATORIO_BUGS.md`): o guard da rota `/gestor/dashboard` roda antes do
 > Zustand terminar de reidratar o token salvo, então o segundo
 > `page.goto('/gestor/dashboard')` do teste ocasionalmente chuta o gestor
 > de volta pro login. Não é um problema deste teste especificamente — é o
@@ -363,7 +363,7 @@ checagem de back-end e o outro lado da regra de autorização:
    token responde `401` e, com token de cidadão, responde `403`.
 4. **Gestor legítimo continua no painel após um F5** — marcado com
    `test.fail()`, porque **hoje isso está quebrado** (ver BUG-04 no
-   `RELATORIO_BUGS.md`).
+   `docs/testes/RELATORIO_BUGS.md`).
 
 > 🐛 **Bug encontrado escrevendo este cenário (BUG-04):** o guard das páginas
 > do gestor roda antes de o Zustand reidratar o token do `localStorage`, então
@@ -502,7 +502,7 @@ e2e/
 │   ├── 02-validacao-campos-obrigatorios-nova-demanda.spec.ts
 │   ├── 03-busca-global-por-palavra-chave.spec.ts
 │   ├── 04-validacao-filtros.spec.ts
-│   ├── 05-navegação_e_paginacao_da_listagem_de_solicitacoes.spec.ts
+│   ├── 05-navegacao-e-paginacao-da-listagem-de-solicitacoes.spec.ts
 │   ├── 06-validar-demanda.spec.ts
 │   ├── 07-detalhes-demanda.spec.ts
 │   ├── 08-alterar-prioridade-demanda.spec.ts
