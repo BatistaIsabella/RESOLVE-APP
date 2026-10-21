@@ -165,17 +165,52 @@ Técnicas rigorosas foram implementadas para proteger a memória, o tempo de res
 * **Monitoramento Ativo contra Cold Start (UptimeRobot + `/warmup`):** Um monitor externo (UptimeRobot) acessa o endpoint `/warmup` do gateway a cada 5 minutos, mantendo todos os microsserviços do Render em execução contínua. Sem esse mecanismo, o plano gratuito hiberna os serviços após 15 minutos de inatividade, causando cold starts de aproximadamente 30 segundos para o próximo usuário que acessar a plataforma.
 * **Minimização de Escrita via Enums Nativos:** A otimização do armazenamento e da paginação no banco é impulsionada pelo uso de CREATE TYPE ... AS ENUM nas tabelas. Ao invés de trafegar strings longas de texto (como 'REGIAO_METROPOLITANA_DO_RECIFE'), o PostgreSQL armazena internamente esses valores como identificadores numéricos de 4 bytes, reduzindo drasticamente o tamanho do índice em memória e acelerando o tempo de varredura das listagens paginadas.
 
+## 📁 Estrutura do Repositório
+
+```
+RESOLVE-APP/
+├── backend/                 # Microsserviços Node.js (Express + Prisma)
+│   ├── api-gateway/         # Porta de entrada da API
+│   ├── auth-service/        # Cadastro, login e JWT
+│   ├── demand-service/      # Demandas urbanas (CRUD, filtros, status)
+│   ├── metrics-service/     # Indicadores do painel do gestor
+│   ├── postgres-init/       # Scripts de criação dos schemas
+│   └── docker-compose*.yml  # Ambiente local e de produção
+├── frontend/                # Aplicação web (Next.js)
+│   └── mobile/              # Aplicativo mobile (React Native + Expo)
+├── e2e/                     # Testes end-to-end (Playwright)
+├── docs/                    # Documentação do projeto
+│   ├── arquitetura/         # Diagramas de modelagem e de arquitetura
+│   └── testes/              # Plano de testes, relatório de bugs, suíte do backend e evidências
+├── .github/workflows/       # Pipeline de regressão (CI)
+├── render.yaml              # Deploy no Render
+└── flake.nix                # Ambiente reprodutível com Nix
+```
+
+| Documento | Onde está |
+| :--- | :--- |
+| Plano de Testes e Backlog de Automação | [docs/testes/Plano_de_Testes_e_Backlog_Grupo5.docx](docs/testes/Plano_de_Testes_e_Backlog_Grupo5.docx) |
+| Relatório de bugs | [docs/testes/RELATORIO_BUGS.md](docs/testes/RELATORIO_BUGS.md) |
+| Suíte de testes do backend | [docs/testes/SUITE_TESTES_BACKEND.md](docs/testes/SUITE_TESTES_BACKEND.md) |
+| Plano de QA | [docs/testes/plano-qa.html](docs/testes/plano-qa.html) |
+| Evidências de execução e cobertura | [docs/testes/evidencias/](docs/testes/evidencias/) |
+| Saídas das rodadas de IA do plano de testes | [docs/testes/ia/](docs/testes/ia/) |
+| Testes E2E | [e2e/README.md](e2e/README.md) |
+| App mobile | [frontend/mobile/README.md](frontend/mobile/README.md) e [ARQUITETURA.md](frontend/mobile/ARQUITETURA.md) |
+| Frontend web | [frontend/README.md](frontend/README.md) e [ARQUITETURA.md](frontend/ARQUITETURA.md) |
+| Backend | [backend/README.md](backend/README.md) |
+
 ## 🔗 Links Úteis
 
 | Ferramenta Utilizada | Material | Links |
 | :--- | :--- | :---
 | **Figma** | Protótipo | [Acesse aqui](https://www.figma.com/design/5qGAuNGrMKdG7AgXjG77YX/Smart-City?node-id=0-1&t=ew4wGee8wgaJ4qCo-1) |
 | **Postman** | Documentação Pública da API | [Acesse aqui](https://documenter.getpostman.com/view/40719566/2sBXwtrADd) |
-| **BRmodelo** | Modelagem conceitual - Auth | [Acesse aqui](public/images/modeloConceitualAuth.png) |
-| **BRmodelo** | Modelagem lógica - Auth | [Acesse aqui](public/images/modeloLogicoAuth.png) |
-| **BRmodelo** | Modelagem conceitual - Demand | [Acesse aqui](public/images/ModeloConceitualDemand.png) |
-| **BRmodelo** | Modelagem lógica - Demand | [Acesse aqui](public/images/ModeloLogicoDemandv2.png) |
-| **LucidChart** | Desenho da Arquitetura em Microsserviços | [Acesse aqui](public/images/Arquitetura_microsservicos.png) |
+| **BRmodelo** | Modelagem conceitual - Auth | [Acesse aqui](docs/arquitetura/modeloConceitualAuth.png) |
+| **BRmodelo** | Modelagem lógica - Auth | [Acesse aqui](docs/arquitetura/modeloLogicoAuth.png) |
+| **BRmodelo** | Modelagem conceitual - Demand | [Acesse aqui](docs/arquitetura/ModeloConceitualDemandv4.png) |
+| **BRmodelo** | Modelagem lógica - Demand | [Acesse aqui](docs/arquitetura/ModeloLogicoDemandv2.png) |
+| **LucidChart** | Desenho da Arquitetura em Microsserviços | [Acesse aqui](docs/arquitetura/Arquitetura_microsservicos.png) |
 
 
 ---
