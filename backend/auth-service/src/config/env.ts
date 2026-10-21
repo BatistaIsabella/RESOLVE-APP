@@ -14,6 +14,12 @@ export function isProducao(): boolean {
   return process.env.NODE_ENV === 'production';
 }
 
+// A verificação em duas etapas vem desligada: sem MFA_HABILITADO=true ninguém consegue ativá-la
+// e o app esconde a opção. Contas que já a tenham ativa continuam sendo desafiadas no login.
+export function mfaHabilitada(): boolean {
+  return process.env.MFA_HABILITADO === 'true';
+}
+
 export function versaoTermosAtual(): string {
   return process.env.TERMOS_VERSAO || '1.0';
 }

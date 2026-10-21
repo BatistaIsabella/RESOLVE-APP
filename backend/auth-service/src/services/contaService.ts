@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { Request } from 'express';
-import { versaoTermosAtual } from '../config/env';
+import { mfaHabilitada, versaoTermosAtual } from '../config/env';
 import { httpError } from '../utils/httpError';
 import { anonimizarEventosDoTitular, registrarEvento } from './auditoriaService';
 import { emailValido, normalizarEmail, termosPendentes } from './authService';
@@ -31,7 +31,8 @@ function formatarConta(usuario: NonNullable<Awaited<ReturnType<typeof buscarUsua
     versaoTermos: usuario.versao_termos,
     termosPendentes: termosPendentes(usuario),
     mfa: {
-      disponivel: usuario.papel === 'GESTOR',
+      // O app só mostra a opção de MFA quando isto é verdadeiro. Quem já a tem ativa a vê mesmo com o recurso desligado.
+      disponivel: usuario.papel === 'GESTOR' && (mfaHabilitada() || usuario.mfa_ativo),
       ativa: usuario.mfa_ativo,
       obrigatoria: usuario.papel === 'GESTOR' && mfaObrigatoriaParaGestor(),
     },

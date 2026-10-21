@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import { Request } from 'express';
 import jwt from 'jsonwebtoken';
 import { authenticator } from 'otplib';
-import { getJwtSecret } from '../config/env';
+import { getJwtSecret, mfaHabilitada } from '../config/env';
 import { cifrar, decifrar } from '../utils/cifra';
 import { httpError } from '../utils/httpError';
 import { registrarEvento } from './auditoriaService';
@@ -46,7 +46,13 @@ export function lerDesafio(desafio: unknown, tipo: TipoDesafio): number {
 }
 
 export function mfaObrigatoriaParaGestor(): boolean {
-  return process.env.MFA_OBRIGATORIO_GESTOR === 'true';
+  return mfaHabilitada() && process.env.MFA_OBRIGATORIO_GESTOR === 'true';
+}
+
+function assegurarMfaHabilitada() {
+  if (!mfaHabilitada()) {
+    throw httpError('A verificação em duas etapas não está disponível no momento', 403);
+  }
 }
 
 function chaveDeBloqueio(usuarioId: number): string {
@@ -75,6 +81,7 @@ async function buscarGestor(usuarioId: number) {
 
 // Cadastro do segredo. Ele só passa a valer depois que o primeiro código for confirmado em `ativar`.
 export async function iniciarConfiguracao(usuarioId: number) {
+  assegurarMfaHabilitada();
   const usuario = await buscarGestor(usuarioId);
   if (usuario.mfa_ativo) throw httpError('A verificação em duas etapas já está ativa', 409);
 
@@ -100,6 +107,7 @@ function conferirTotp(codigo: string, segredo: string, ultimoPasso: number | nul
 }
 
 export async function ativar(usuarioId: number, codigo: unknown, req?: Request): Promise<string[]> {
+  assegurarMfaHabilitada();
   const usuario = await buscarGestor(usuarioId);
   if (usuario.mfa_ativo) throw httpError('A verificação em duas etapas já está ativa', 409);
   if (!usuario.mfa_segredo) throw httpError('Inicie a configuração antes de confirmar o código', 400);
