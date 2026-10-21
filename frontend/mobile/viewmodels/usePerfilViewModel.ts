@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { ApiError } from '@/lib/api';
 import { Conta, contaService } from '@/services/contaService';
+import { codigoMfaValido } from '@/utils/mfa';
 import { primeiroRequisitoPendente } from '@/utils/senha';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -34,6 +35,12 @@ export function usePerfilViewModel() {
   const [salvandoSenha, setSalvandoSenha] = useState(false);
   const [mensagemSenha, setMensagemSenha] = useState('');
   const [erroSenha, setErroSenha] = useState('');
+
+  const [desativandoMfa, setDesativandoMfa] = useState(false);
+  const [senhaMfa, setSenhaMfa] = useState('');
+  const [codigoMfa, setCodigoMfa] = useState('');
+  const [salvandoMfa, setSalvandoMfa] = useState(false);
+  const [erroMfa, setErroMfa] = useState('');
 
   const [exportando, setExportando] = useState(false);
   const [erroExportacao, setErroExportacao] = useState('');
@@ -111,6 +118,25 @@ export function usePerfilViewModel() {
   };
 
   // Abre a folha de compartilhamento do sistema com o JSON da cópia dos dados.
+  // Desativar pede a senha e um código atual (do app ou de recuperação), para que quem pegar o celular
+  // desbloqueado não consiga tirar a proteção. As outras sessões são encerradas pelo servidor.
+  const desativarMfa = async () => {
+    setErroMfa('');
+    if (!senhaMfa) return setErroMfa('Informe a sua senha');
+    if (!codigoMfaValido(codigoMfa)) return setErroMfa('Digite o código do app autenticador ou um código de recuperação');
+
+    try {
+      setSalvandoMfa(true);
+      await contaService.mfaDesativar(senhaMfa, codigoMfa.trim());
+      logout();
+      router.replace('/login');
+    } catch (err) {
+      setErroMfa(mensagemDe(err, 'Não foi possível desativar a verificação em duas etapas'));
+    } finally {
+      setSalvandoMfa(false);
+    }
+  };
+
   const exportarDados = async () => {
     setErroExportacao('');
     try {
@@ -173,6 +199,22 @@ export function usePerfilViewModel() {
     mensagemSenha,
     erroSenha,
     alterarSenha,
+    desativandoMfa,
+    abrirDesativacaoMfa: () => setDesativandoMfa(true),
+    cancelarDesativacaoMfa: () => {
+      setDesativandoMfa(false);
+      setSenhaMfa('');
+      setCodigoMfa('');
+      setErroMfa('');
+    },
+    senhaMfa,
+    setSenhaMfa,
+    codigoMfa,
+    setCodigoMfa,
+    salvandoMfa,
+    erroMfa,
+    desativarMfa,
+    ativarMfa: () => router.push('/mfa-configurar'),
     exportando,
     erroExportacao,
     exportarDados,

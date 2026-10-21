@@ -1,4 +1,5 @@
 import { api, toApiError } from '@/lib/api';
+import { AuthResponse } from '@/services/authService';
 
 export interface Conta {
   id: number;
@@ -9,6 +10,18 @@ export interface Conta {
   aceiteTermosEm: string | null;
   versaoTermos: string | null;
   termosPendentes: boolean;
+  mfa: { disponivel: boolean; ativa: boolean; obrigatoria: boolean };
+}
+
+export interface ConfiguracaoMfa {
+  segredo: string;
+  otpauthUri: string;
+}
+
+export interface AtivacaoMfa {
+  codigosRecuperacao: string[];
+  // Presente quando a configuração foi feita antes de existir sessão (MFA obrigatória no primeiro acesso).
+  login?: AuthResponse;
 }
 
 async function chamar<T>(requisicao: Promise<{ data: T }>): Promise<T> {
@@ -41,6 +54,23 @@ export const contaService = {
   async excluir(senha: string): Promise<void> {
     try {
       await api.delete('/auth/me', { data: { senha } });
+    } catch (err) {
+      throw toApiError(err);
+    }
+  },
+
+  // `desafio` só é enviado quando ainda não há sessão (MFA obrigatória no primeiro login).
+  mfaConfigurar(desafio?: string): Promise<ConfiguracaoMfa> {
+    return chamar(api.post<ConfiguracaoMfa>('/auth/mfa/configurar', desafio ? { desafio } : {}));
+  },
+
+  mfaAtivar(codigo: string, desafio?: string): Promise<AtivacaoMfa> {
+    return chamar(api.post<AtivacaoMfa>('/auth/mfa/ativar', { codigo, ...(desafio ? { desafio } : {}) }));
+  },
+
+  async mfaDesativar(senha: string, codigo: string): Promise<void> {
+    try {
+      await api.post('/auth/mfa/desativar', { senha, codigo });
     } catch (err) {
       throw toApiError(err);
     }

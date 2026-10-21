@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 
-import { getPostLoginRoute, useAuthContext } from '@/contexts/AuthContext';
+import { getPostLoginRoute, ResultadoLogin, useAuthContext } from '@/contexts/AuthContext';
 import { setRemembered } from '@/lib/secureStorage';
 import { ApiError } from '@/lib/api';
 
@@ -29,15 +29,23 @@ export function useLoginViewModel() {
 
     try {
       setRemembered(manterConectado);
-      let role;
+      let resultado: ResultadoLogin;
       try {
-        role = await login(emailNormalizado, senha);
+        resultado = await login(emailNormalizado, senha);
       } catch (err) {
         const recusado = err instanceof ApiError && err.status === 401;
         if (!recusado || emailDigitado === emailNormalizado) throw err;
-        role = await login(emailDigitado, senha);
+        resultado = await login(emailDigitado, senha);
       }
-      router.replace(getPostLoginRoute(role));
+
+      // Gestor com verificação em duas etapas ainda precisa informar o código antes de entrar.
+      if (resultado.tipo === 'mfa') {
+        router.push({ pathname: '/mfa', params: { desafio: resultado.desafio } });
+      } else if (resultado.tipo === 'mfa-configuracao') {
+        router.push({ pathname: '/mfa-configurar', params: { desafio: resultado.desafio } });
+      } else {
+        router.replace(getPostLoginRoute(resultado.role));
+      }
     } catch (err) {
       setErro(err instanceof ApiError ? err.message : 'Erro ao fazer login');
     }

@@ -68,14 +68,20 @@ export function useCadastroViewModel() {
 
     try {
       setRemembered(true);
-      const role = await register({
+      const resultado = await register({
         nome: nomeLimpo,
         email: emailLimpo,
         senha,
         papel,
         codigoAcesso: papel === 'gestor' ? codigoAcesso.trim() : undefined,
       });
-      router.replace(getPostLoginRoute(role));
+      if (resultado.tipo === 'mfa') {
+        router.push({ pathname: '/mfa', params: { desafio: resultado.desafio } });
+      } else if (resultado.tipo === 'mfa-configuracao') {
+        router.push({ pathname: '/mfa-configurar', params: { desafio: resultado.desafio } });
+      } else {
+        router.replace(getPostLoginRoute(resultado.role));
+      }
     } catch (err) {
       setErro(err instanceof ApiError ? err.message : 'Erro ao criar conta');
     }

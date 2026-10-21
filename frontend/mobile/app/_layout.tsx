@@ -18,6 +18,8 @@ export default function RootLayout() {
           <Stack.Screen name="privacidade" />
           <Stack.Screen name="aceite-termos" />
           <Stack.Screen name="perfil" />
+          <Stack.Screen name="mfa" />
+          <Stack.Screen name="mfa-configurar" />
           <Stack.Screen name="denuncias" />
           <Stack.Screen name="gestor" />
         </Stack>

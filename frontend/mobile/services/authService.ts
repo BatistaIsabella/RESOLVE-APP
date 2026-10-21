@@ -5,8 +5,31 @@ export interface AuthResponse {
   papel: 'cidadao' | 'gestor';
   userId: number;
   nome: string;
+  email: string;
   orgao?: string;
   termosPendentes: boolean;
+}
+
+// Com a verificação em duas etapas a senha certa ainda não devolve a sessão, só um desafio.
+export interface MfaNecessaria {
+  mfaNecessaria: true;
+  desafio: string;
+}
+
+// MFA obrigatória e ainda não configurada: o desafio serve só para configurar.
+export interface MfaConfiguracaoNecessaria {
+  mfaConfiguracaoNecessaria: true;
+  desafio: string;
+}
+
+export type RespostaLogin = AuthResponse | MfaNecessaria | MfaConfiguracaoNecessaria;
+
+export function exigeMfa(resposta: RespostaLogin): resposta is MfaNecessaria {
+  return 'mfaNecessaria' in resposta;
+}
+
+export function exigeConfiguracaoMfa(resposta: RespostaLogin): resposta is MfaConfiguracaoNecessaria {
+  return 'mfaConfiguracaoNecessaria' in resposta;
 }
 
 export interface RegisterResponse {
@@ -27,9 +50,18 @@ export interface CadastroInput {
 }
 
 export const authService = {
-  async login(email: string, senha: string): Promise<AuthResponse> {
+  async login(email: string, senha: string): Promise<RespostaLogin> {
     try {
-      const { data } = await api.post<AuthResponse>('/auth/login', { email, senha });
+      const { data } = await api.post<RespostaLogin>('/auth/login', { email, senha });
+      return data;
+    } catch (err) {
+      throw toApiError(err);
+    }
+  },
+
+  async loginMfa(desafio: string, codigo: string): Promise<AuthResponse> {
+    try {
+      const { data } = await api.post<AuthResponse>('/auth/login/mfa', { desafio, codigo });
       return data;
     } catch (err) {
       throw toApiError(err);

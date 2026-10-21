@@ -144,6 +144,7 @@ export async function respostaDeLogin(usuario: Usuario) {
     papel: usuario.papel.toLowerCase() as 'cidadao' | 'gestor',
     userId: usuario.id,
     nome: usuario.nome,
+    email: usuario.email,
     ...(orgao ? { orgao } : {}),
     termosPendentes: termosPendentes(usuario),
   };

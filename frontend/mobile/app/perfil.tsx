@@ -86,6 +86,60 @@ function PerfilConteudo() {
               <PrimaryButton label="Alterar senha" onPress={vm.alterarSenha} loading={vm.salvandoSenha} />
             </Cartao>
 
+            {vm.conta.mfa.disponivel ? (
+              <Cartao titulo="Verificação em duas etapas">
+                {vm.conta.mfa.ativa ? (
+                  <>
+                    <Text style={styles.texto}>
+                      Ativa. Ao entrar, além da senha, é preciso informar o código do app autenticador.
+                    </Text>
+                    {vm.desativandoMfa ? (
+                      <>
+                        <Campo
+                          rotulo="Senha"
+                          value={vm.senhaMfa}
+                          onChangeText={vm.setSenhaMfa}
+                          secureTextEntry
+                        />
+                        <Campo
+                          rotulo="Código do app ou de recuperação"
+                          value={vm.codigoMfa}
+                          onChangeText={vm.setCodigoMfa}
+                        />
+                        <Aviso erro={vm.erroMfa} />
+                        <Pressable
+                          style={[styles.botaoPerigo, vm.salvandoMfa && styles.desabilitado]}
+                          onPress={vm.desativarMfa}
+                          disabled={vm.salvandoMfa}
+                        >
+                          <Text style={styles.botaoPerigoTexto}>
+                            {vm.salvandoMfa ? 'Desativando...' : 'Desativar verificação'}
+                          </Text>
+                        </Pressable>
+                        <Pressable onPress={vm.cancelarDesativacaoMfa} hitSlop={8}>
+                          <Text style={styles.link}>Cancelar</Text>
+                        </Pressable>
+                      </>
+                    ) : (
+                      <Pressable style={styles.botaoPerigoContorno} onPress={vm.abrirDesativacaoMfa}>
+                        <Text style={styles.botaoPerigoContornoTexto}>Desativar</Text>
+                      </Pressable>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.texto}>
+                      {vm.conta.mfa.obrigatoria
+                        ? 'Obrigatória para gestores. '
+                        : 'Recomendado para contas de gestor. '}
+                      Protege a conta mesmo que a senha vaze, pedindo um código do app autenticador a cada login.
+                    </Text>
+                    <PrimaryButton label="Ativar" onPress={vm.ativarMfa} />
+                  </>
+                )}
+              </Cartao>
+            ) : null}
+
             <Cartao titulo="Privacidade">
               <Text style={styles.texto}>
                 Você pode pedir uma cópia dos seus dados, ler a política de privacidade ou excluir a conta. Outros

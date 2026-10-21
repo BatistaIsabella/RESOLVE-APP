@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
-import { authService } from '@/services/authService';
+import { AuthResponse, authService, exigeConfiguracaoMfa, exigeMfa } from '@/services/authService';
 import { contaService } from '@/services/contaService';
 import { ApiError } from '@/lib/api';
 import { setAuthSnapshot, setUnauthorizedHandler } from '@/lib/authToken';
@@ -17,6 +17,12 @@ interface CadastroDados {
   codigoAcesso?: string;
 }
 
+// Resultado do login: sessão aberta, ou uma etapa de MFA ainda por fazer.
+export type ResultadoLogin =
+  | { tipo: 'sessao'; role: Papel }
+  | { tipo: 'mfa'; desafio: string }
+  | { tipo: 'mfa-configuracao'; desafio: string };
+
 interface AuthContextValue {
   token: string | null;
   role: Papel | null;
@@ -27,8 +33,10 @@ interface AuthContextValue {
   isLoading: boolean;
   error: string | null;
   hasHydrated: boolean;
-  login: (email: string, senha: string) => Promise<Papel>;
-  register: (dados: CadastroDados) => Promise<Papel>;
+  login: (email: string, senha: string) => Promise<ResultadoLogin>;
+  register: (dados: CadastroDados) => Promise<ResultadoLogin>;
+  concluirLoginMfa: (desafio: string, codigo: string) => Promise<Papel>;
+  iniciarSessao: (resposta: AuthResponse) => Papel;
   logout: () => void;
   aceitarTermos: () => Promise<void>;
   atualizarSessao: (parcial: { token?: string; userName?: string; userEmail?: string }) => void;
@@ -92,21 +100,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => setUnauthorizedHandler(null);
   }, [encerrarLocalmente]);
 
-  const autenticar = useCallback(
-    async (email: string, senha: string): Promise<Papel> => {
-      const emailNormalizado = email.trim().toLowerCase();
-      const result = await authService.login(emailNormalizado, senha);
+  const iniciarSessao = useCallback(
+    (resposta: AuthResponse): Papel => {
       applySession({
-        token: result.token,
-        role: result.papel,
-        userName: result.nome,
-        userEmail: emailNormalizado,
-        orgao: result.orgao ?? null,
-        termosPendentes: result.termosPendentes,
+        token: resposta.token,
+        role: resposta.papel,
+        userName: resposta.nome,
+        userEmail: resposta.email,
+        orgao: resposta.orgao ?? null,
+        termosPendentes: resposta.termosPendentes,
       });
-      return result.papel;
+      return resposta.papel;
     },
     [applySession]
+  );
+
+  const autenticar = useCallback(
+    async (email: string, senha: string): Promise<ResultadoLogin> => {
+      const resposta = await authService.login(email.trim().toLowerCase(), senha);
+
+      if (exigeMfa(resposta)) return { tipo: 'mfa', desafio: resposta.desafio };
+      if (exigeConfiguracaoMfa(resposta)) return { tipo: 'mfa-configuracao', desafio: resposta.desafio };
+      return { tipo: 'sessao', role: iniciarSessao(resposta) };
+    },
+    [iniciarSessao]
+  );
+
+  const concluirLoginMfa = useCallback(
+    async (desafio: string, codigo: string): Promise<Papel> => {
+      return iniciarSessao(await authService.loginMfa(desafio, codigo));
+    },
+    [iniciarSessao]
   );
 
   const login = useCallback(
@@ -175,11 +199,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       hasHydrated,
       login,
       register,
+      concluirLoginMfa,
+      iniciarSessao,
       logout,
       aceitarTermos,
       atualizarSessao,
     }),
-    [session, isLoading, error, hasHydrated, login, register, logout, aceitarTermos, atualizarSessao]
+    [
+      session,
+      isLoading,
+      error,
+      hasHydrated,
+      login,
+      register,
+      concluirLoginMfa,
+      iniciarSessao,
+      logout,
+      aceitarTermos,
+      atualizarSessao,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

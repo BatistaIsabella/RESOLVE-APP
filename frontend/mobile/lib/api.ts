@@ -5,7 +5,15 @@ export const API_GATEWAY_URL =
   process.env.EXPO_PUBLIC_API_GATEWAY_URL ?? 'https://smartcity-api.beholder.app.br';
 
 // Nestas rotas um 401 é erro de credencial/código, não sessão expirada.
-const AUTH_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/reset-password'];
+const AUTH_ENDPOINTS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/auth/mfa/configurar',
+  '/auth/mfa/ativar',
+  '/auth/mfa/desativar',
+];
 
 export class ApiError extends Error {
   status: number;
