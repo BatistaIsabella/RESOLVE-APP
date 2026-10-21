@@ -2,7 +2,7 @@
 
 Plano de testes e Backlog de automação
 
-**Arquivo:**  [Template_Plano_de_Testes_e_Backlog grupo 5.md - Google Docs](https://docs.google.com/document/d/1R-aOrtenqLDhXF6g0rWwx9QbTeDCCBjN_vuRoMfj734/edit?tab=t.0#heading=h.ipy4hhrvrbqi)
+**Arquivo:**  [Template_Plano_de_Testes_e_Backlog grupo 5.md - Google Docs](https://docs.google.com/document/d/1uv0zKrkr9Gv0RQBRbBE9WOa8F4WEhd-W3kV-L4Z0K5c/edit?usp=sharing)
 
 ------------------------------------------------------------------------
 
