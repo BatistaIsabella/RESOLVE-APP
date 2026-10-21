@@ -96,7 +96,9 @@ frontend/mobile
 | `/redefinir-senha`  | `app/redefinir-senha.tsx`  | Define a senha nova com o código recebido   | Público  |
 | `/privacidade`      | `app/privacidade.tsx`      | Política de Privacidade e Termos de Uso     | Público  |
 | `/aceite-termos`    | `app/aceite-termos.tsx`    | Aceite da versão vigente dos termos         | Logado   |
-| `/perfil`           | `app/perfil.tsx`           | Meus dados: corrigir, trocar senha, exportar, excluir conta | Logado |
+| `/perfil`           | `app/perfil.tsx`           | Meus dados: corrigir, trocar senha, exportar, excluir conta, MFA | Logado |
+| `/mfa`              | `app/mfa.tsx`              | Código do autenticador no login do gestor  | Público  |
+| `/mfa-configurar`   | `app/mfa-configurar.tsx`   | Ativação da verificação em duas etapas (gestor) | Gestor |
 | `/denuncias`        | `app/denuncias/index.tsx`  | Lista das denúncias do cidadão              | Cidadão  |
 | `/denuncias/nova`   | `app/denuncias/nova.tsx`   | Nova denúncia (foto + GPS)                  | Cidadão  |
 | `/denuncias/[id]`   | `app/denuncias/[id].tsx`   | Detalhe da denúncia                         | Cidadão  |

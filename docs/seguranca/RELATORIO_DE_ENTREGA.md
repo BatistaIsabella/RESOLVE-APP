@@ -32,6 +32,7 @@ Este documento tem três partes: o que foi implementado, o que não foi (com o m
 | 19 | Gestor só vê o seu órgão (3.6) | Cada código de acesso liga o gestor a um órgão, que define as categorias visíveis (lista, detalhe, status, prioridade, exclusão e indicadores). Outro órgão responde 404 | `auth-service/src/config/orgaos.ts` |
 | 20 | Cidadão não vê dados de outros (3.6) | O feed devolvia e-mail e identificador de quem registrou; agora não devolve, e as coordenadas saem com menos precisão | `denunciaService.ts` |
 | 21 | Mapeamento dos dados (3.1) | Tabela de dados, finalidade, retenção e proteção | [IMPLEMENTACAO.md](IMPLEMENTACAO.md), seção 4 |
+| 22 | MFA para administradores (1.7) | Verificação em duas etapas por código TOTP para gestores, com 8 códigos de recuperação de uso único, proteção contra repetição do código e segredo cifrado. Opcional por padrão, ou obrigatória com `MFA_OBRIGATORIO_GESTOR=true` | `mfaService.ts`, `cifra.ts`, telas `mfa` e `mfa-configurar`, cartão em "Meus dados" |
 
 Extras: limite de 100 chamadas por 15 minutos em `/auth` no gateway, CORS fechado por padrão, IP real repassado aos serviços e corpo máximo de 10 MB (era 50 MB).
 
@@ -56,7 +57,6 @@ Na coluna "Precisa no acadêmico?": **Não** significa que pode ficar como está
 |---|---|---|---|
 | Criptografia de disco (2.2) | Não é feita pelo código; depende de onde o banco roda | Usar um provedor que já faz (Supabase, Render) ou criptografar o disco do servidor (LUKS). Registrar qual foi o escolhido | **Não.** Basta documentar o provedor |
 | Criptografia de coluna e KMS (2.2) | O e-mail é a chave de busca do login, então não dá para cifrar direto sem quebrar o login | Guardar o e-mail cifrado (AES-GCM) mais um hash para busca (HMAC), com a chave em um cofre de segredos. Mexe em cadastro, login e troca de e-mail, então são alguns dias de trabalho | **Não.** O próprio documento já aceita não cifrar a geolocalização por motivo parecido. Basta justificar |
-| MFA para gestores (1.7) | O próprio documento trata como melhoria futura | Código de uso único (TOTP) com biblioteca pronta, QR code no cadastro do gestor e uma coluna para o segredo | **Não** |
 | Cadastro que revela e-mail existente (1.3) | Responder igual exigiria confirmar o e-mail por mensagem, o que depende do SMTP e muda o fluxo de cadastro | Cadastro sempre responde "verifique seu e-mail" e a conta só é ativada pelo link | **Não.** Pode ficar como risco aceito, descrito |
 | Tela ou alerta para revisar os registros (1.7) | Os registros existem, falta a interface | Consultas SQL (seção 3) servem para o acadêmico. Em produção: painel ou alerta quando houver muitos bloqueios | **Não** |
 | Criptografia ponta a ponta das fotos (2.8) | Melhoria futura na própria documentação, e o gestor precisa ver as fotos | Cifrar no app com chave do órgão. As fotos hoje ficam no banco em base64; o ideal seria mover para um armazenamento de arquivos | **Não** |
@@ -188,6 +188,26 @@ Para a líder testar. Se algo não bater, anotar o passo, o que apareceu na tela
 | 46 | Em produção, sem `GESTOR_ACCESS_CODES`, cadastrar gestor | Recusa (403) | [ ] |
 | 47 | Mais de 100 chamadas em `/auth` em 15 minutos pelo mesmo IP | O gateway passa a responder 429 | [ ] |
 
+### Verificação em duas etapas (gestor)
+
+Para o primeiro teste, deixar `MFA_OBRIGATORIO_GESTOR=false`. Precisa de um app autenticador no celular (Google Authenticator, Microsoft Authenticator ou similar).
+
+| # | O que fazer | O que deve acontecer | OK? |
+|---|---|---|---|
+| M1 | Como gestor, abrir "Meus dados" | Aparece o cartão "Verificação em duas etapas" com o botão "Ativar" (cidadão não vê o cartão) | [ ] |
+| M2 | Tocar em "Ativar" | Mostra uma chave em grupos de 4 letras e o botão "Abrir no autenticador" | [ ] |
+| M3 | Tocar em "Abrir no autenticador" (ou digitar a chave no app) | O app autenticador adiciona a conta "RESOLVE" | [ ] |
+| M4 | Informar um código errado | Recusa | [ ] |
+| M5 | Informar o código de 6 números do app | Ativa e mostra 8 códigos de recuperação, com o botão de compartilhar | [ ] |
+| M6 | Sair e entrar de novo com e-mail e senha | Pede o código antes de abrir o painel | [ ] |
+| M7 | Digitar o código do app | Entra no painel do gestor | [ ] |
+| M8 | Sair, entrar de novo e tentar o mesmo código que acabou de usar | Recusa (cada código vale uma vez); esperar o próximo código do app resolve | [ ] |
+| M9 | Entrar usando um código de recuperação (xxxxx-xxxxx) | Entra; usar o mesmo código de novo é recusado | [ ] |
+| M10 | Errar o código 3 vezes seguidas | Bloqueia por 15 minutos, mesmo com um código certo depois | [ ] |
+| M11 | Em "Meus dados", desativar informando a senha e um código | Desativa, volta para o login, e o login passa a ser só com a senha | [ ] |
+| M12 | Com `MFA_OBRIGATORIO_GESTOR=true`, entrar como gestor que nunca ativou | O app leva direto para a configuração; só abre o painel depois de ativar e ver os códigos | [ ] |
+| M13 | Com a MFA obrigatória ligada, entrar como cidadão | Entra normalmente, sem pedir código | [ ] |
+
 ### Consultas úteis para revisar os registros (item 1.7 e procedimento de incidentes)
 
 ```sql
@@ -206,4 +226,4 @@ WHERE tipo IN ('SENHA_ALTERADA', 'SENHA_REDEFINIDA') AND criado_em > now() - int
 
 ### Resultado dos testes automáticos
 
-auth 115, demand 322, metrics 14 e app 12 testes passando. Os serviços também foram executados juntos (gateway, auth, demand, metrics, Postgres e Redis com senha) em um roteiro de 45 verificações pelo gateway, todas passando.
+auth 146, demand 322, metrics 14 e app 18 testes passando. Os serviços também foram executados juntos (gateway, auth, demand, metrics, Postgres e Redis com senha) em dois roteiros pelo gateway, todos passando: 45 verificações gerais e 26 de MFA.

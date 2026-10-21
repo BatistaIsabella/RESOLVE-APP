@@ -21,7 +21,7 @@ Situação: **Feito**, **Parcial** (feito com limite explicado) ou **Não feito*
 | 1.4 Token não exposto | Feito | Fica no Keychain/Keystore (`expo-secure-store`) e é apagado ao sair. |
 | 1.5 Recuperação de senha | Feito | Código aleatório de 24 bytes enviado por e-mail, válido por 30 minutos, uso único. No banco fica só o hash. A resposta é igual exista ou não o e-mail. Precisa de SMTP configurado. |
 | 1.6 Registro de eventos | Feito | Tabela `auth.eventos_auth`: cadastro, login ok, login com falha, login bloqueado, logout, pedido e conclusão de redefinição, troca de senha, alteração de dados, aceite de termos e exclusão de conta. Guarda data, IP e aparelho. Nunca guarda senha, token ou e-mail em texto. |
-| 1.7 MFA para administradores | Não feito | A própria documentação trata como melhoria futura. |
+| 1.7 MFA para administradores | Feito | Verificação em duas etapas (TOTP, compatível com Google e Microsoft Authenticator) para contas de gestor. Opcional por padrão; com `MFA_OBRIGATORIO_GESTOR=true` todo gestor precisa ativar no próximo login. O login passa a ter duas etapas, há 8 códigos de recuperação de uso único, o mesmo código não vale duas vezes e o segredo fica cifrado no banco (AES-256-GCM). 3 códigos errados bloqueiam por 15 minutos. |
 | 1.7 Revisão dos registros | Parcial | Os registros existem e podem ser consultados no banco. Não há tela nem alerta. |
 
 ### Entregável 2 – Dados em repouso
@@ -66,6 +66,9 @@ Pelo gateway. As rotas `/demands/...` viram `/demandas/...` no demand-service.
 | `GET /auth/me`, `PATCH /auth/me`, `DELETE /auth/me` | Ver, corrigir e excluir a conta (exclusão pede a senha). |
 | `POST /auth/me/senha` | Troca de senha. Devolve token novo e encerra os outros. |
 | `POST /auth/aceite-termos` | Registra o aceite da versão vigente. |
+| `POST /auth/login/mfa` | Segunda etapa do login: recebe o `desafio` do login e o `codigo` (6 dígitos do autenticador ou código de recuperação). |
+| `POST /auth/mfa/configurar`, `POST /auth/mfa/ativar` | O gestor gera a chave e confirma o primeiro código. A ativação devolve os 8 códigos de recuperação, uma única vez. |
+| `POST /auth/mfa/desativar` | Pede a senha e um código válido. Encerra as outras sessões. |
 | `GET /demands/me/export`, `DELETE /demands/me` | Cópia dos dados e anonimização das ocorrências. O segundo é chamado pelo auth-service na exclusão. |
 
 ## 3. Configuração
@@ -79,6 +82,8 @@ Variáveis novas (exemplos em `backend/.env.example` e `backend/.env.production.
 | `GESTOR_ACCESS_CODE` | auth | Código único que libera a gestão geral (compatibilidade). |
 | `REDIS_PASSWORD` e `REDIS_URL` com senha | todos | Redis exige senha. |
 | `AUTH_DB_PASSWORD`, `DEMAND_DB_PASSWORD`, `METRICS_DB_PASSWORD` | postgres (produção) | Senhas dos usuários de banco por serviço. |
+| `MFA_ENCRYPTION_KEY` | auth | Chave (32 bytes em base64, `openssl rand -base64 32`) que cifra o segredo do autenticador. Em produção, sem ela, a MFA fica indisponível. Não troque depois de haver MFA ativa. |
+| `MFA_OBRIGATORIO_GESTOR` | auth | `true` exige MFA de todo gestor. Padrão `false`. |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | auth | Envio do e-mail de redefinição. Sem `SMTP_HOST` o e-mail não sai; em desenvolvimento o link aparece no log. |
 | `DEMAND_SERVICE_URL` | auth | Usada na exclusão da conta. |
 | `CORS_ORIGINS` | gateway e serviços | Origens web permitidas. Vazio libera ninguém (o app não precisa). |
@@ -134,4 +139,4 @@ cd frontend/mobile         && npm test && npx tsc --noEmit
 
 Os testes do auth usam um Redis simulado em memória. Os do demand criam e removem os próprios dados, mas a rotina de retenção apaga qualquer denúncia resolvida há mais de 5 anos no banco apontado, então não rode contra um banco com dados reais.
 
-Resultado da última execução: auth 115, demand 322, metrics 14 e app 12 testes passando. Além disso, os serviços foram executados juntos (gateway, auth, demand, metrics, Postgres e um Redis com senha) em um roteiro de 45 verificações pelo gateway, cobrindo cadastro, política de senha, bloqueio, escopo por órgão, feed, troca e recuperação de senha, exportação e exclusão da conta. As telas do app foram conferidas por tipagem, lint e geração do bundle Android; **não foram testadas em aparelho**.
+Resultado da última execução: auth 146, demand 322, metrics 14 e app 18 testes passando. Além disso, os serviços foram executados juntos (gateway, auth, demand, metrics, Postgres e um Redis com senha) em dois roteiros pelo gateway: 45 verificações (cadastro, política de senha, bloqueio, escopo por órgão, feed, troca e recuperação de senha, exportação e exclusão da conta) e 26 de MFA (ativação, login em duas etapas, desafio recusado pelos outros serviços, repetição de código, recuperação, bloqueio e desativação). As telas do app foram conferidas por tipagem, lint e geração do bundle Android; **não foram testadas em aparelho**.

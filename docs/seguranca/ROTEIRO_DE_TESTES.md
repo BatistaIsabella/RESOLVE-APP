@@ -93,32 +93,48 @@ Se alguma coisa não bater, anota o passo, o que apareceu na tela e, se der, o p
 | 7.2 | Com o token do cidadão B, chamar `GET /demands/{id da denúncia do A}` | 404 | [ ] |
 | 7.3 | Chamar `GET /demands/gestor` com o token de um cidadão | 403 | [ ] |
 
-## 8. Infraestrutura (para quem faz o deploy)
+## 8. Verificação em duas etapas (gestor)
+
+Precisa de um app autenticador no celular. Para o primeiro teste, deixar `MFA_OBRIGATORIO_GESTOR=false`.
+
+| # | O que fazer | O que deve acontecer | OK? |
+|---|---|---|---|
+| 8.1 | Como gestor, abrir "Meus dados" | Aparece o cartão de verificação em duas etapas (cidadão não vê) | [ ] |
+| 8.2 | Tocar em "Ativar" e depois em "Abrir no autenticador" | O app autenticador adiciona a conta "RESOLVE" | [ ] |
+| 8.3 | Informar um código errado e depois o certo | Recusa o errado; o certo ativa e mostra 8 códigos de recuperação | [ ] |
+| 8.4 | Sair e entrar com e-mail e senha | Pede o código antes de abrir o painel | [ ] |
+| 8.5 | Tentar de novo o mesmo código que acabou de usar | Recusa, cada código vale uma vez | [ ] |
+| 8.6 | Entrar com um código de recuperação | Entra; usar o mesmo de novo é recusado | [ ] |
+| 8.7 | Errar o código 3 vezes | Bloqueia por 15 minutos | [ ] |
+| 8.8 | Desativar em "Meus dados" com senha e código | Desativa e o login volta a ser só com a senha | [ ] |
+| 8.9 | Com `MFA_OBRIGATORIO_GESTOR=true`, entrar como gestor sem MFA | O app leva para a configuração e só abre o painel depois de ativar | [ ] |
+
+## 9. Infraestrutura (para quem faz o deploy)
 
 | # | O que conferir | O que deve acontecer | OK? |
 |---|---|---|---|
-| 8.1 | Subir um serviço sem `JWT_SECRET` | O serviço não sobe e avisa o motivo | [ ] |
-| 8.2 | Tentar conectar no Redis sem senha | Recusa (NOAUTH) | [ ] |
-| 8.3 | No `docker-compose.prod.yml`, entrar no banco com cada usuário (`auth_svc`, `demand_svc`, `metrics_svc`) | Cada um só enxerga o próprio schema, e o `metrics_svc` só consegue ler | [ ] |
-| 8.4 | Em produção, sem `GESTOR_ACCESS_CODES`, cadastrar um gestor | Recusa (403) | [ ] |
-| 8.5 | Mais de 100 chamadas em `/auth` em 15 minutos pelo mesmo IP | O gateway começa a responder 429 | [ ] |
+| 9.1 | Subir um serviço sem `JWT_SECRET` | O serviço não sobe e avisa o motivo | [ ] |
+| 9.2 | Tentar conectar no Redis sem senha | Recusa (NOAUTH) | [ ] |
+| 9.3 | No `docker-compose.prod.yml`, entrar no banco com cada usuário (`auth_svc`, `demand_svc`, `metrics_svc`) | Cada um só enxerga o próprio schema, e o `metrics_svc` só consegue ler | [ ] |
+| 9.4 | Em produção, sem `GESTOR_ACCESS_CODES`, cadastrar um gestor | Recusa (403) | [ ] |
+| 9.5 | Mais de 100 chamadas em `/auth` em 15 minutos pelo mesmo IP | O gateway começa a responder 429 | [ ] |
 
 ## O que eu já testei
 
-- Testes automáticos: auth 115, demand 322, metrics 14 e app 12, todos passando.
-- Um roteiro de 45 verificações com os serviços rodando juntos (gateway, auth, demand, metrics, Postgres e um Redis com senha): cadastro, senha, bloqueio, órgão, feed, troca e recuperação de senha, exportação e exclusão da conta.
+- Testes automáticos: auth 146, demand 322, metrics 14 e app 18, todos passando.
+- Dois roteiros (45 verificações gerais e 26 de MFA) com os serviços rodando juntos (gateway, auth, demand, metrics, Postgres e um Redis com senha): cadastro, senha, bloqueio, órgão, feed, troca e recuperação de senha, exportação e exclusão da conta, e MFA (ativação, duas etapas, recuperação, bloqueio e desativação).
 - App: tipagem, lint e geração do bundle Android.
 
 ## O que eu não consegui testar (por favor, olhem com mais atenção)
 
-- As telas novas em celular ou emulador (cadastro, esqueci/redefinir senha, termos, Meus dados). Principalmente o visual e o compartilhamento do JSON.
+- As telas novas em celular ou emulador (cadastro, esqueci/redefinir senha, termos, Meus dados e MFA). Principalmente o visual e o compartilhamento do JSON.
 - O envio de e-mail real (SMTP).
 - O deploy no Render e no Docker de produção. O script dos usuários de banco foi testado em um Postgres local nos dois cenários (banco novo e banco existente), mas não no servidor de vocês.
 - O comportamento com o Redis fora do ar em produção. A ideia é o sistema continuar funcionando e só deixar de encerrar as sessões antigas.
 
 ## O que ficou de fora
 
-- Criptografia de coluna e KMS (o e-mail é a chave de busca do login), MFA para gestores e criptografia das fotos: a documentação trata os dois últimos como melhorias futuras.
+- Criptografia de coluna e KMS (o e-mail é a chave de busca do login) e criptografia das fotos, que a documentação trata como melhoria futura.
 - RIPD, procedimento escrito de resposta a incidentes e termo de cooperação com o órgão: são documentos, não código.
 - Os textos da Política de Privacidade e dos Termos de Uso são um rascunho meu, e precisam de revisão antes de ir para produção.
 - O cadastro ainda diz "E-mail já cadastrado", o que permite descobrir se um e-mail existe.
