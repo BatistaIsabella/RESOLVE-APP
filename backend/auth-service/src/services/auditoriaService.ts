@@ -15,6 +15,11 @@ export type TipoEvento =
   | 'SENHA_ALTERADA'
   | 'DADOS_ALTERADOS'
   | 'TERMOS_ACEITOS'
+  | 'MFA_DESAFIO'
+  | 'MFA_ATIVADA'
+  | 'MFA_DESATIVADA'
+  | 'MFA_CODIGO_RECUSADO'
+  | 'MFA_RECUPERACAO_USADA'
   | 'CONTA_EXCLUIDA';
 
 interface DadosEvento {

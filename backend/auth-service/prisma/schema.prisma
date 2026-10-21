@@ -18,8 +18,13 @@ model Usuario {
   orgao            String?   @db.VarChar(40)
   aceite_termos_em DateTime?
   versao_termos    String?   @db.VarChar(20)
+  // Verificação em duas etapas (TOTP). O segredo fica cifrado; ver utils/cifra.ts.
+  mfa_segredo      String?   @db.VarChar(200)
+  mfa_ativo        Boolean   @default(false)
+  mfa_ultimo_passo Int?
 
-  tokensRedefinicao TokenRedefinicao[]
+  tokensRedefinicao  TokenRedefinicao[]
+  codigosRecuperacao CodigoRecuperacaoMfa[]
 
   @@map("usuarios")
   @@schema("auth")
@@ -36,6 +41,18 @@ model TokenRedefinicao {
 
   @@index([usuario_id])
   @@map("tokens_redefinicao")
+  @@schema("auth")
+}
+
+model CodigoRecuperacaoMfa {
+  id          Int       @id @default(autoincrement())
+  usuario_id  Int
+  codigo_hash String    @db.VarChar(64)
+  usado_em    DateTime?
+  usuario     Usuario   @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@index([usuario_id])
+  @@map("mfa_codigos_recuperacao")
   @@schema("auth")
 }
 

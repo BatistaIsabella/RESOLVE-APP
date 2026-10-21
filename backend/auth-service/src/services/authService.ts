@@ -1,10 +1,11 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma, Usuario } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { Request } from 'express';
 import { versaoTermosAtual } from '../config/env';
 import { httpError } from '../utils/httpError';
 import { registrarEvento } from './auditoriaService';
 import { assegurarSenhaAceitavel, gastarTempoDeComparacao, hashSenha } from './senhaService';
+import { emitirDesafio, lerDesafio, mfaObrigatoriaParaGestor, verificarSegundoFator } from './mfaService';
 import { emitirToken, orgaoEfetivo } from './tokenService';
 import { bloqueadoAte, chaveDoEmail, limparTentativas, registrarFalha } from './tentativasLoginService';
 
@@ -120,8 +121,22 @@ export async function login(emailInformado: string, senha: string, req?: Request
   }
 
   await limparTentativas(chave);
-  await registrarEvento({ tipo: 'LOGIN_SUCESSO', usuarioId: usuario.id, email, req });
 
+  // Com a verificação em duas etapas, a senha certa ainda não abre a sessão: devolve só um desafio.
+  if (usuario.mfa_ativo) {
+    await registrarEvento({ tipo: 'MFA_DESAFIO', usuarioId: usuario.id, email, req });
+    return { mfaNecessaria: true as const, desafio: emitirDesafio(usuario.id, 'login') };
+  }
+  if (usuario.papel === 'GESTOR' && mfaObrigatoriaParaGestor()) {
+    await registrarEvento({ tipo: 'MFA_DESAFIO', usuarioId: usuario.id, email, detalhe: 'configuração obrigatória', req });
+    return { mfaConfiguracaoNecessaria: true as const, desafio: emitirDesafio(usuario.id, 'setup') };
+  }
+
+  await registrarEvento({ tipo: 'LOGIN_SUCESSO', usuarioId: usuario.id, email, req });
+  return respostaDeLogin(usuario);
+}
+
+export async function respostaDeLogin(usuario: Usuario) {
   const orgao = orgaoEfetivo(usuario);
 
   return {
@@ -132,6 +147,26 @@ export async function login(emailInformado: string, senha: string, req?: Request
     ...(orgao ? { orgao } : {}),
     termosPendentes: termosPendentes(usuario),
   };
+}
+
+// Segunda etapa do login: o desafio vem da etapa da senha e o código, do app autenticador (ou de recuperação).
+export async function loginComMfa(desafio: unknown, codigo: unknown, req?: Request) {
+  const usuarioId = lerDesafio(desafio, 'login');
+  await verificarSegundoFator(usuarioId, codigo, req);
+
+  const usuario = await prisma.usuario.findUnique({ where: { id: usuarioId } });
+  if (!usuario) throw httpError(MENSAGEM_CREDENCIAIS, 401);
+
+  await registrarEvento({ tipo: 'LOGIN_SUCESSO', usuarioId, detalhe: 'mfa', req });
+  return respostaDeLogin(usuario);
+}
+
+export async function loginAposConfigurarMfa(usuarioId: number, req?: Request) {
+  const usuario = await prisma.usuario.findUnique({ where: { id: usuarioId } });
+  if (!usuario) throw httpError(MENSAGEM_CREDENCIAIS, 401);
+
+  await registrarEvento({ tipo: 'LOGIN_SUCESSO', usuarioId, detalhe: 'mfa configurada', req });
+  return respostaDeLogin(usuario);
 }
 
 export async function logout(usuarioId: number, req?: Request) {

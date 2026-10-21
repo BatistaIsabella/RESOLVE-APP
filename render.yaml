@@ -46,6 +46,8 @@ services:
       # Defina no painel do Render. Sem esta variável o cadastro de gestor fica fechado.
       - key: GESTOR_ACCESS_CODES
         sync: false
+      - key: MFA_ENCRYPTION_KEY
+        sync: false
       - key: SMTP_HOST
         sync: false
       - key: SMTP_USER

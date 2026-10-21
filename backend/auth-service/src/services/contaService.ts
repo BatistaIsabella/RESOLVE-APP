@@ -5,6 +5,7 @@ import { versaoTermosAtual } from '../config/env';
 import { httpError } from '../utils/httpError';
 import { anonimizarEventosDoTitular, registrarEvento } from './auditoriaService';
 import { emailValido, normalizarEmail, termosPendentes } from './authService';
+import { mfaObrigatoriaParaGestor } from './mfaService';
 import { assegurarSenhaAceitavel, hashSenha } from './senhaService';
 import { invalidarSessoes } from './sessaoService';
 import { emitirToken, orgaoEfetivo } from './tokenService';
@@ -29,6 +30,11 @@ function formatarConta(usuario: NonNullable<Awaited<ReturnType<typeof buscarUsua
     aceiteTermosEm: usuario.aceite_termos_em,
     versaoTermos: usuario.versao_termos,
     termosPendentes: termosPendentes(usuario),
+    mfa: {
+      disponivel: usuario.papel === 'GESTOR',
+      ativa: usuario.mfa_ativo,
+      obrigatoria: usuario.papel === 'GESTOR' && mfaObrigatoriaParaGestor(),
+    },
   };
 }
 

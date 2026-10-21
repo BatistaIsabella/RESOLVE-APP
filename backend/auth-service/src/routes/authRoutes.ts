@@ -11,8 +11,12 @@ import {
   alterarSenha,
   aceitarTermos,
   excluirConta,
+  loginMfa,
+  mfaConfigurar,
+  mfaAtivar,
+  mfaDesativar,
 } from '../controllers/authController';
-import { authMiddleware } from '../middlewares/authMiddleware';
+import { authMiddleware, sessaoOuDesafioDeConfiguracao } from '../middlewares/authMiddleware';
 
 const router = Router();
 
@@ -30,6 +34,7 @@ const limiteRecuperacao = rateLimit({
 
 router.post('/register', register);
 router.post('/login', login);
+router.post('/login/mfa', limiteRecuperacao, loginMfa);
 router.post('/logout', authMiddleware, logout);
 
 router.post('/forgot-password', limiteRecuperacao, esqueciSenha);
@@ -40,5 +45,10 @@ router.patch('/me', authMiddleware, atualizarConta);
 router.delete('/me', authMiddleware, excluirConta);
 router.post('/me/senha', authMiddleware, alterarSenha);
 router.post('/aceite-termos', authMiddleware, aceitarTermos);
+
+// Verificação em duas etapas (gestores)
+router.post('/mfa/configurar', sessaoOuDesafioDeConfiguracao, mfaConfigurar);
+router.post('/mfa/ativar', sessaoOuDesafioDeConfiguracao, mfaAtivar);
+router.post('/mfa/desativar', authMiddleware, mfaDesativar);
 
 export default router;

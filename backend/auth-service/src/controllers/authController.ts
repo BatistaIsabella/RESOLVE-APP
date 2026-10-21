@@ -3,6 +3,7 @@ import { orgaoPorCodigo } from '../config/codigosGestor';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import * as authService from '../services/authService';
 import * as contaService from '../services/contaService';
+import * as mfaService from '../services/mfaService';
 import * as recuperacaoService from '../services/recuperacaoSenhaService';
 
 const MENSAGEM_REDEFINICAO = 'Se o e-mail estiver cadastrado, você receberá as instruções para redefinir a senha.';
@@ -132,6 +133,50 @@ export async function aceitarTermos(req: AuthRequest, res: Response, next: NextF
 export async function excluirConta(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     await contaService.excluirConta(req.user!.userId, req.body?.senha, req.headers.authorization!);
+    return res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function loginMfa(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { desafio, codigo } = req.body ?? {};
+    if (!desafio || !codigo) {
+      return res.status(400).json({ error: 'Campos obrigatórios: desafio, codigo' });
+    }
+    return res.json(await authService.loginComMfa(desafio, codigo, req));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function mfaConfigurar(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    return res.json(await mfaService.iniciarConfiguracao(req.user!.userId));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function mfaAtivar(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const codigosRecuperacao = await mfaService.ativar(req.user!.userId, req.body?.codigo, req);
+
+    // Quando a MFA era obrigatória e a pessoa ainda não tinha sessão, a ativação já conclui o login.
+    if (req.viaDesafio) {
+      const login = await authService.loginAposConfigurarMfa(req.user!.userId, req);
+      return res.json({ codigosRecuperacao, login });
+    }
+    return res.json({ codigosRecuperacao });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function mfaDesativar(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    await mfaService.desativar(req.user!.userId, req.body?.senha, req.body?.codigo, req);
     return res.status(204).send();
   } catch (err) {
     next(err);
