@@ -22,7 +22,7 @@ Implementação dos Entregáveis 1 (autenticação e senhas), 2 (dados em repous
 | 1.4 Sessão | Token de 24h no Keychain/Keystore; troca de senha encerra as sessões antigas nos três serviços | [sessaoService.ts](../../backend/auth-service/src/services/sessaoService.ts), [secureStorage.ts](../../frontend/mobile/lib/secureStorage.ts) |
 | 1.5 Recuperação de senha | Código de uso único, 30 minutos, enviado por e-mail | [recuperacaoSenhaService.ts](../../backend/auth-service/src/services/recuperacaoSenhaService.ts) |
 | 1.6 Registro de acessos | Login, falha, bloqueio, logout, redefinição, troca de senha, aceite, MFA e exclusão, sem senha nem e-mail em texto | [auditoriaService.ts](../../backend/auth-service/src/services/auditoriaService.ts) |
-| 1.7 MFA para gestores | Código TOTP do app autenticador, 8 códigos de recuperação, segredo cifrado | [mfaService.ts](../../backend/auth-service/src/services/mfaService.ts), [cifra.ts](../../backend/auth-service/src/utils/cifra.ts) |
+| 1.7 MFA para gestores | Código TOTP do app autenticador, 8 códigos de recuperação, segredo cifrado. **Implementada, mas desligada por padrão** (`MFA_HABILITADO=false`): enquanto desligada, ninguém consegue ativar e o app esconde a opção | [mfaService.ts](../../backend/auth-service/src/services/mfaService.ts), [cifra.ts](../../backend/auth-service/src/utils/cifra.ts) |
 
 ### Entregável 2: dados em repouso
 
@@ -78,4 +78,4 @@ cd backend/metrics-service && npx vitest run
 cd frontend/mobile         && npm test && npx tsc --noEmit
 ```
 
-Resultado da última execução: auth 146, demand 322, metrics 14 e app 18 testes passando, mais dois roteiros de ponta a ponta com os serviços rodando juntos (45 verificações gerais e 26 de MFA). Os testes de demand apagam denúncias resolvidas há mais de 5 anos do banco apontado, então não devem rodar contra um banco com dados reais.
+Resultado da última execução: auth 150, demand 322, metrics 14 e app 18 testes passando, mais dois roteiros de ponta a ponta com os serviços rodando juntos (45 verificações gerais e 26 de MFA). Os testes de demand apagam denúncias resolvidas há mais de 5 anos do banco apontado, então não devem rodar contra um banco com dados reais.

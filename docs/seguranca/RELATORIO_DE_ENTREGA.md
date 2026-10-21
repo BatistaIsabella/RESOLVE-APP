@@ -32,7 +32,7 @@ Este documento tem três partes: o que foi implementado, o que não foi (com o m
 | 19 | Gestor só vê o seu órgão (3.6) | Cada código de acesso liga o gestor a um órgão, que define as categorias visíveis (lista, detalhe, status, prioridade, exclusão e indicadores). Outro órgão responde 404 | `auth-service/src/config/orgaos.ts` |
 | 20 | Cidadão não vê dados de outros (3.6) | O feed devolvia e-mail e identificador de quem registrou; agora não devolve, e as coordenadas saem com menos precisão | `denunciaService.ts` |
 | 21 | Mapeamento dos dados (3.1) | Tabela de dados, finalidade, retenção e proteção | [IMPLEMENTACAO.md](IMPLEMENTACAO.md), seção 4 |
-| 22 | MFA para administradores (1.7) | Verificação em duas etapas por código TOTP para gestores, com 8 códigos de recuperação de uso único, proteção contra repetição do código e segredo cifrado. Opcional por padrão, ou obrigatória com `MFA_OBRIGATORIO_GESTOR=true` | `mfaService.ts`, `cifra.ts`, telas `mfa` e `mfa-configurar`, cartão em "Meus dados" |
+| 22 | MFA para administradores (1.7) | **Implementada, mas desligada por padrão (`MFA_HABILITADO=false`).** Verificação em duas etapas por código TOTP para gestores, com 8 códigos de recuperação de uso único, proteção contra repetição do código e segredo cifrado. Opcional por padrão, ou obrigatória com `MFA_OBRIGATORIO_GESTOR=true` | `mfaService.ts`, `cifra.ts`, telas `mfa` e `mfa-configurar`, cartão em "Meus dados" |
 
 Extras: limite de 100 chamadas por 15 minutos em `/auth` no gateway, CORS fechado por padrão, IP real repassado aos serviços e corpo máximo de 10 MB (era 50 MB).
 
@@ -190,7 +190,7 @@ Para a líder testar. Se algo não bater, anotar o passo, o que apareceu na tela
 
 ### Verificação em duas etapas (gestor)
 
-Para o primeiro teste, deixar `MFA_OBRIGATORIO_GESTOR=false`. Precisa de um app autenticador no celular (Google Authenticator, Microsoft Authenticator ou similar).
+A MFA vem desligada. Para testar, ligar `MFA_HABILITADO=true` no auth-service e deixar `MFA_OBRIGATORIO_GESTOR=false` no primeiro teste. Com ela desligada, o cartão não aparece em "Meus dados" e o gestor entra só com e-mail e senha. Precisa de um app autenticador no celular (Google Authenticator, Microsoft Authenticator ou similar).
 
 | # | O que fazer | O que deve acontecer | OK? |
 |---|---|---|---|
@@ -226,4 +226,4 @@ WHERE tipo IN ('SENHA_ALTERADA', 'SENHA_REDEFINIDA') AND criado_em > now() - int
 
 ### Resultado dos testes automáticos
 
-auth 146, demand 322, metrics 14 e app 18 testes passando. Os serviços também foram executados juntos (gateway, auth, demand, metrics, Postgres e Redis com senha) em dois roteiros pelo gateway, todos passando: 45 verificações gerais e 26 de MFA.
+auth 150, demand 322, metrics 14 e app 18 testes passando. Os serviços também foram executados juntos (gateway, auth, demand, metrics, Postgres e Redis com senha) em dois roteiros pelo gateway, todos passando: 45 verificações gerais e 26 de MFA.

@@ -95,7 +95,7 @@ Se alguma coisa não bater, anota o passo, o que apareceu na tela e, se der, o p
 
 ## 8. Verificação em duas etapas (gestor)
 
-Precisa de um app autenticador no celular. Para o primeiro teste, deixar `MFA_OBRIGATORIO_GESTOR=false`.
+A MFA vem desligada. Para testar, ligar `MFA_HABILITADO=true` no auth-service, deixar `MFA_OBRIGATORIO_GESTOR=false` no primeiro teste e ter um app autenticador no celular. Com ela desligada, o cartão não aparece em "Meus dados" e o gestor entra só com e-mail e senha (vale conferir isso também).
 
 | # | O que fazer | O que deve acontecer | OK? |
 |---|---|---|---|
@@ -121,7 +121,7 @@ Precisa de um app autenticador no celular. Para o primeiro teste, deixar `MFA_OB
 
 ## O que eu já testei
 
-- Testes automáticos: auth 146, demand 322, metrics 14 e app 18, todos passando.
+- Testes automáticos: auth 150, demand 322, metrics 14 e app 18, todos passando.
 - Dois roteiros (45 verificações gerais e 26 de MFA) com os serviços rodando juntos (gateway, auth, demand, metrics, Postgres e um Redis com senha): cadastro, senha, bloqueio, órgão, feed, troca e recuperação de senha, exportação e exclusão da conta, e MFA (ativação, duas etapas, recuperação, bloqueio e desativação).
 - App: tipagem, lint e geração do bundle Android.
 
