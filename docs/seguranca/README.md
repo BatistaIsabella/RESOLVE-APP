@@ -9,6 +9,10 @@ Implementação dos Entregáveis 1 (autenticação e senhas), 2 (dados em repous
 | [RELATORIO_DE_ENTREGA.md](RELATORIO_DE_ENTREGA.md) | Visão completa: o que foi feito, o que não foi (com motivo, como fazer e se precisa no acadêmico) e o roteiro de testes |
 | [IMPLEMENTACAO.md](IMPLEMENTACAO.md) | Detalhe técnico: situação de cada item dos entregáveis, endpoints, variáveis de ambiente, mapeamento dos dados e cuidados no deploy |
 | [ROTEIRO_DE_TESTES.md](ROTEIRO_DE_TESTES.md) | Texto para a líder testar, com os passos e o resultado esperado |
+| [RIPD.md](RIPD.md) | Relatório de Impacto à Proteção de Dados (3.7): dados, riscos, medidas e direitos dos titulares |
+| [PROCEDIMENTO_INCIDENTES.md](PROCEDIMENTO_INCIDENTES.md) | Resposta a incidentes e comunicação à ANPD (3.8) |
+| [TERMO_DE_COOPERACAO_MODELO.md](TERMO_DE_COOPERACAO_MODELO.md) | Modelo de termo com o órgão controlador, incluindo gestores terceirizados (3.6) |
+| [AJUSTES_NOS_ENTREGAVEIS.md](AJUSTES_NOS_ENTREGAVEIS.md) | Texto sugerido para corrigir os trechos dos PDFs que não batem com o projeto |
 
 ## O que foi implementado
 
@@ -23,12 +27,15 @@ Implementação dos Entregáveis 1 (autenticação e senhas), 2 (dados em repous
 | 1.5 Recuperação de senha | Código de uso único, 30 minutos, enviado por e-mail | [recuperacaoSenhaService.ts](../../backend/auth-service/src/services/recuperacaoSenhaService.ts) |
 | 1.6 Registro de acessos | Login, falha, bloqueio, logout, redefinição, troca de senha, aceite, MFA e exclusão, sem senha nem e-mail em texto | [auditoriaService.ts](../../backend/auth-service/src/services/auditoriaService.ts) |
 | 1.7 MFA para gestores | Código TOTP do app autenticador, 8 códigos de recuperação, segredo cifrado. **Implementada, mas desligada por padrão** (`MFA_HABILITADO=false`): enquanto desligada, ninguém consegue ativar e o app esconde a opção | [mfaService.ts](../../backend/auth-service/src/services/mfaService.ts), [cifra.ts](../../backend/auth-service/src/utils/cifra.ts) |
+| 1.3 Cadastro sem revelar e-mail | Com `CONFIRMACAO_EMAIL_HABILITADA=true` o cadastro responde igual para qualquer e-mail e a conta só entra após confirmar o código enviado por e-mail. **Desligado por padrão** | [confirmacaoEmailService.ts](../../backend/auth-service/src/services/confirmacaoEmailService.ts), [confirmar-email.tsx](../../frontend/mobile/app/confirmar-email.tsx) |
 
 ### Entregável 2: dados em repouso
 
 | Item | Resumo | Código |
 |---|---|---|
 | 2.3 Redis | Senha obrigatória; fila expira em 1 hora; cache em 5 minutos | [docker-compose.prod.yml](../../backend/docker-compose.prod.yml), [redis.ts](../../backend/demand-service/src/config/redis.ts) |
+| 2.2 Criptografia de coluna | E-mail do usuário e do solicitante cifrados com AES-256-GCM; busca do login por HMAC; migração automática. Chaves por variável de ambiente (sem KMS) | [emailProtegido.ts](../../backend/auth-service/src/utils/emailProtegido.ts), [lib/prisma.ts](../../backend/auth-service/src/lib/prisma.ts) |
+| E4 Fotos | Só JPEG, PNG ou WEBP em base64, com conferência do conteúdo, até 2 MB por foto e 5 por denúncia | [imagem.ts](../../backend/demand-service/src/utils/imagem.ts) |
 | 2.4 Dados no aparelho | Sessão no armazenamento seguro, apagada no logout | [secureStorage.ts](../../frontend/mobile/lib/secureStorage.ts) |
 | 2.5 Indicadores | Só agregados, sem identificar o titular, e por órgão | [metricsService.ts](../../backend/metrics-service/src/services/metricsService.ts) |
 | 2.6 Menor privilégio | Um usuário de banco por serviço em produção | [roles.sql](../../backend/postgres-init/sql/roles.sql) |
@@ -53,12 +60,11 @@ O motivo, como fazer e se precisa no contexto acadêmico de cada item estão em 
 
 | Item | Resumo do motivo |
 |---|---|
-| RIPD (3.7) e procedimento de incidentes (3.8) | São documentos, não código. **Recomendo fazer**, são curtos |
-| Termo de cooperação com o órgão (3.6) e revisão jurídica dos textos | Dependem do órgão e de um jurídico, fora da equipe |
+| Preenchimento do RIPD e do termo de cooperação (3.6, 3.7) | Os rascunhos existem; encarregado, órgão, aprovação e revisão jurídica dependem do controlador |
 | Criptografia de disco (2.2) | Depende do provedor onde o banco roda |
-| Criptografia de coluna e KMS (2.2) | O e-mail é a chave de busca do login, então não pode ser cifrado direto |
+| KMS para as chaves (2.2) | A criptografia de coluna do e-mail foi feita; as chaves vêm de variáveis de ambiente, não de um KMS |
 | Criptografia das fotos ponta a ponta (2.8) | Melhoria futura na própria documentação |
-| Cadastro que revela e-mail existente (1.3) | Exigiria confirmação de e-mail por mensagem; risco aceito e descrito |
+| Confirmação de e-mail ligada (1.3) | Está implementada, mas desligada por padrão: exige SMTP, e só o app mobile foi adaptado |
 | Tela ou alerta para revisar registros (1.7) | Os registros existem e há consultas SQL prontas no relatório |
 | Gestor servidor x terceirizado (3.6) | Hoje só existe o vínculo ao órgão |
 | Pedidos de bloqueio, anonimização e revogação automatizados (3.4) | Atendidos por e-mail, como o documento pede |
@@ -78,4 +84,4 @@ cd backend/metrics-service && npx vitest run
 cd frontend/mobile         && npm test && npx tsc --noEmit
 ```
 
-Resultado da última execução: auth 150, demand 322, metrics 14 e app 18 testes passando, mais dois roteiros de ponta a ponta com os serviços rodando juntos (45 verificações gerais e 26 de MFA). Os testes de demand apagam denúncias resolvidas há mais de 5 anos do banco apontado, então não devem rodar contra um banco com dados reais.
+Resultado da última execução: auth 192, demand 370, metrics 14 e app 18 testes passando (auth e demand em um Postgres 16 local). Os dois roteiros de ponta a ponta (45 verificações gerais e 26 de MFA) foram feitos antes da criptografia de coluna e da confirmação de e-mail e não foram repetidos depois. Os testes de demand apagam denúncias resolvidas há mais de 5 anos do banco apontado, então não devem rodar contra um banco com dados reais.

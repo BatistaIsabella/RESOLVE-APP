@@ -119,25 +119,57 @@ A MFA vem desligada. Para testar, ligar `MFA_HABILITADO=true` no auth-service, d
 | 9.4 | Em produção, sem `GESTOR_ACCESS_CODES`, cadastrar um gestor | Recusa (403) | [ ] |
 | 9.5 | Mais de 100 chamadas em `/auth` em 15 minutos pelo mesmo IP | O gateway começa a responder 429 | [ ] |
 
+## 10. E-mail cifrado e confirmação de e-mail
+
+### 10.1 E-mail cifrado no banco (para quem faz o deploy)
+
+Gere `DADOS_ENCRYPTION_KEY` e `EMAIL_HASH_KEY` com `openssl rand -base64 32`, uma para cada, e defina as duas no auth-service (a primeira também no demand-service). Faça um backup do banco antes.
+
+| # | O que fazer | O que deve acontecer | OK? |
+|---|---|---|---|
+| 10.1 | Subir o auth-service e o demand-service em produção sem as chaves | Os dois não sobem e avisam qual variável falta | [ ] |
+| 10.2 | Cadastrar uma conta e consultar `SELECT email, email_hash FROM auth.usuarios` | A coluna `email` mostra algo começando por `enc:v1:` (ilegível) e `email_hash` tem 64 caracteres hexadecimais | [ ] |
+| 10.3 | Entrar com essa conta, em maiúsculas e minúsculas diferentes | Entra normalmente, e o app mostra o e-mail em texto | [ ] |
+| 10.4 | Registrar uma denúncia e consultar `SELECT email_solicitante FROM demand.denuncias` | A coluna mostra `enc:v1:` (ilegível), mas o gestor do órgão vê o e-mail em texto na tela da denúncia | [ ] |
+| 10.5 | Em um banco com contas antigas (e-mail em texto), subir o auth-service | O log mostra "e-mail(s) migrado(s) para o formato cifrado", as contas antigas entram, e a coluna `email` passa a ficar ilegível | [ ] |
+| 10.6 | Trocar o e-mail pela tela "Meus dados" | O novo entra e o antigo não | [ ] |
+
+### 10.2 Confirmação de e-mail
+
+Ligue `CONFIRMACAO_EMAIL_HABILITADA=true` no auth-service. Sem SMTP o código aparece no log (`docker compose logs auth-service`). Só o app mobile foi adaptado.
+
+| # | O que fazer | O que deve acontecer | OK? |
+|---|---|---|---|
+| 10.7 | Cadastrar uma conta nova | O app vai para a tela "Confirmar e-mail" e não entra ainda | [ ] |
+| 10.8 | Tentar entrar com essa conta antes de confirmar | O app leva para a tela "Confirmar e-mail" | [ ] |
+| 10.9 | Informar um código errado | Recusa ("Código inválido ou expirado") | [ ] |
+| 10.10 | Informar o código do e-mail (ou abrir o link) | "E-mail confirmado" e o login funciona | [ ] |
+| 10.11 | Usar o mesmo código de novo | Recusa | [ ] |
+| 10.12 | Tocar em "Reenviar o código" | Mensagem genérica; chega um código novo (e o anterior deixa de valer). Dois toques seguidos em menos de 1 minuto só enviam um | [ ] |
+| 10.13 | Cadastrar de novo um e-mail que já tem conta | A tela mostra o mesmo que no item 10.7. O dono do e-mail recebe um aviso ("você já tem uma conta"), e nenhuma conta nova é criada | [ ] |
+| 10.14 | Com a conta pendente, repetir o cadastro com outra senha e confirmar | Vale a senha do último cadastro | [ ] |
+| 10.15 | Uma conta criada antes de ligar o recurso | Continua entrando sem confirmar nada | [ ] |
+| 10.16 | Usar "Esqueci minha senha" em uma conta pendente e redefinir | A conta fica confirmada e entra com a nova senha | [ ] |
+
 ## O que eu já testei
 
-- Testes automáticos: auth 150, demand 322, metrics 14 e app 18, todos passando.
-- Dois roteiros (45 verificações gerais e 26 de MFA) com os serviços rodando juntos (gateway, auth, demand, metrics, Postgres e um Redis com senha): cadastro, senha, bloqueio, órgão, feed, troca e recuperação de senha, exportação e exclusão da conta, e MFA (ativação, duas etapas, recuperação, bloqueio e desativação).
-- App: tipagem, lint e geração do bundle Android.
+- Testes automáticos: auth 192, demand 370, metrics 14 e app 18, todos passando (auth e demand em um Postgres 16 local).
+- Antes da criptografia de coluna e da confirmação de e-mail, dois roteiros (45 verificações gerais e 26 de MFA) com os serviços rodando juntos (gateway, auth, demand, metrics, Postgres e um Redis com senha): cadastro, senha, bloqueio, órgão, feed, troca e recuperação de senha, exportação e exclusão da conta, e MFA (ativação, duas etapas, recuperação, bloqueio e desativação).
+- App: tipagem, lint, testes de utilitários e geração do bundle Android. **Os dois roteiros de ponta a ponta não foram repetidos depois da criptografia de coluna e da confirmação de e-mail.**
 
 ## O que eu não consegui testar (por favor, olhem com mais atenção)
 
-- As telas novas em celular ou emulador (cadastro, esqueci/redefinir senha, termos, Meus dados e MFA). Principalmente o visual e o compartilhamento do JSON.
+- As telas novas em celular ou emulador (cadastro, esqueci/redefinir senha, termos, Meus dados, MFA e a confirmação de e-mail). Principalmente o visual e o compartilhamento do JSON.
 - O envio de e-mail real (SMTP).
 - O deploy no Render e no Docker de produção. O script dos usuários de banco foi testado em um Postgres local nos dois cenários (banco novo e banco existente), mas não no servidor de vocês.
 - O comportamento com o Redis fora do ar em produção. A ideia é o sistema continuar funcionando e só deixar de encerrar as sessões antigas.
 
 ## O que ficou de fora
 
-- Criptografia de coluna e KMS (o e-mail é a chave de busca do login) e criptografia das fotos, que a documentação trata como melhoria futura.
-- RIPD, procedimento escrito de resposta a incidentes e termo de cooperação com o órgão: são documentos, não código.
+- KMS para as chaves de criptografia (as chaves vêm de variáveis de ambiente) e criptografia das fotos, que a documentação trata como melhoria futura.
+- Preencher e aprovar o RIPD e o termo de cooperação com o órgão: os rascunhos existem, mas dependem de quem for o controlador.
 - Os textos da Política de Privacidade e dos Termos de Uso são um rascunho meu, e precisam de revisão antes de ir para produção.
-- O cadastro ainda diz "E-mail já cadastrado", o que permite descobrir se um e-mail existe.
+- Com a confirmação de e-mail desligada (o padrão), o cadastro ainda diz "E-mail já cadastrado", o que permite descobrir se um e-mail existe.
 - Alguns trechos dos documentos dos entregáveis não batem com o que o projeto tem (por exemplo, AsyncStorage e geolocalização em coluna própria). Estão listados na seção 5 do IMPLEMENTACAO.md.
 
 Obrigado por testar! Qualquer coisa estranha, me chama.

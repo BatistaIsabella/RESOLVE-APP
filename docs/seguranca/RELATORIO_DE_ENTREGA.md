@@ -33,6 +33,9 @@ Este documento tem três partes: o que foi implementado, o que não foi (com o m
 | 20 | Cidadão não vê dados de outros (3.6) | O feed devolvia e-mail e identificador de quem registrou; agora não devolve, e as coordenadas saem com menos precisão | `denunciaService.ts` |
 | 21 | Mapeamento dos dados (3.1) | Tabela de dados, finalidade, retenção e proteção | [IMPLEMENTACAO.md](IMPLEMENTACAO.md), seção 4 |
 | 22 | MFA para administradores (1.7) | **Implementada, mas desligada por padrão (`MFA_HABILITADO=false`).** Verificação em duas etapas por código TOTP para gestores, com 8 códigos de recuperação de uso único, proteção contra repetição do código e segredo cifrado. Opcional por padrão, ou obrigatória com `MFA_OBRIGATORIO_GESTOR=true` | `mfaService.ts`, `cifra.ts`, telas `mfa` e `mfa-configurar`, cartão em "Meus dados" |
+| 23 | Criptografia de coluna (2.2) | E-mail do usuário e do solicitante cifrados com AES-256-GCM; o login busca por um HMAC do e-mail (chave própria). Migração automática das contas e ocorrências antigas ao subir. Em produção o serviço não sobe sem as chaves. **Sem KMS**: as chaves vêm de variáveis de ambiente | `utils/emailProtegido.ts` (auth e demand), `lib/prisma.ts`, `migracaoEmailService.ts` |
+| 24 | Cadastro que não revela e-mail existente (1.3) | **Implementado, mas desligado por padrão (`CONFIRMACAO_EMAIL_HABILITADA=false`).** Com ele ligado, o cadastro responde igual (202) para qualquer e-mail, quem já tem conta recebe um aviso, e a conta só entra depois de confirmar o código enviado por e-mail (24 h, uso único). Contas não confirmadas são apagadas em 3 dias. Exige SMTP | `confirmacaoEmailService.ts`, tela `confirmar-email` |
+| 25 | Validação das fotos (Entregável 4, 4.7) | Só JPEG, PNG ou WEBP em base64, com conferência do conteúdo real do arquivo, até 2 MB por foto e 5 por denúncia. Antes, qualquer texto era gravado como foto | `demand-service/src/utils/imagem.ts` |
 
 Extras: limite de 100 chamadas por 15 minutos em `/auth` no gateway, CORS fechado por padrão, IP real repassado aos serviços e corpo máximo de 10 MB (era 50 MB).
 
@@ -46,9 +49,9 @@ Na coluna "Precisa no acadêmico?": **Não** significa que pode ficar como está
 
 | Item | Por que não foi feito | Como fazer | Precisa no acadêmico? |
 |---|---|---|---|
-| RIPD (3.7) | É um documento a ser escrito com a equipe, não funcionalidade | Seguir o guia da ANPD: descrever os dados tratados, os riscos (ex.: reidentificação pela localização) e as medidas já adotadas, que estão no relatório acima | **Recomendo.** Costuma ser o que o professor espera ver. Posso redigir um rascunho |
-| Procedimento de resposta a incidentes (3.8) | Também é documento | Uma página com: quem decide, como identificar o que foi afetado (consultas abaixo, na seção 3), prazo e modelo de aviso à ANPD e aos titulares (art. 48) | **Recomendo**, é curto |
-| Termo de cooperação com o órgão (3.6) | Depende do órgão público contratante, não da equipe | Modelo com finalidade, escopo dos dados e responsabilidades de cada parte | **Não.** Basta citar que existiria em um uso real |
+| RIPD (3.7) | Era documento, não funcionalidade | **Feito (rascunho):** [RIPD.md](RIPD.md) | Falta o órgão preencher encarregado e aprovação |
+| Procedimento de resposta a incidentes (3.8) | Também era documento | **Feito:** [PROCEDIMENTO_INCIDENTES.md](PROCEDIMENTO_INCIDENTES.md), com as consultas e o modelo de aviso | **Não** |
+| Termo de cooperação com o órgão (3.6) | Depende do órgão público contratante, não da equipe | **Modelo feito:** [TERMO_DE_COOPERACAO_MODELO.md](TERMO_DE_COOPERACAO_MODELO.md) | **Não.** O órgão preenche e o jurídico revisa |
 | Revisão jurídica dos textos da política e dos termos | Os textos são um rascunho nosso | Passar para o orientador ou para o jurídico do órgão antes de uso real | **Não.** Basta indicar que é rascunho |
 
 ### 2.2 Código ou infraestrutura
@@ -56,8 +59,8 @@ Na coluna "Precisa no acadêmico?": **Não** significa que pode ficar como está
 | Item | Por que não foi feito | Como fazer | Precisa no acadêmico? |
 |---|---|---|---|
 | Criptografia de disco (2.2) | Não é feita pelo código; depende de onde o banco roda | Usar um provedor que já faz (Supabase, Render) ou criptografar o disco do servidor (LUKS). Registrar qual foi o escolhido | **Não.** Basta documentar o provedor |
-| Criptografia de coluna e KMS (2.2) | O e-mail é a chave de busca do login, então não dá para cifrar direto sem quebrar o login | Guardar o e-mail cifrado (AES-GCM) mais um hash para busca (HMAC), com a chave em um cofre de segredos. Mexe em cadastro, login e troca de e-mail, então são alguns dias de trabalho | **Não.** O próprio documento já aceita não cifrar a geolocalização por motivo parecido. Basta justificar |
-| Cadastro que revela e-mail existente (1.3) | Responder igual exigiria confirmar o e-mail por mensagem, o que depende do SMTP e muda o fluxo de cadastro | Cadastro sempre responde "verifique seu e-mail" e a conta só é ativada pelo link | **Não.** Pode ficar como risco aceito, descrito |
+| KMS para as chaves de criptografia (2.2) | A criptografia de coluna foi feita, mas as chaves vêm de variáveis de ambiente, não de um serviço de gerenciamento de chaves | Injetar `DADOS_ENCRYPTION_KEY` e `EMAIL_HASH_KEY` a partir de um cofre (Render Secret Files, AWS Secrets Manager, Vault). Para trocar uma chave é preciso um passo de migração que refaça os dados | **Não.** Basta citar que em produção as chaves vêm de um cofre |
+| Cadastro com a confirmação de e-mail desligada (1.3) | Ligar exige SMTP configurado e não foi testado com envio real. Só o app mobile foi adaptado (o cadastro da web não) | Preencher `SMTP_*` e ligar `CONFIRMACAO_EMAIL_HABILITADA=true` | **Não.** Pode ficar desligado e descrito como risco aceito, ou ligado se houver SMTP |
 | Tela ou alerta para revisar os registros (1.7) | Os registros existem, falta a interface | Consultas SQL (seção 3) servem para o acadêmico. Em produção: painel ou alerta quando houver muitos bloqueios | **Não** |
 | Criptografia ponta a ponta das fotos (2.8) | Melhoria futura na própria documentação, e o gestor precisa ver as fotos | Cifrar no app com chave do órgão. As fotos hoje ficam no banco em base64; o ideal seria mover para um armazenamento de arquivos | **Não** |
 | Diferenciar gestor servidor de terceirizado (3.6) | Hoje só existe o vínculo ao órgão, pelo código | Uma coluna de vínculo (servidor ou terceirizado) e a empresa, com um código por empresa | **Não.** Basta descrever |
@@ -65,7 +68,7 @@ Na coluna "Precisa no acadêmico?": **Não** significa que pode ficar como está
 | Remoção dos dados nos backups do banco (2.7) | Depende da rotação de backup do provedor | Configurar a retenção dos backups para um prazo definido e documentar | **Não** |
 | Sessões antigas continuam valendo se o Redis cair (1.4) | Decisão de projeto: preferi o sistema continuar de pé. A própria documentação diz "quando o mecanismo permitir" | Trocar a regra para recusar o token quando o Redis não responde, ou guardar a versão da sessão no banco | **Não** |
 | Tokens antigos valem até 24h depois da atualização | Não há como invalidar tokens que não têm a versão da sessão | Esperar 24h após o deploy ou trocar o `JWT_SECRET` (desloga todo mundo) | **Não** |
-| Limite de recuperação de senha em memória | Zera quando o auth-service reinicia | Guardar o contador no Redis | **Não** |
+| Limite de recuperação de senha em memória | **Corrigido:** o contador por IP agora fica no Redis (`limiteRecuperacaoMiddleware.ts`), com limite em memória só como reserva se o Redis cair | | |
 | `render.yaml` com variáveis diferentes das do código | Já era assim antes; não mexi para não alterar o que funciona | Alinhar `DATABASE_URL_AUTH` e `DATABASE_URL_DEMAND` com o que o código lê (`DATABASE_URL`) | **Não**, só se for fazer deploy no Render |
 
 ### 2.3 O que eu não consegui testar
@@ -79,7 +82,7 @@ Na coluna "Precisa no acadêmico?": **Não** significa que pode ficar como está
 
 ### 2.4 Trechos dos documentos dos entregáveis que não batem com o projeto
 
-Vale corrigir o texto antes de entregar:
+Vale corrigir o texto antes de entregar. O texto sugerido para cada trecho está em [AJUSTES_NOS_ENTREGAVEIS.md](AJUSTES_NOS_ENTREGAVEIS.md):
 
 1. **2.4:** o app não usa React Query nem AsyncStorage e não guarda denúncias no aparelho. Só a sessão fica no armazenamento seguro.
 2. **2.2:** não existe coluna de geolocalização. O GPS vai como texto dentro do campo de endereço e não há consulta espacial.
@@ -208,6 +211,38 @@ A MFA vem desligada. Para testar, ligar `MFA_HABILITADO=true` no auth-service e 
 | M12 | Com `MFA_OBRIGATORIO_GESTOR=true`, entrar como gestor que nunca ativou | O app leva direto para a configuração; só abre o painel depois de ativar e ver os códigos | [ ] |
 | M13 | Com a MFA obrigatória ligada, entrar como cidadão | Entra normalmente, sem pedir código | [ ] |
 
+### E-mail cifrado e confirmação de e-mail (C1 a C16)
+
+**E-mail cifrado no banco (para quem faz o deploy)**
+
+Gere `DADOS_ENCRYPTION_KEY` e `EMAIL_HASH_KEY` com `openssl rand -base64 32`, uma para cada, e defina as duas no auth-service (a primeira também no demand-service). Faça um backup do banco antes.
+
+| # | O que fazer | O que deve acontecer | OK? |
+|---|---|---|---|
+| C1 | Subir o auth-service e o demand-service em produção sem as chaves | Os dois não sobem e avisam qual variável falta | [ ] |
+| C2 | Cadastrar uma conta e consultar `SELECT email, email_hash FROM auth.usuarios` | A coluna `email` mostra algo começando por `enc:v1:` (ilegível) e `email_hash` tem 64 caracteres hexadecimais | [ ] |
+| C3 | Entrar com essa conta, em maiúsculas e minúsculas diferentes | Entra normalmente, e o app mostra o e-mail em texto | [ ] |
+| C4 | Registrar uma denúncia e consultar `SELECT email_solicitante FROM demand.denuncias` | A coluna mostra `enc:v1:` (ilegível), mas o gestor do órgão vê o e-mail em texto na tela da denúncia | [ ] |
+| C5 | Em um banco com contas antigas (e-mail em texto), subir o auth-service | O log mostra "e-mail(s) migrado(s) para o formato cifrado", as contas antigas entram, e a coluna `email` passa a ficar ilegível | [ ] |
+| C6 | Trocar o e-mail pela tela "Meus dados" | O novo entra e o antigo não | [ ] |
+
+**Confirmação de e-mail**
+
+Ligue `CONFIRMACAO_EMAIL_HABILITADA=true` no auth-service. Sem SMTP o código aparece no log (`docker compose logs auth-service`). Só o app mobile foi adaptado.
+
+| # | O que fazer | O que deve acontecer | OK? |
+|---|---|---|---|
+| C7 | Cadastrar uma conta nova | O app vai para a tela "Confirmar e-mail" e não entra ainda | [ ] |
+| C8 | Tentar entrar com essa conta antes de confirmar | O app leva para a tela "Confirmar e-mail" | [ ] |
+| C9 | Informar um código errado | Recusa ("Código inválido ou expirado") | [ ] |
+| C10 | Informar o código do e-mail (ou abrir o link) | "E-mail confirmado" e o login funciona | [ ] |
+| C11 | Usar o mesmo código de novo | Recusa | [ ] |
+| C12 | Tocar em "Reenviar o código" | Mensagem genérica; chega um código novo (e o anterior deixa de valer). Dois toques seguidos em menos de 1 minuto só enviam um | [ ] |
+| C13 | Cadastrar de novo um e-mail que já tem conta | A tela mostra o mesmo que no item 10.7. O dono do e-mail recebe um aviso ("você já tem uma conta"), e nenhuma conta nova é criada | [ ] |
+| C14 | Com a conta pendente, repetir o cadastro com outra senha e confirmar | Vale a senha do último cadastro | [ ] |
+| C15 | Uma conta criada antes de ligar o recurso | Continua entrando sem confirmar nada | [ ] |
+| C16 | Usar "Esqueci minha senha" em uma conta pendente e redefinir | A conta fica confirmada e entra com a nova senha | [ ] |
+
 ### Consultas úteis para revisar os registros (item 1.7 e procedimento de incidentes)
 
 ```sql
@@ -226,4 +261,4 @@ WHERE tipo IN ('SENHA_ALTERADA', 'SENHA_REDEFINIDA') AND criado_em > now() - int
 
 ### Resultado dos testes automáticos
 
-auth 150, demand 322, metrics 14 e app 18 testes passando. Os serviços também foram executados juntos (gateway, auth, demand, metrics, Postgres e Redis com senha) em dois roteiros pelo gateway, todos passando: 45 verificações gerais e 26 de MFA.
+auth 192, demand 370, metrics 14 e app 18 testes passando (auth e demand em um Postgres 16 local). Os roteiros de ponta a ponta, com os serviços rodando juntos (45 verificações gerais e 26 de MFA), foram feitos antes da criptografia de coluna e da confirmação de e-mail e **não foram repetidos depois dessas mudanças**.
