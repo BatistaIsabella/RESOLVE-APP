@@ -12,6 +12,8 @@ necessários ao executor Vitest e aos módulos importados e roda os unitários
 backend com mocks de Prisma e Redis, sem o setup de integração. PostgreSQL,
 Redis, preparação de tabelas, instalação do `auth-service` e checkout e
 preparação do sistema E2E só acontecem depois dos unitários.
+Na configuração unitária, `JWT_SECRET` usa o mesmo valor dos tokens de teste,
+independentemente do segredo configurado para a integração no CI.
 
 | Evento | Suites executadas |
 |---|---|
