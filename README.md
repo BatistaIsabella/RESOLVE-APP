@@ -230,6 +230,7 @@ RESOLVE-APP/
 
 | Documento | Onde está |
 | :--- | :--- |
+| Pipeline de CI, backlog executado e configuração do Quality Gate | [docs/testes/PIPELINE_CI_QUALITY_GATE.md](docs/testes/PIPELINE_CI_QUALITY_GATE.md) |
 | Plano de Testes e Backlog de Automação | [docs/testes/Plano_de_Testes_e_Backlog_Grupo5.docx](docs/testes/Plano_de_Testes_e_Backlog_Grupo5.docx) |
 | Relatório de bugs | [docs/testes/RELATORIO_BUGS.md](docs/testes/RELATORIO_BUGS.md) |
 | Suíte de testes do backend | [docs/testes/SUITE_TESTES_BACKEND.md](docs/testes/SUITE_TESTES_BACKEND.md) |
