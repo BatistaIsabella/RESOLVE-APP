@@ -1,18 +1,32 @@
-name: Regressão Completa
+name: Pipeline de Qualidade
 
 on:
+  push:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+  schedule:
+    - cron: '30 4 * * *'
   workflow_dispatch:
 
-jobs:
-  regressao:
-    name: Regressão Completa
-    runs-on: ubuntu-latest
+permissions:
+  contents: read
 
-    env:
-      DATABASE_URL_AUTH: postgresql://postgres:postgrespassword@localhost:5432/postgres
-      DATABASE_URL_DEMAND: postgresql://postgres:postgrespassword@localhost:5432/postgres?schema=demand
-      REDIS_URL: redis://localhost:6379
-      JWT_SECRET: ci-secret-resolve-app
+env:
+  DATABASE_URL_AUTH: postgresql://postgres:postgrespassword@localhost:5432/postgres?schema=auth
+  DATABASE_URL_DEMAND: postgresql://postgres:postgrespassword@localhost:5432/postgres?schema=demand
+  REDIS_URL: redis://localhost:6379
+  JWT_SECRET: ci-secret-resolve-app
+
+jobs:
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     steps:
       - name: Checkout resolve-app
@@ -20,16 +34,28 @@ jobs:
         with:
           path: resolve-app
 
-      - name: Checkout RESOLVE
-        uses: actions/checkout@v4
-        with:
-          repository: Cecimedeiros/RESOLVE
-          path: resolve-web
-
-      - name: Setup Node.js 20
+      - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
+
+      - name: Testes unitários — mobile
+        id: unitarios_mobile
+        continue-on-error: true
+        working-directory: resolve-app
+        run: node --test frontend/mobile/utils/__tests__/extractBairro.test.mjs
+
+      - name: Instalar dependências — demand-service
+        working-directory: resolve-app/backend/demand-service
+        run: npm ci
+
+      - name: Testes unitários — demand-service
+        id: unitarios_backend
+        continue-on-error: true
+        working-directory: resolve-app/backend/demand-service
+        run: |
+          mkdir -p relatorios
+          npm run test:unit -- --reporter=default --reporter=junit --outputFile.junit=relatorios/unit-demand.xml
 
       - name: Subir PostgreSQL e Redis
         working-directory: resolve-app/backend
@@ -40,19 +66,9 @@ jobs:
           timeout 60 bash -c 'until docker exec smartcity_postgres pg_isready -U postgres; do sleep 2; done'
           timeout 30 bash -c 'until docker exec smartcity_redis redis-cli ping | grep -q PONG; do sleep 2; done'
 
-      - name: Instalar dependências — demand-service
-        working-directory: resolve-app/backend/demand-service
-        run: npm ci
-
       - name: Instalar dependências — auth-service
         working-directory: resolve-app/backend/auth-service
         run: npm ci
-
-      - name: "Testes Unitários"
-        working-directory: resolve-app/backend/demand-service
-        run: npx vitest run --config vitest.unit.config.ts
-        env:
-          JWT_SECRET: ''
 
       - name: Gerar Prisma Client — auth-service
         working-directory: resolve-app/backend/auth-service
@@ -91,57 +107,101 @@ jobs:
             );
           "
 
-      - name: "Testes de API — auth-service"
+      - name: Testes de API — auth-service
+        id: api_auth
+        continue-on-error: true
         working-directory: resolve-app/backend/auth-service
-        run: npx vitest run
         env:
           DATABASE_URL: ${{ env.DATABASE_URL_AUTH }}
           JWT_SECRET: ${{ env.JWT_SECRET }}
           PORT: 3001
+        run: |
+          mkdir -p relatorios
+          npx vitest run --reporter=default --reporter=junit --outputFile.junit=relatorios/api-auth.xml
 
-      - name: "Testes de API — demand-service"
+      - name: Testes de API — demand-service
+        id: api_demand
+        continue-on-error: true
         working-directory: resolve-app/backend/demand-service
-        run: npx vitest run
         env:
           DATABASE_URL: ${{ env.DATABASE_URL_DEMAND }}
           REDIS_URL: ${{ env.REDIS_URL }}
           JWT_SECRET: change-me
           PORT: 3002
+        run: |
+          mkdir -p relatorios
+          npm run test:api -- --reporter=default --reporter=junit --outputFile.junit=relatorios/api-demand.xml
+
+      - name: Liberar PostgreSQL e Redis para a stack E2E
+        if: github.event_name != 'push'
+        working-directory: resolve-app/backend
+        run: docker compose down
+
+      - name: Checkout RESOLVE
+        if: github.event_name != 'push'
+        uses: actions/checkout@v4
+        with:
+          repository: Cecimedeiros/RESOLVE
+          path: resolve-web
 
       - name: Subir backend do RESOLVE para E2E
+        if: github.event_name != 'push'
         working-directory: resolve-web/backend
         run: docker compose up -d --build
         env:
           JWT_SECRET: ${{ env.JWT_SECRET }}
 
       - name: Aguardar api-gateway do RESOLVE (:8080)
+        if: github.event_name != 'push'
         run: timeout 180 bash -c 'until nc -z localhost 8080; do sleep 3; done'
 
       - name: Instalar dependências — frontend RESOLVE
+        if: github.event_name != 'push'
         working-directory: resolve-web/frontend
         run: npm ci
 
       - name: Build frontend RESOLVE
+        if: github.event_name != 'push'
         working-directory: resolve-web/frontend
         run: npm run build
         env:
           NEXT_PUBLIC_API_GATEWAY_URL: http://localhost:8080
 
       - name: Iniciar frontend RESOLVE em segundo plano
+        if: github.event_name != 'push'
         working-directory: resolve-web/frontend
         run: |
           NEXT_PUBLIC_API_GATEWAY_URL=http://localhost:8080 npm run start &
           timeout 60 bash -c 'until nc -z localhost 3000; do sleep 2; done'
 
-      - name: Instalar dependências — e2e
+      - name: Instalar dependências — E2E
+        if: github.event_name != 'push'
         working-directory: resolve-app/e2e
         run: npm ci
 
       - name: Instalar Chromium (Playwright)
+        if: github.event_name != 'push'
         working-directory: resolve-app/e2e
         run: npx playwright install --with-deps chromium
 
-      - name: "Testes E2E"
+      - name: Smoke E2E — pull request
+        id: smoke_e2e
+        continue-on-error: true
+        if: github.event_name == 'pull_request'
+        working-directory: resolve-app/e2e
+        run: |
+          npx playwright test \
+            tests/01-cadastros-sucesso.spec.ts \
+            tests/02-validacao-campos-obrigatorios-nova-demanda.spec.ts
+        env:
+          E2E_API_URL: http://localhost:8080
+          E2E_REUSE_SERVER: 'true'
+          CI: true
+
+      - name: Regressão E2E completa — agendamento diário ou execução manual
+        id: regressao_e2e
+        continue-on-error: true
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         working-directory: resolve-app/e2e
         run: npx playwright test
         env:
@@ -149,18 +209,51 @@ jobs:
           E2E_REUSE_SERVER: 'true'
           CI: true
 
-      - name: Upload relatório Playwright
+      - name: Resumo das suites
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: resolve-app/e2e/playwright-report/
-          retention-days: 7
+        run: |
+          {
+            echo "## Resultados dos testes automatizados"
+            echo "| Suite | Resultado |"
+            echo "|---|---|"
+            echo "| Unitários — demand-service | ${{ steps.unitarios_backend.outcome }} |"
+            echo "| Unitários — mobile | ${{ steps.unitarios_mobile.outcome }} |"
+            echo "| API — auth-service | ${{ steps.api_auth.outcome }} |"
+            echo "| API — demand-service | ${{ steps.api_demand.outcome }} |"
+            echo "| Smoke E2E — pull request | ${{ steps.smoke_e2e.outcome }} |"
+            echo "| Regressão E2E completa | ${{ steps.regressao_e2e.outcome }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload screenshots e vídeos de falhas
+      - name: Reprovar o Quality Gate se alguma suite falhou
+        if: always()
+        env:
+          BACKEND_UNIT: ${{ steps.unitarios_backend.outcome }}
+          MOBILE_UNIT: ${{ steps.unitarios_mobile.outcome }}
+          API_AUTH: ${{ steps.api_auth.outcome }}
+          API_DEMAND: ${{ steps.api_demand.outcome }}
+          E2E_SMOKE: ${{ steps.smoke_e2e.outcome }}
+          E2E_FULL: ${{ steps.regressao_e2e.outcome }}
+        run: |
+          failed=0
+          for result in "$BACKEND_UNIT" "$MOBILE_UNIT" "$API_AUTH" "$API_DEMAND" "$E2E_SMOKE" "$E2E_FULL"; do
+            if [ "$result" = "failure" ]; then
+              failed=1
+            fi
+          done
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::Uma ou mais suites automatizadas falharam."
+            exit 1
+          fi
+
+      - name: Publicar relatórios e evidências
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
-          path: resolve-app/e2e/test-results/
-          retention-days: 7
+          name: evidencias-testes-${{ github.run_id }}
+          path: |
+            resolve-app/backend/demand-service/relatorios/
+            resolve-app/backend/auth-service/relatorios/
+            resolve-app/e2e/playwright-report/
+            resolve-app/e2e/test-results/
+          retention-days: 14
+          if-no-files-found: warn

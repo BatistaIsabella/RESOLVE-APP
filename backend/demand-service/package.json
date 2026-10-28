@@ -6,6 +6,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "vitest run",
+    "test:api": "vitest run --config vitest.config.ts",
+    "test:unit": "vitest run --config vitest.unit.config.ts",
     "test:watch": "vitest",
     "prisma:generate": "prisma generate"
   },
