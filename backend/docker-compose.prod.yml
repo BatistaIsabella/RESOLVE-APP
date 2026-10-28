@@ -47,7 +47,10 @@ services:
       DEMAND_SERVICE_URL: http://demand-service:3002
       MFA_HABILITADO: ${MFA_HABILITADO:-false}
       MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:-}
+      DADOS_ENCRYPTION_KEY: ${DADOS_ENCRYPTION_KEY:?defina DADOS_ENCRYPTION_KEY}
+      EMAIL_HASH_KEY: ${EMAIL_HASH_KEY:?defina EMAIL_HASH_KEY}
       MFA_OBRIGATORIO_GESTOR: ${MFA_OBRIGATORIO_GESTOR:-false}
+      CONFIRMACAO_EMAIL_HABILITADA: ${CONFIRMACAO_EMAIL_HABILITADA:-false}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
@@ -74,6 +77,7 @@ services:
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       DATABASE_URL: postgresql://demand_svc:${DEMAND_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:-postgres}?schema=demand
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET}
+      DADOS_ENCRYPTION_KEY: ${DADOS_ENCRYPTION_KEY:?defina DADOS_ENCRYPTION_KEY}
     depends_on:
       redis:
         condition: service_healthy

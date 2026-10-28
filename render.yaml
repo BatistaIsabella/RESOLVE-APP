@@ -48,6 +48,12 @@ services:
         sync: false
       - key: MFA_ENCRYPTION_KEY
         sync: false
+      - key: DADOS_ENCRYPTION_KEY
+        sync: false
+      - key: CONFIRMACAO_EMAIL_HABILITADA
+        value: "false"
+      - key: EMAIL_HASH_KEY
+        sync: false
       - key: SMTP_HOST
         sync: false
       - key: SMTP_USER
@@ -76,6 +82,9 @@ services:
           name: smartcity-redis
           type: redis
           property: connectionString
+      # Tem de ser igual à do auth-service: cifra o e-mail do solicitante. Sem ela o serviço não sobe em produção.
+      - key: DADOS_ENCRYPTION_KEY
+        sync: false
       - fromGroup: smartcity-shared
       - key: PORT
         value: 3002

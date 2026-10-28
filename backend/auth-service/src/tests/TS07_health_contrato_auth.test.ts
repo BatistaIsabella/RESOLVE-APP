@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { PrismaClient } from '@prisma/client';
 import app from '../app';
+import { hashDoEmail } from '../utils/emailProtegido';
 import { CODIGO_GESTOR, SENHA_FORTE, TERMOS } from './helpers/dados';
 
 const prisma = new PrismaClient();
@@ -21,7 +22,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (emailsParaLimpar.length > 0) {
-    await prisma.usuario.deleteMany({ where: { email: { in: emailsParaLimpar } } });
+    await prisma.usuario.deleteMany({ where: { email_hash: { in: emailsParaLimpar.map(hashDoEmail) } } });
   }
   await prisma.$disconnect();
 });

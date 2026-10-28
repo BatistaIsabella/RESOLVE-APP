@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { PrismaClient, Categorias, Regioes } from '@prisma/client';
 import app from '../app';
 import { getJwtSecret } from '../config/env';
+import { protegerEmail } from '../utils/emailProtegido';
 
 const prisma = new PrismaClient();
 const SECRET = getJwtSecret();
@@ -41,7 +42,7 @@ async function criarDenuncia(cidadaoId: number, categoria: Categorias, extra: Re
       regiao: Regioes.AGRESTE,
       descricao: 'Denúncia criada para o teste de escopo',
       endereco: 'Rua Teste, 10, Centro, Recife, PE (-8.05012, -34.88123)',
-      email_solicitante: `solicitante.${cidadaoId}@test.com`,
+      email_solicitante_cifrado: protegerEmail(`solicitante.${cidadaoId}@test.com`),
       cidadao_id: cidadaoId,
       ...extra,
     },

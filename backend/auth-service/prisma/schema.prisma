@@ -12,7 +12,9 @@ generator client {
 model Usuario {
   id               Int       @id @default(autoincrement())
   nome             String    @db.VarChar(100)
-  email            String    @unique @db.VarChar(254)
+  // O e-mail fica cifrado (AES-256-GCM); a busca usa email_hash (HMAC). Ver utils/emailProtegido.ts.
+  email_cifrado    String    @map("email") @db.VarChar(600)
+  email_hash       String?   @unique @db.VarChar(64)
   senha            String    @db.VarChar(60)
   papel            Papel     @default(CIDADAO)
   orgao            String?   @db.VarChar(40)
@@ -22,8 +24,12 @@ model Usuario {
   mfa_segredo      String?   @db.VarChar(200)
   mfa_ativo        Boolean   @default(false)
   mfa_ultimo_passo Int?
+  // Cadastro com confirmação de e-mail: a conta só entra depois de confirmar. Contas anteriores ficam false.
+  email_pendente   Boolean   @default(false)
+  criado_em        DateTime  @default(now())
 
   tokensRedefinicao  TokenRedefinicao[]
+  tokensConfirmacao  TokenConfirmacaoEmail[]
   codigosRecuperacao CodigoRecuperacaoMfa[]
 
   @@map("usuarios")
@@ -41,6 +47,20 @@ model TokenRedefinicao {
 
   @@index([usuario_id])
   @@map("tokens_redefinicao")
+  @@schema("auth")
+}
+
+model TokenConfirmacaoEmail {
+  id         Int       @id @default(autoincrement())
+  usuario_id Int
+  token_hash String    @unique @db.VarChar(64)
+  expira_em  DateTime
+  usado_em   DateTime?
+  criado_em  DateTime  @default(now())
+  usuario    Usuario   @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@index([usuario_id])
+  @@map("tokens_confirmacao_email")
   @@schema("auth")
 }
 

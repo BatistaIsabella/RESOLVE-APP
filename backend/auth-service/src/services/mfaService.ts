@@ -1,17 +1,16 @@
 import { createHash, createHmac, randomBytes } from 'crypto';
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { Request } from 'express';
 import jwt from 'jsonwebtoken';
 import { authenticator } from 'otplib';
 import { getJwtSecret, mfaHabilitada } from '../config/env';
+import { prisma } from '../lib/prisma';
 import { cifrar, decifrar } from '../utils/cifra';
 import { httpError } from '../utils/httpError';
 import { registrarEvento } from './auditoriaService';
 import { invalidarSessoes } from './sessaoService';
 import { bloqueadoAte, chaveDoEmail, limparTentativas, registrarFalha } from './tentativasLoginService';
 
-const prisma = new PrismaClient();
 
 const EMISSOR = 'RESOLVE';
 const QUANTIDADE_CODIGOS_RECUPERACAO = 8;

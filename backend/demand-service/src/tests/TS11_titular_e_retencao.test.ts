@@ -5,6 +5,7 @@ import { PrismaClient, Categorias, Regioes, StatusDenuncia } from '@prisma/clien
 import app from '../app';
 import { getJwtSecret } from '../config/env';
 import { executarRetencao } from '../jobs/retencao';
+import { protegerEmail, revelarEmail } from '../utils/emailProtegido';
 
 const prisma = new PrismaClient();
 const SECRET = getJwtSecret();
@@ -31,7 +32,7 @@ function umaDenuncia(cidadaoId: number, extra: Record<string, unknown> = {}) {
       regiao: Regioes.AGRESTE,
       descricao: 'Criada para o teste de direitos do titular',
       endereco: 'Rua do Teste, 5',
-      email_solicitante: `u${cidadaoId}@test.com`,
+      email_solicitante_cifrado: protegerEmail(`u${cidadaoId}@test.com`),
       cidadao_id: cidadaoId,
       ...extra,
     },
@@ -109,7 +110,7 @@ describe('TS11 - Eliminação dos dados pessoais (anonimização)', () => {
 
     const denuncia = await prisma.denuncia.findUnique({ where: { id_denuncia: denunciaTitular } });
     expect(denuncia).not.toBeNull();
-    expect(denuncia?.email_solicitante).toBeNull();
+    expect(denuncia?.email_solicitante_cifrado).toBeNull();
     expect(await prisma.imagem.count({ where: { denuncia_id: denunciaTitular } })).toBe(0);
 
     const cidadao = await prisma.cidadao.findUnique({ where: { id_cidadao: cidadaoTitular } });
@@ -119,7 +120,7 @@ describe('TS11 - Eliminação dos dados pessoais (anonimização)', () => {
   it('não mexe nos dados de outros titulares', async () => {
     const denuncia = await prisma.denuncia.findUnique({ where: { id_denuncia: denunciaOutro } });
 
-    expect(denuncia?.email_solicitante).toBe(`u${cidadaoOutro}@test.com`);
+    expect(revelarEmail(denuncia!.email_solicitante_cifrado!)).toBe(`u${cidadaoOutro}@test.com`);
     expect(await prisma.imagem.count({ where: { denuncia_id: denunciaOutro } })).toBe(1);
   });
 

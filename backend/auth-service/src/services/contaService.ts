@@ -1,7 +1,8 @@
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { Request } from 'express';
 import { mfaHabilitada, versaoTermosAtual } from '../config/env';
+import { prisma } from '../lib/prisma';
+import { hashDoEmail, protegerEmail } from '../utils/emailProtegido';
 import { httpError } from '../utils/httpError';
 import { anonimizarEventosDoTitular, registrarEvento } from './auditoriaService';
 import { emailValido, normalizarEmail, termosPendentes } from './authService';
@@ -10,8 +11,6 @@ import { assegurarSenhaAceitavel, hashSenha } from './senhaService';
 import { invalidarSessoes } from './sessaoService';
 import { emitirToken, orgaoEfetivo } from './tokenService';
 import { chaveDoEmail, limparTentativas } from './tentativasLoginService';
-
-const prisma = new PrismaClient();
 
 async function buscarUsuario(usuarioId: number) {
   const usuario = await prisma.usuario.findUnique({ where: { id: usuarioId } });
@@ -58,7 +57,7 @@ export async function atualizarConta(
   req?: Request
 ) {
   const usuario = await buscarUsuario(usuarioId);
-  const alteracoes: { nome?: string; email?: string } = {};
+  const alteracoes: { nome?: string; email_cifrado?: string; email_hash?: string } = {};
 
   if (entrada.nome !== undefined) {
     if (typeof entrada.nome !== 'string' || entrada.nome.trim().length === 0 || entrada.nome.trim().length > 100) {
@@ -74,10 +73,11 @@ export async function atualizarConta(
     const novoEmail = normalizarEmail(entrada.email);
     if (novoEmail !== usuario.email.toLowerCase()) {
       const existente = await prisma.usuario.findFirst({
-        where: { email: { equals: novoEmail, mode: 'insensitive' }, NOT: { id: usuarioId } },
+        where: { email_hash: hashDoEmail(novoEmail), NOT: { id: usuarioId } },
       });
       if (existente) throw httpError('E-mail já cadastrado', 409);
-      alteracoes.email = novoEmail;
+      alteracoes.email_cifrado = protegerEmail(novoEmail);
+      alteracoes.email_hash = hashDoEmail(novoEmail);
     }
   }
 
@@ -89,7 +89,7 @@ export async function atualizarConta(
   await registrarEvento({
     tipo: 'DADOS_ALTERADOS',
     usuarioId,
-    detalhe: Object.keys(alteracoes).join(','),
+    detalhe: [alteracoes.nome !== undefined && 'nome', alteracoes.email_hash !== undefined && 'email'].filter(Boolean).join(','),
     req,
   });
 

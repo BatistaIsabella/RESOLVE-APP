@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { authenticator } from 'otplib';
 import { PrismaClient } from '@prisma/client';
 import app from '../app';
+import { hashDoEmail } from '../utils/emailProtegido';
 import { decifrar } from '../utils/cifra';
 import { hashIdentificador } from '../services/auditoriaService';
 import { limparRedisFalso } from './helpers/redisFalso';
@@ -50,7 +51,7 @@ afterEach(() => {
 });
 
 afterAll(async () => {
-  const usuarios = await prisma.usuario.findMany({ where: { email: { in: emails } }, select: { id: true } });
+  const usuarios = await prisma.usuario.findMany({ where: { email_hash: { in: emails.map(hashDoEmail) } }, select: { id: true } });
   const ids = usuarios.map((u) => u.id);
   await prisma.eventoAuth.deleteMany({
     where: { OR: [{ usuario_id: { in: ids } }, { identificador: { in: emails.map(hashIdentificador) } }] },
@@ -58,7 +59,7 @@ afterAll(async () => {
   await prisma.tentativaLogin.deleteMany({
     where: { chave: { in: [...emails.map(hashIdentificador), ...ids.map((id) => hashIdentificador(`mfa:${id}`))] } },
   });
-  await prisma.usuario.deleteMany({ where: { email: { in: emails } } });
+  await prisma.usuario.deleteMany({ where: { email_hash: { in: emails.map(hashDoEmail) } } });
   await prisma.$disconnect();
 });
 
@@ -392,6 +393,7 @@ describe('TS14 - MFA obrigatória para gestores', () => {
 describe('TS14 - Chave de cifra do segredo', () => {
   it('em produção, sem MFA_ENCRYPTION_KEY, a configuração fica indisponível (503)', async () => {
     const { token } = await criarGestor();
+    const usuarioId = (await prisma.usuario.findFirst({ where: { email_hash: hashDoEmail(emails[emails.length - 1]) } }))!.id;
     process.env.NODE_ENV = 'production';
     process.env.JWT_SECRET = 'segredo-de-producao-do-teste';
     delete process.env.MFA_ENCRYPTION_KEY;
@@ -400,7 +402,7 @@ describe('TS14 - Chave de cifra do segredo', () => {
     expect(res.status).toBe(401);
 
     const sessaoValida = jwt.sign(
-      { userId: (await prisma.usuario.findFirst({ where: { email: { startsWith: 'ts14.' } }, orderBy: { id: 'desc' } }))!.id, papel: 'gestor', email: 'x' },
+      { userId: usuarioId, papel: 'gestor', email: 'x' },
       'segredo-de-producao-do-teste'
     );
     const indisponivel = await request(app).post('/auth/mfa/configurar').set(comToken(sessaoValida)).send({});

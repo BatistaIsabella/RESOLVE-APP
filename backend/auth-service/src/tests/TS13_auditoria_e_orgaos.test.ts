@@ -3,6 +3,7 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import app from '../app';
+import { hashDoEmail } from '../utils/emailProtegido';
 import { hashIdentificador } from '../services/auditoriaService';
 import { getJwtSecret, validarConfiguracao } from '../config/env';
 import { SENHA_FORTE, TERMOS } from './helpers/dados';
@@ -47,7 +48,7 @@ beforeAll(() => {
 });
 
 afterAll(async () => {
-  const usuarios = await prisma.usuario.findMany({ where: { email: { in: emailsCriados } }, select: { id: true } });
+  const usuarios = await prisma.usuario.findMany({ where: { email_hash: { in: emailsCriados.map(hashDoEmail) } }, select: { id: true } });
   await prisma.eventoAuth.deleteMany({
     where: {
       OR: [
@@ -59,7 +60,7 @@ afterAll(async () => {
   await prisma.tentativaLogin.deleteMany({
     where: { chave: { in: emailsCriados.map(hashIdentificador) } },
   });
-  await prisma.usuario.deleteMany({ where: { email: { in: emailsCriados } } });
+  await prisma.usuario.deleteMany({ where: { email_hash: { in: emailsCriados.map(hashDoEmail) } } });
   await prisma.$disconnect();
 });
 

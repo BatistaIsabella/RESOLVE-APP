@@ -9,6 +9,15 @@ export function getJwtSecret(): string {
 
 export function validarConfiguracao(): void {
   getJwtSecret();
+
+  // Sem a chave o e-mail do solicitante não pode ser gravado nem lido, então em produção o serviço não sobe.
+  if (process.env.NODE_ENV === 'production' && !process.env.DADOS_ENCRYPTION_KEY) {
+    throw new Error('DADOS_ENCRYPTION_KEY não definida');
+  }
+}
+
+export function isProducao(): boolean {
+  return process.env.NODE_ENV === 'production';
 }
 
 export function retencaoAnos(): number {

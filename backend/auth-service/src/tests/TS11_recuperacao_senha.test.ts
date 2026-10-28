@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vites
 import request from 'supertest';
 import { PrismaClient } from '@prisma/client';
 import app from '../app';
+import { hashDoEmail } from '../utils/emailProtegido';
 import { enviarEmailRedefinicao } from '../services/emailService';
 import { limparRedisFalso } from './helpers/redisFalso';
 import { SENHA_FORTE, TERMOS } from './helpers/dados';
@@ -32,7 +33,7 @@ function ultimoTokenEnviado(): string {
 }
 
 async function limparTokens() {
-  const dono = await prisma.usuario.findUnique({ where: { email: usuario.email } });
+  const dono = await prisma.usuario.findUnique({ where: { email_hash: hashDoEmail(usuario.email) } });
   if (dono) await prisma.tokenRedefinicao.deleteMany({ where: { usuario_id: dono.id } });
 }
 
@@ -47,7 +48,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await prisma.usuario.deleteMany({ where: { email: usuario.email } });
+  await prisma.usuario.deleteMany({ where: { email_hash: hashDoEmail(usuario.email) } });
   await prisma.$disconnect();
 });
 
@@ -75,7 +76,7 @@ describe('TS11 - Recuperação de senha', () => {
     it('guarda apenas o hash do token, nunca o valor enviado por e-mail', async () => {
       await pedir(usuario.email);
       const token = ultimoTokenEnviado();
-      const dono = await prisma.usuario.findUnique({ where: { email: usuario.email } });
+      const dono = await prisma.usuario.findUnique({ where: { email_hash: hashDoEmail(usuario.email) } });
       const registros = await prisma.tokenRedefinicao.findMany({ where: { usuario_id: dono!.id } });
 
       expect(registros).toHaveLength(1);

@@ -1,7 +1,8 @@
 import { createHash, randomBytes } from 'crypto';
-import { PrismaClient } from '@prisma/client';
 import { Request } from 'express';
 import { config } from '../config/env';
+import { prisma } from '../lib/prisma';
+import { hashDoEmail } from '../utils/emailProtegido';
 import { httpError } from '../utils/httpError';
 import { registrarEvento } from './auditoriaService';
 import { normalizarEmail } from './authService';
@@ -9,8 +10,6 @@ import { enviarEmailRedefinicao } from './emailService';
 import { assegurarSenhaAceitavel, hashSenha } from './senhaService';
 import { invalidarSessoes } from './sessaoService';
 import { chaveDoEmail, limparTentativas } from './tentativasLoginService';
-
-const prisma = new PrismaClient();
 
 const INTERVALO_MINIMO_MS = 60 * 1000;
 
@@ -22,7 +21,7 @@ function hashDoToken(token: string): string {
 // Só o hash do token fica no banco; o valor em si vai apenas por e-mail.
 export async function solicitarRedefinicao(emailInformado: string, req?: Request): Promise<void> {
   const email = normalizarEmail(emailInformado);
-  const usuario = await prisma.usuario.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
+  const usuario = await prisma.usuario.findUnique({ where: { email_hash: hashDoEmail(email) } });
 
   await registrarEvento({ tipo: 'SENHA_REDEFINICAO_SOLICITADA', usuarioId: usuario?.id, email, req });
   if (!usuario) return;
@@ -76,7 +75,8 @@ export async function redefinirSenha(token: unknown, novaSenha: unknown, req?: R
     });
     if (marcado.count === 0) return false;
 
-    await tx.usuario.update({ where: { id: usuario.id }, data: { senha: hash } });
+    // Quem recebe e usa o código de redefinição prova que é dono do e-mail, então a conta também fica confirmada.
+    await tx.usuario.update({ where: { id: usuario.id }, data: { senha: hash, email_pendente: false } });
     await tx.tokenRedefinicao.deleteMany({ where: { usuario_id: usuario.id, id: { not: registro.id } } });
     return true;
   });

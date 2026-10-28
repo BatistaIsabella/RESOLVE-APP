@@ -37,7 +37,8 @@ model Denuncia {
   prioridade    NivelPrioridade @default(MEDIA)
   data_registro DateTime        @default(now())
   endereco           String
-  email_solicitante  String?
+  // Cifrado (AES-256-GCM); o cliente expõe `email_solicitante` já decifrado. Ver lib/prisma.ts.
+  email_solicitante_cifrado String? @map("email_solicitante")
   data_conclusao     DateTime?
 
   cidadao_id    Int

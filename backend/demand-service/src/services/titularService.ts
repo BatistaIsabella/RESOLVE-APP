@@ -74,7 +74,7 @@ export async function anonimizarTitular(usuarioId: number, papel: Papel) {
     const fotos = await tx.imagem.deleteMany({ where: { denuncia: { cidadao_id: cidadao.id_cidadao } } });
     const denuncias = await tx.denuncia.updateMany({
       where: { cidadao_id: cidadao.id_cidadao },
-      data: { email_solicitante: null },
+      data: { email_solicitante_cifrado: null },
     });
     // ids de usuário negativos nunca colidem com contas reais e mantêm a coluna única.
     await tx.cidadao.update({ where: { id_cidadao: cidadao.id_cidadao }, data: { usuario_id: -cidadao.id_cidadao } });

@@ -3,6 +3,7 @@ import { createHash } from 'crypto';
 import request from 'supertest';
 import { PrismaClient } from '@prisma/client';
 import app from '../app';
+import { hashDoEmail } from '../utils/emailProtegido';
 import { validarPoliticaSenha } from '../utils/senha';
 import { senhaVazada } from '../services/senhaVazada';
 import { SENHA_FORTE, TERMOS } from './helpers/dados';
@@ -17,7 +18,7 @@ afterEach(() => {
 });
 
 afterAll(async () => {
-  await prisma.usuario.deleteMany({ where: { email: { in: emailsCriados } } });
+  await prisma.usuario.deleteMany({ where: { email_hash: { in: emailsCriados.map(hashDoEmail) } } });
   await prisma.$disconnect();
 });
 

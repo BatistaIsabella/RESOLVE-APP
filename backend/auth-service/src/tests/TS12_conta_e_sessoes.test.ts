@@ -3,6 +3,7 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import app from '../app';
+import { hashDoEmail } from '../utils/emailProtegido';
 import { hashIdentificador } from '../services/auditoriaService';
 import { limparRedisFalso } from './helpers/redisFalso';
 import { SENHA_FORTE, TERMOS } from './helpers/dados';
@@ -35,7 +36,7 @@ beforeEach(() => limparRedisFalso());
 afterEach(() => vi.unstubAllGlobals());
 
 afterAll(async () => {
-  await prisma.usuario.deleteMany({ where: { email: { in: emailsCriados } } });
+  await prisma.usuario.deleteMany({ where: { email_hash: { in: emailsCriados.map(hashDoEmail) } } });
   await prisma.$disconnect();
 });
 

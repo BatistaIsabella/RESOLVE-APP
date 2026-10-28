@@ -48,7 +48,10 @@ services:
       GESTOR_ACCESS_CODES: ${GESTOR_ACCESS_CODES:-}
       MFA_HABILITADO: ${MFA_HABILITADO:-false}
       MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:-}
+      DADOS_ENCRYPTION_KEY: ${DADOS_ENCRYPTION_KEY:-}
+      EMAIL_HASH_KEY: ${EMAIL_HASH_KEY:-}
       MFA_OBRIGATORIO_GESTOR: ${MFA_OBRIGATORIO_GESTOR:-false}
+      CONFIRMACAO_EMAIL_HABILITADA: ${CONFIRMACAO_EMAIL_HABILITADA:-false}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
@@ -71,6 +74,7 @@ services:
       REDIS_URL: redis://:${REDIS_PASSWORD:-redis-dev}@redis:6379
       DATABASE_URL: "postgresql://postgres:postgrespassword@postgres:5432/postgres?schema=public"
       JWT_SECRET: ${JWT_SECRET:-segredo-somente-desenvolvimento}
+      DADOS_ENCRYPTION_KEY: ${DADOS_ENCRYPTION_KEY:-}
     ports:
       - "3002:3002"
     depends_on:
