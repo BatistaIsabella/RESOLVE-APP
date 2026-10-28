@@ -6,6 +6,8 @@ import {
   Prisma,
 } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { protegerEmail } from '../utils/emailProtegido';
+import { validarImagens } from '../utils/imagem';
 import { httpError } from '../utils/httpError';
 import { buildPaginatedResult, PaginatedResult, PaginationParams } from '../utils/pagination';
 import { getRedisPublisher, publishDenunciaStatusEvent } from '../config/redis';
@@ -148,7 +150,7 @@ export function validateCreateDenunciaInput(body: Record<string, unknown>): Crea
     descricao,
     endereco,
     prioridade: prioridade as NivelPrioridade | undefined,
-    imagens: Array.isArray(imagens) ? (imagens as string[]) : undefined,
+    imagens: validarImagens(imagens),
   };
 }
 
@@ -280,7 +282,7 @@ export async function createDenuncia(usuarioId: number, input: CreateDenunciaInp
       prioridade: input.prioridade ?? NivelPrioridade.MEDIA,
       status: StatusDenuncia.ABERTA,
       cidadao_id: cidadaoId,
-      email_solicitante: emailSolicitante ?? null,
+      email_solicitante_cifrado: emailSolicitante ? protegerEmail(emailSolicitante) : null,
       imagens: imagensData,
     },
     include: {
