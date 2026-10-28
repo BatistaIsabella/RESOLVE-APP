@@ -75,7 +75,9 @@ export function useCadastroViewModel() {
         papel,
         codigoAcesso: papel === 'gestor' ? codigoAcesso.trim() : undefined,
       });
-      if (resultado.tipo === 'mfa') {
+      if (resultado.tipo === 'confirmar-email') {
+        router.replace({ pathname: '/confirmar-email', params: { email: emailLimpo } });
+      } else if (resultado.tipo === 'mfa') {
         router.push({ pathname: '/mfa', params: { desafio: resultado.desafio } });
       } else if (resultado.tipo === 'mfa-configuracao') {
         router.push({ pathname: '/mfa-configurar', params: { desafio: resultado.desafio } });

@@ -1,15 +1,17 @@
-import { PrismaClient, Prisma, Usuario } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { Request } from 'express';
-import { versaoTermosAtual } from '../config/env';
+import { confirmacaoEmailHabilitada, versaoTermosAtual } from '../config/env';
+import { prisma, UsuarioLegivel } from '../lib/prisma';
+import { hashDoEmail, protegerEmail } from '../utils/emailProtegido';
 import { httpError } from '../utils/httpError';
 import { registrarEvento } from './auditoriaService';
+import { emitirConfirmacao } from './confirmacaoEmailService';
+import { enviarEmailContaExistente } from './emailService';
 import { assegurarSenhaAceitavel, gastarTempoDeComparacao, hashSenha } from './senhaService';
 import { emitirDesafio, lerDesafio, mfaObrigatoriaParaGestor, verificarSegundoFator } from './mfaService';
 import { emitirToken, orgaoEfetivo } from './tokenService';
 import { bloqueadoAte, chaveDoEmail, limparTentativas, registrarFalha } from './tentativasLoginService';
-
-const prisma = new PrismaClient();
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -51,14 +53,17 @@ export async function register(dados: DadosCadastro, req?: Request) {
 
   await assegurarSenhaAceitavel(dados.senha, { email, nome });
 
-  const existente = await prisma.usuario.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
+  if (confirmacaoEmailHabilitada()) return cadastrarComConfirmacao(dados, nome, email, req);
+
+  const existente = await prisma.usuario.findUnique({ where: { email_hash: hashDoEmail(email) } });
   if (existente) throw httpError('E-mail já cadastrado', 409);
 
   try {
     const usuario = await prisma.usuario.create({
       data: {
         nome,
-        email,
+        email_cifrado: protegerEmail(email),
+        email_hash: hashDoEmail(email),
         senha: await hashSenha(dados.senha),
         papel: dados.papel === 'gestor' ? 'GESTOR' : 'CIDADAO',
         orgao: dados.papel === 'gestor' ? dados.orgao : null,
@@ -84,6 +89,61 @@ export async function register(dados: DadosCadastro, req?: Request) {
   }
 }
 
+export const MENSAGEM_CONFIRMACAO =
+  'Enviamos um código de confirmação para o e-mail informado. Confirme o e-mail para ativar a conta.';
+
+// Com a confirmação de e-mail ligada, a resposta é a mesma para qualquer e-mail: quem tem conta recebe
+// um aviso por e-mail, e quem não tem recebe o código. Assim o cadastro não revela quem já está cadastrado.
+async function cadastrarComConfirmacao(dados: DadosCadastro, nome: string, email: string, req?: Request) {
+  const resposta = { confirmacaoNecessaria: true as const, mensagem: MENSAGEM_CONFIRMACAO };
+  // O hash gasta o mesmo tempo nos dois caminhos, para o tempo de resposta também não denunciar a conta.
+  const senha = await hashSenha(dados.senha);
+  const existente = await prisma.usuario.findUnique({ where: { email_hash: hashDoEmail(email) } });
+
+  if (existente && !existente.email_pendente) {
+    await registrarEvento({ tipo: 'CADASTRO_EMAIL_EXISTENTE', usuarioId: existente.id, email, req });
+    try {
+      await enviarEmailContaExistente(email);
+    } catch (err) {
+      console.error('[auth] Falha ao enviar o aviso de conta existente:', (err as Error).message);
+    }
+    return resposta;
+  }
+
+  const campos = {
+    nome,
+    senha,
+    papel: dados.papel === 'gestor' ? ('GESTOR' as const) : ('CIDADAO' as const),
+    orgao: dados.papel === 'gestor' ? dados.orgao : null,
+    aceite_termos_em: new Date(),
+    versao_termos: versaoTermosAtual(),
+  };
+
+  let usuario: { id: number };
+  try {
+    // Se já havia um cadastro ainda sem confirmar para esse e-mail, vale o mais recente: quem não é o dono
+    // do e-mail não consegue deixar uma senha sua esperando a confirmação do dono de verdade.
+    usuario = existente
+      ? await prisma.usuario.update({ where: { id: existente.id }, data: { ...campos, criado_em: new Date() } })
+      : await prisma.usuario.create({
+          data: {
+            ...campos,
+            email_cifrado: protegerEmail(email),
+            email_hash: hashDoEmail(email),
+            email_pendente: true,
+          },
+        });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') return resposta;
+    throw err;
+  }
+
+  await registrarEvento({ tipo: 'CADASTRO', usuarioId: usuario.id, email, detalhe: `${dados.papel}, aguardando confirmação`, req });
+  await emitirConfirmacao(usuario.id, email);
+
+  return resposta;
+}
+
 const MENSAGEM_CREDENCIAIS = 'Credenciais inválidas';
 const MENSAGEM_BLOQUEIO = 'Muitas tentativas de login. Tente novamente em alguns minutos.';
 
@@ -99,7 +159,7 @@ export async function login(emailInformado: string, senha: string, req?: Request
     throw err;
   }
 
-  const usuario = await prisma.usuario.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
+  const usuario = await prisma.usuario.findUnique({ where: { email_hash: hashDoEmail(email) } });
 
   let senhaConfere = false;
   if (usuario) {
@@ -122,6 +182,14 @@ export async function login(emailInformado: string, senha: string, req?: Request
 
   await limparTentativas(chave);
 
+  // A senha está certa, então a pessoa já provou que é quem fez o cadastro: pode saber que falta confirmar.
+  if (usuario.email_pendente) {
+    await registrarEvento({ tipo: 'LOGIN_EMAIL_NAO_CONFIRMADO', usuarioId: usuario.id, email, req });
+    const err = httpError('Confirme seu e-mail para entrar. Use o código que enviamos ao se cadastrar.', 403);
+    (err as Error & { codigo?: string }).codigo = 'EMAIL_NAO_CONFIRMADO';
+    throw err;
+  }
+
   // Com a verificação em duas etapas, a senha certa ainda não abre a sessão: devolve só um desafio.
   if (usuario.mfa_ativo) {
     await registrarEvento({ tipo: 'MFA_DESAFIO', usuarioId: usuario.id, email, req });
@@ -136,7 +204,7 @@ export async function login(emailInformado: string, senha: string, req?: Request
   return respostaDeLogin(usuario);
 }
 
-export async function respostaDeLogin(usuario: Usuario) {
+export async function respostaDeLogin(usuario: UsuarioLegivel) {
   const orgao = orgaoEfetivo(usuario);
 
   return {

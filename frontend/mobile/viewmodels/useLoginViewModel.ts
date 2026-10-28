@@ -39,7 +39,9 @@ export function useLoginViewModel() {
       }
 
       // Gestor com verificação em duas etapas ainda precisa informar o código antes de entrar.
-      if (resultado.tipo === 'mfa') {
+      if (resultado.tipo === 'confirmar-email') {
+        router.push({ pathname: '/confirmar-email', params: { email: emailNormalizado } });
+      } else if (resultado.tipo === 'mfa') {
         router.push({ pathname: '/mfa', params: { desafio: resultado.desafio } });
       } else if (resultado.tipo === 'mfa-configuracao') {
         router.push({ pathname: '/mfa-configurar', params: { desafio: resultado.desafio } });
@@ -47,6 +49,11 @@ export function useLoginViewModel() {
         router.replace(getPostLoginRoute(resultado.role));
       }
     } catch (err) {
+      // A senha estava certa, mas o e-mail do cadastro ainda não foi confirmado.
+      if (err instanceof ApiError && err.codigo === 'EMAIL_NAO_CONFIRMADO') {
+        router.push({ pathname: '/confirmar-email', params: { email: emailNormalizado } });
+        return;
+      }
       setErro(err instanceof ApiError ? err.message : 'Erro ao fazer login');
     }
   };

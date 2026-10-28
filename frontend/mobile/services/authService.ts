@@ -40,6 +40,17 @@ export interface RegisterResponse {
   orgao?: string;
 }
 
+// Com a confirmação de e-mail ligada no servidor, o cadastro não cria sessão: responde igual para qualquer
+// e-mail e a conta só entra depois de confirmar o código enviado por e-mail.
+export interface ConfirmacaoNecessaria {
+  confirmacaoNecessaria: true;
+  mensagem: string;
+}
+
+export function exigeConfirmacaoEmail(resposta: RegisterResponse | ConfirmacaoNecessaria): resposta is ConfirmacaoNecessaria {
+  return 'confirmacaoNecessaria' in resposta;
+}
+
 export interface CadastroInput {
   nome: string;
   email: string;
@@ -68,9 +79,9 @@ export const authService = {
     }
   },
 
-  async register(input: CadastroInput): Promise<RegisterResponse> {
+  async register(input: CadastroInput): Promise<RegisterResponse | ConfirmacaoNecessaria> {
     try {
-      const { data } = await api.post<RegisterResponse>('/auth/register', {
+      const { data } = await api.post<RegisterResponse | ConfirmacaoNecessaria>('/auth/register', {
         ...input,
         aceiteTermos: true,
       });
@@ -83,6 +94,24 @@ export const authService = {
   // O token é passado à parte porque a sessão local já foi apagada quando o logout é enviado.
   async logout(token: string): Promise<void> {
     await api.post('/auth/logout', null, { headers: { Authorization: `Bearer ${token}` } });
+  },
+
+  async confirmEmail(token: string): Promise<string> {
+    try {
+      const { data } = await api.post<{ message: string }>('/auth/confirmar-email', { token });
+      return data.message;
+    } catch (err) {
+      throw toApiError(err);
+    }
+  },
+
+  async resendConfirmation(email: string): Promise<string> {
+    try {
+      const { data } = await api.post<{ message: string }>('/auth/reenviar-confirmacao', { email });
+      return data.message;
+    } catch (err) {
+      throw toApiError(err);
+    }
   },
 
   async forgotPassword(email: string): Promise<string> {

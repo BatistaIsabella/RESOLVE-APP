@@ -2,6 +2,7 @@ import { Response, NextFunction, Request } from 'express';
 import { orgaoPorCodigo } from '../config/codigosGestor';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import * as authService from '../services/authService';
+import * as confirmacaoService from '../services/confirmacaoEmailService';
 import * as contaService from '../services/contaService';
 import * as mfaService from '../services/mfaService';
 import * as recuperacaoService from '../services/recuperacaoSenhaService';
@@ -35,6 +36,8 @@ export async function register(req: Request, res: Response, next: NextFunction) 
       { nome, email, senha, papel, orgao, aceiteTermos: aceiteTermos === true, versaoTermos },
       req
     );
+    // Com a confirmação de e-mail ligada a resposta é a mesma para qualquer e-mail, e a conta ainda não existe para o login.
+    if ('confirmacaoNecessaria' in result) return res.status(202).json(result);
     return res.status(201).json(result);
   } catch (err) {
     next(err);
@@ -91,6 +94,34 @@ export async function redefinirSenha(req: Request, res: Response, next: NextFunc
 
     await recuperacaoService.redefinirSenha(token, novaSenha, req);
     return res.json({ message: 'Senha redefinida com sucesso. Faça login com a nova senha.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+const MENSAGEM_REENVIO = 'Se o e-mail aguardar confirmação, enviaremos um novo código.';
+
+export async function confirmarEmail(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { token } = req.body ?? {};
+    if (!token) return res.status(400).json({ error: 'Campo obrigatório: token' });
+
+    await confirmacaoService.confirmarEmail(token, req);
+    return res.json({ message: 'E-mail confirmado. Faça login para entrar.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function reenviarConfirmacao(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { email } = req.body ?? {};
+    if (typeof email !== 'string' || email.length === 0) {
+      return res.status(400).json({ error: 'Campo obrigatório: email' });
+    }
+
+    await confirmacaoService.reenviarConfirmacao(authService.normalizarEmail(email), req);
+    return res.json({ message: MENSAGEM_REENVIO });
   } catch (err) {
     next(err);
   }

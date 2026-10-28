@@ -17,11 +17,14 @@ const AUTH_ENDPOINTS = [
 
 export class ApiError extends Error {
   status: number;
+  // Código de máquina enviado pela API em alguns erros (ex.: EMAIL_NAO_CONFIRMADO).
+  codigo?: string;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, codigo?: string) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.codigo = codigo;
   }
 }
 
@@ -84,8 +87,8 @@ export function toApiError(err: unknown): ApiError {
   if (err instanceof ApiError) return err;
   if (axios.isAxiosError(err)) {
     const status = err.response?.status ?? 0;
-    const message = (err.response?.data as { error?: string } | undefined)?.error;
-    return new ApiError(message ?? 'Erro na requisição', status);
+    const corpo = err.response?.data as { error?: string; codigo?: string } | undefined;
+    return new ApiError(corpo?.error ?? 'Erro na requisição', status, corpo?.codigo);
   }
   return new ApiError('Erro na requisição', 0);
 }

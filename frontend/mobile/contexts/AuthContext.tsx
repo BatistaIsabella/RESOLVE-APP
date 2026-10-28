@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
-import { AuthResponse, authService, exigeConfiguracaoMfa, exigeMfa } from '@/services/authService';
+import { AuthResponse, authService, exigeConfiguracaoMfa, exigeConfirmacaoEmail, exigeMfa } from '@/services/authService';
 import { contaService } from '@/services/contaService';
 import { ApiError } from '@/lib/api';
 import { setAuthSnapshot, setUnauthorizedHandler } from '@/lib/authToken';
@@ -17,9 +17,10 @@ interface CadastroDados {
   codigoAcesso?: string;
 }
 
-// Resultado do login: sessão aberta, ou uma etapa de MFA ainda por fazer.
+// Resultado do login: sessão aberta, uma etapa de MFA ainda por fazer, ou (só no cadastro) o e-mail por confirmar.
 export type ResultadoLogin =
   | { tipo: 'sessao'; role: Papel }
+  | { tipo: 'confirmar-email' }
   | { tipo: 'mfa'; desafio: string }
   | { tipo: 'mfa-configuracao'; desafio: string };
 
@@ -154,7 +155,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(true);
       setError(null);
       try {
-        await authService.register({ ...dados, versaoTermos: VERSAO_TERMOS });
+        const resposta = await authService.register({ ...dados, versaoTermos: VERSAO_TERMOS });
+        // Sem sessão até o e-mail ser confirmado: a tela seguinte pede o código enviado por e-mail.
+        if (exigeConfirmacaoEmail(resposta)) return { tipo: 'confirmar-email' as const };
         return await autenticar(dados.email, dados.senha);
       } catch (err) {
         setError(err instanceof ApiError ? err.message : 'Erro ao criar conta');

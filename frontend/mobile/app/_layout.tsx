@@ -15,6 +15,7 @@ export default function RootLayout() {
           <Stack.Screen name="cadastro" />
           <Stack.Screen name="esqueci-senha" />
           <Stack.Screen name="redefinir-senha" />
+          <Stack.Screen name="confirmar-email" />
           <Stack.Screen name="privacidade" />
           <Stack.Screen name="aceite-termos" />
           <Stack.Screen name="perfil" />
