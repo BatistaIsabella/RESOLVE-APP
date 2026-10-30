@@ -3,6 +3,9 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     include: ['src/tests/unit/**/*.test.ts'],
+    env: {
+      JWT_SECRET: 'change-me',
+    },
     coverage: {
       provider: 'v8',
       include: [

@@ -34,7 +34,7 @@
  *      depender do front-end — GET /demands/gestor sem token responde 401
  *      e, com token de cidadão, responde 403.
  *
- * ⚠️ BUG ENCONTRADO AO ESCREVER ESTE TESTE (ver BUG-04 no RELATORIO_BUGS.md):
+ * ⚠️ BUG ENCONTRADO AO ESCREVER ESTE TESTE (ver BUG-04 em docs/testes/RELATORIO_BUGS.md):
  * hoje o guard do painel roda ANTES de o Zustand reidratar o token do
  * localStorage, então QUALQUER carga direta de URL (digitar o endereço, dar
  * F5) derruba o usuário pro login — inclusive um gestor legítimo. Isso tem

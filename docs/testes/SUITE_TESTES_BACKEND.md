@@ -285,11 +285,11 @@ Se `JWT_SECRET` não estiver configurado no `.env`, os tokens gerados pelos test
 
 Os testes foram executados em ambiente corporativo com restrição de rede. A conexão com o banco de dados Supabase (porta 6543) foi bloqueada pelo firewall da rede local, mesmo com hotspot móvel como alternativa.
 
-**auth-service** (`evidencias_auth.txt`):
+**auth-service** (`docs/testes/evidencias/evidencias_auth.txt`):
 - ✅ 10 testes passaram — validações de campos obrigatórios, papel inválido, CORS preflight
 - ❌ 16 falharam — todos por `Can't reach database server` (bloqueio de rede)
 
-**demand-service** (`evidencias_demand.txt`):
+**demand-service** (`docs/testes/evidencias/evidencias_demand.txt`):
 - Mesma condição — testes de validação passaram; testes com banco falharam por bloqueio de rede
 
 > Os testes que passaram confirmam que o framework está configurado corretamente e que a lógica de validação da API funciona. As falhas são exclusivamente de infraestrutura (conectividade de rede), não de código.
@@ -335,6 +335,6 @@ Ferramentas de IA foram utilizadas como apoio em etapas específicas desta ativi
 
 - **Revisão e melhoria dos scripts:** os códigos construídos pelo squad foram revisados com apoio de IA para identificar melhorias de clareza, cobertura de casos de borda e consistência nos padrões de asserção adotados.
 
-- **Geração do plano de QA atualizado:** a IA foi utilizada na geração do arquivo consolidado do plano de QA (`plano-qa.html`), incorporando todos os cenários automatizados, a análise de riscos, critérios de aceite e os bugs identificados durante a execução.
+- **Geração do plano de QA atualizado:** a IA foi utilizada na geração do arquivo consolidado do plano de QA (`docs/testes/plano-qa.html`), incorporando todos os cenários automatizados, a análise de riscos, critérios de aceite e os bugs identificados durante a execução.
 
 Todo o código gerado com apoio de IA foi compreendido, revisado e validado pelo squad. A seleção dos cenários, a análise dos resultados e a responsabilidade pela entrega final são integralmente da equipe.
