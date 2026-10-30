@@ -111,9 +111,28 @@ describe('updateDenunciaStatus', () => {
     expect(txFake.denuncia.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id_denuncia: DENUNCIA_ID },
-        data:  { status: 'EM_ANALISE' },
+        data:  { status: 'EM_ANALISE', data_conclusao: null },
       })
     );
+  });
+
+  it('grava a data de conclusão ao marcar como RESOLVIDA', async () => {
+    const txFake = setupTransactionMock();
+
+    await updateDenunciaStatus(USUARIO_ID, DENUNCIA_ID, 'RESOLVIDA');
+
+    const { data } = txFake.denuncia.update.mock.calls[0][0];
+    expect(data.status).toBe('RESOLVIDA');
+    expect(data.data_conclusao).toBeInstanceOf(Date);
+  });
+
+  it('limpa a data de conclusão quando a denúncia sai de RESOLVIDA', async () => {
+    const txFake = setupTransactionMock();
+    db.denuncia.findUnique.mockResolvedValue({ ...denunciaAberta, status: 'RESOLVIDA' as const });
+
+    await updateDenunciaStatus(USUARIO_ID, DENUNCIA_ID, 'EM_ANALISE');
+
+    expect(txFake.denuncia.update.mock.calls[0][0].data.data_conclusao).toBeNull();
   });
 
   it('devolve a denúncia com as imagens (o app substitui o item da lista por ela)', async () => {

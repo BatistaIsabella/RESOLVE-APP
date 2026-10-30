@@ -1,8 +1,23 @@
 import { useAuthContext } from '@/contexts/AuthContext';
 
 export function useAuth() {
-  const { token, role, userName, userEmail, isLoading, hasHydrated, login, register, logout } =
-    useAuthContext();
+  const {
+    token,
+    role,
+    userName,
+    userEmail,
+    orgao,
+    termosPendentes,
+    isLoading,
+    hasHydrated,
+    login,
+    register,
+    concluirLoginMfa,
+    iniciarSessao,
+    logout,
+    aceitarTermos,
+    atualizarSessao,
+  } = useAuthContext();
 
   const isAuthenticated = !!token;
   const isCidadao = role === 'cidadao';
@@ -13,6 +28,8 @@ export function useAuth() {
     role,
     userName,
     userEmail,
+    orgao,
+    termosPendentes,
     isLoading,
     hasHydrated,
     isAuthenticated,
@@ -20,6 +37,10 @@ export function useAuth() {
     isGestor,
     login,
     register,
+    concluirLoginMfa,
+    iniciarSessao,
     logout,
+    aceitarTermos,
+    atualizarSessao,
   };
 }

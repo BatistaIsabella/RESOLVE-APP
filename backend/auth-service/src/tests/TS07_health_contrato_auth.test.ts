@@ -2,6 +2,8 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { PrismaClient } from '@prisma/client';
 import app from '../app';
+import { hashDoEmail } from '../utils/emailProtegido';
+import { CODIGO_GESTOR, SENHA_FORTE, TERMOS } from './helpers/dados';
 
 const prisma = new PrismaClient();
 const emailsParaLimpar: string[] = [];
@@ -9,8 +11,8 @@ const emailsParaLimpar: string[] = [];
 const usuarioBase = {
   nome: 'Contrato TS07',
   email: `ts07.contrat.${Date.now()}@test.com`,
-  senha: 'senha123',
-  papel: 'cidadao',
+  senha: SENHA_FORTE,
+  papel: 'cidadao', ...TERMOS,
 };
 
 beforeAll(async () => {
@@ -20,7 +22,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (emailsParaLimpar.length > 0) {
-    await prisma.usuario.deleteMany({ where: { email: { in: emailsParaLimpar } } });
+    await prisma.usuario.deleteMany({ where: { email_hash: { in: emailsParaLimpar.map(hashDoEmail) } } });
   }
   await prisma.$disconnect();
 });
@@ -53,12 +55,22 @@ describe('TS07 - Health check e contrato da API (auth-service)', () => {
 
   describe('2 — Headers CORS', () => {
 
-    it('Given qualquer requisição ao auth-service, When resposta chega, Then Access-Control-Allow-Origin está presente', async () => {
+    it('Given origem não configurada em CORS_ORIGINS, When resposta chega, Then Access-Control-Allow-Origin não é enviado', async () => {
       const res = await request(app)
         .post('/auth/login')
+        .set('Origin', 'https://site-qualquer.com')
         .send({ email: usuarioBase.email, senha: usuarioBase.senha });
 
-      expect(res.headers['access-control-allow-origin']).toBeDefined();
+      expect(res.headers['access-control-allow-origin']).toBeUndefined();
+    });
+
+    it('Given origem listada em CORS_ORIGINS, When resposta chega, Then Access-Control-Allow-Origin repete só essa origem', async () => {
+      const res = await request(app)
+        .post('/auth/login')
+        .set('Origin', 'https://painel.resolve.app')
+        .send({ email: usuarioBase.email, senha: usuarioBase.senha });
+
+      expect(res.headers['access-control-allow-origin']).toBe('https://painel.resolve.app');
     });
 
     it('Given requisição OPTIONS (preflight CORS), When OPTIONS /auth/register, Then retorna 204', async () => {
@@ -76,7 +88,7 @@ describe('TS07 - Health check e contrato da API (auth-service)', () => {
 
       const res = await request(app)
         .post('/auth/register')
-        .send({ nome: 'Reg TS07', email, senha: 'abc123', papel: 'cidadao' });
+        .send({ nome: 'Reg TS07', email, senha: SENHA_FORTE, papel: 'cidadao', ...TERMOS });
 
       expect(res.status).toBe(201);
       expect(typeof res.body.id).toBe('number');
@@ -88,11 +100,11 @@ describe('TS07 - Health check e contrato da API (auth-service)', () => {
     it('Given registro bem-sucedido, When POST /auth/register, Then resposta NÃO expõe o campo senha', async () => {
       const email = `ts07.nosinha.${Date.now()}@test.com`;
       emailsParaLimpar.push(email);
-      const codigoAcesso = process.env.GESTOR_ACCESS_CODE || 'change-me-codigo-gestor';
+      const codigoAcesso = CODIGO_GESTOR;
 
       const res = await request(app)
         .post('/auth/register')
-        .send({ nome: 'Sem Senha TS07', email, senha: 'secreto999', papel: 'gestor', codigoAcesso });
+        .send({ nome: 'Sem Senha TS07', email, senha: SENHA_FORTE, papel: 'gestor', ...TERMOS, codigoAcesso });
 
       expect(res.status).toBe(201);
       expect(res.body.senha).toBeUndefined();

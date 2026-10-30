@@ -1,6 +1,7 @@
 import { Categorias, Regioes, NivelPrioridade } from '@prisma/client';
 import * as repo from '../repositories/DenunciaRepository';
 import { getRedisPublisher } from '../config/redis';
+import { limparCacheMetricas } from '../utils/metricsCache';
 
 export type CreateDemandInput = {
   titulo: string;
@@ -22,7 +23,7 @@ export async function createDemand(usuarioId: number, data: CreateDemandInput) {
 
   try {
     const redis = await getRedisPublisher();
-    await redis.del('smartcity:metrics:kpis');
+    await limparCacheMetricas(redis);
   } catch {
     // nao bloqueia a criacao se o Redis estiver indisponivel
   }

@@ -157,7 +157,7 @@ describe('createDenuncia', () => {
 
     expect(db.denuncia.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ email_solicitante: 'cidadao@test.com' }),
+        data: expect.objectContaining({ email_solicitante_cifrado: expect.stringMatching(/^enc:v1:/) }),
       })
     );
   });
@@ -167,7 +167,7 @@ describe('createDenuncia', () => {
 
     expect(db.denuncia.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ email_solicitante: null }),
+        data: expect.objectContaining({ email_solicitante_cifrado: null }),
       })
     );
   });

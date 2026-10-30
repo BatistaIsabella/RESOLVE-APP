@@ -8,7 +8,7 @@ export async function getKpis(req: AuthRequest, res: Response, next: NextFunctio
       return res.status(403).json({ error: 'Acesso negado para este perfil' });
     }
 
-    const metrics = await getMetrics();
+    const metrics = await getMetrics(req.user.categorias);
     return res.json(metrics);
   } catch (err) {
     next(err);
@@ -21,7 +21,7 @@ export async function refreshKpis(req: AuthRequest, res: Response, next: NextFun
       return res.status(403).json({ error: 'Acesso negado para este perfil' });
     }
 
-    const metrics = await refreshMetricsCache();
+    const metrics = await refreshMetricsCache(req.user.categorias);
     return res.json(metrics);
   } catch (err) {
     next(err);

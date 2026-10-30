@@ -182,13 +182,21 @@ describe('validateCreateDenunciaInput', () => {
     expect(resultado.prioridade).toBe('ALTA');
   });
 
-  it('aceita imagens como array de strings', () => {
-    const resultado = validateCreateDenunciaInput({
-      ...inputValido,
-      imagens: ['foto1.jpg', 'foto2.jpg'],
-    });
+  it('aceita imagens válidas em base64', () => {
+    const fotos = [
+      `data:image/jpeg;base64,${Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0x10]).toString('base64')}`,
+      `data:image/png;base64,${Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).toString('base64')}`,
+    ];
 
-    expect(resultado.imagens).toEqual(['foto1.jpg', 'foto2.jpg']);
+    const resultado = validateCreateDenunciaInput({ ...inputValido, imagens: fotos });
+
+    expect(resultado.imagens).toEqual(fotos);
+  });
+
+  it('recusa imagens que não são data URI de imagem', () => {
+    expect(() => validateCreateDenunciaInput({ ...inputValido, imagens: ['foto1.jpg'] })).toThrowError(
+      expect.objectContaining({ status: 400 })
+    );
   });
 
   it('lança erro 400 quando titulo está ausente', () => {

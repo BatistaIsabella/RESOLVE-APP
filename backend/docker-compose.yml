@@ -4,10 +4,12 @@ services:
     image: redis:7-alpine
     container_name: smartcity_redis
     restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis-dev}
+    # Publicado só na máquina local, para depuração.
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD:-redis-dev} --no-auth-warning ping | grep PONG"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -21,7 +23,7 @@ services:
       POSTGRES_PASSWORD: postgrespassword
       POSTGRES_DB: postgres
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -30,6 +32,8 @@ services:
       timeout: 5s
       retries: 5
 
+  # Em desenvolvimento os serviços usam o usuário administrador do banco.
+  # Os usuários por serviço (menor privilégio) são configurados em docker-compose.prod.yml.
   auth-service:
     build: ./auth-service
     container_name: smartcity_auth
@@ -37,11 +41,28 @@ services:
     environment:
       PORT: 3001
       DATABASE_URL: "postgresql://postgres:postgrespassword@postgres:5432/postgres?schema=public"
-      #DATABASE_URL_AUTH: "postgresql://postgres:postgrespassword@postgres:5432/postgres?schema=public"
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis-dev}@redis:6379
+      JWT_SECRET: ${JWT_SECRET:-segredo-somente-desenvolvimento}
+      DEMAND_SERVICE_URL: http://demand-service:3002
+      GESTOR_ACCESS_CODE: ${GESTOR_ACCESS_CODE:-change-me-codigo-gestor}
+      GESTOR_ACCESS_CODES: ${GESTOR_ACCESS_CODES:-}
+      MFA_HABILITADO: ${MFA_HABILITADO:-false}
+      MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:-}
+      DADOS_ENCRYPTION_KEY: ${DADOS_ENCRYPTION_KEY:-}
+      EMAIL_HASH_KEY: ${EMAIL_HASH_KEY:-}
+      MFA_OBRIGATORIO_GESTOR: ${MFA_OBRIGATORIO_GESTOR:-false}
+      CONFIRMACAO_EMAIL_HABILITADA: ${CONFIRMACAO_EMAIL_HABILITADA:-false}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
     ports:
       - "3001:3001"
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   demand-service:
@@ -50,9 +71,10 @@ services:
     restart: always
     environment:
       PORT: 3002
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis-dev}@redis:6379
       DATABASE_URL: "postgresql://postgres:postgrespassword@postgres:5432/postgres?schema=public"
-      #DATABASE_URL_AUTH: "postgresql://postgres:postgrespassword@postgres:5432/postgres?schema=public"
+      JWT_SECRET: ${JWT_SECRET:-segredo-somente-desenvolvimento}
+      DADOS_ENCRYPTION_KEY: ${DADOS_ENCRYPTION_KEY:-}
     ports:
       - "3002:3002"
     depends_on:
@@ -67,9 +89,9 @@ services:
     restart: always
     environment:
       PORT: 3003
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis-dev}@redis:6379
       DATABASE_URL: "postgresql://postgres:postgrespassword@postgres:5432/postgres?schema=public"
-      #DATABASE_URL_AUTH: "postgresql://postgres:postgrespassword@postgres:5432/postgres?schema=public"
+      JWT_SECRET: ${JWT_SECRET:-segredo-somente-desenvolvimento}
     ports:
       - "3003:3003"
     depends_on:

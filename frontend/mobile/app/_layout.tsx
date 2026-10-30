@@ -13,6 +13,14 @@ export default function RootLayout() {
           <Stack.Screen name="index" />
           <Stack.Screen name="login" />
           <Stack.Screen name="cadastro" />
+          <Stack.Screen name="esqueci-senha" />
+          <Stack.Screen name="redefinir-senha" />
+          <Stack.Screen name="confirmar-email" />
+          <Stack.Screen name="privacidade" />
+          <Stack.Screen name="aceite-termos" />
+          <Stack.Screen name="perfil" />
+          <Stack.Screen name="mfa" />
+          <Stack.Screen name="mfa-configurar" />
           <Stack.Screen name="denuncias" />
           <Stack.Screen name="gestor" />
         </Stack>

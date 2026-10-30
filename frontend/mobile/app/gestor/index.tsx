@@ -68,6 +68,7 @@ export default function GestorScreen() {
         variant="gestor"
         onBack={vm.goHome}
         onLogout={vm.handleLogout}
+        onProfile={vm.goToPerfil}
       />
 
       <FlatList

@@ -1,0 +1,175 @@
+# Segurança e LGPD: roteiro de testes
+
+Oi! Terminei a parte de segurança e LGPD dos Entregáveis 1, 2 e 3 no app e no backend. Está na branch `feat/seguranca-lgpd`, ainda sem subir para a `main`. Você consegue testar antes de eu abrir o PR? Preciso principalmente de olhos no app, porque as telas novas eu só consegui conferir por tipagem, lint e geração do bundle, **não abri em celular**.
+
+O que mudou, item por item, está em [IMPLEMENTACAO.md](IMPLEMENTACAO.md). Aqui está só o que precisa ser testado e o que deve acontecer.
+
+## Como preparar o ambiente
+
+1. Subir o backend (`backend/`, `docker compose up -d --build`). Em desenvolvimento o Redis agora tem senha, e o `docker-compose.yml` já traz um valor padrão.
+2. Para testar gestores por órgão, definir no `.env` do backend, por exemplo:
+   `GESTOR_ACCESS_CODES=GERAL=geral-123;ILUMINACAO=luz-123;OBRAS_E_SANEAMENTO=obras-123`
+3. Para o bloqueio de login não demorar 15 minutos nos testes, dá para usar `LOGIN_BLOQUEIO_MINUTOS=1`.
+4. Sem SMTP configurado, o e-mail de redefinição de senha não sai. Em desenvolvimento o link aparece no log do auth-service (`docker compose logs auth-service`). Se quiser testar o e-mail de verdade, preencher `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` e `SMTP_FROM`.
+5. Rodar o app (`cd frontend/mobile && npm install && npm start`) apontando `EXPO_PUBLIC_API_GATEWAY_URL` para o gateway.
+
+Se alguma coisa não bater, anota o passo, o que apareceu na tela e, se der, o print.
+
+## 1. Cadastro e senha
+
+| # | O que fazer | O que deve acontecer | OK? |
+|---|---|---|---|
+| 1.1 | Abrir o cadastro e digitar uma senha aos poucos | A lista abaixo do campo vai marcando cada requisito (12 caracteres, maiúscula, minúscula, número, símbolo) | [ ] |
+| 1.2 | Tentar cadastrar com `senha123` | Mensagem dizendo o que falta, sem criar a conta | [ ] |
+| 1.3 | Tentar uma senha que cumpre as regras mas é comum (ex.: `Senha@123456`) | O servidor recusa dizendo que a senha é muito comum | [ ] |
+| 1.4 | Tentar uma senha que contém o seu nome | O servidor recusa | [ ] |
+| 1.5 | Preencher tudo certo, mas sem marcar o aceite | Mensagem pedindo para aceitar a Política e os Termos | [ ] |
+| 1.6 | Tocar no link da política no cadastro | Abre a tela com a Política de Privacidade e os Termos de Uso, e dá para voltar | [ ] |
+| 1.7 | Marcar o aceite e criar a conta | Conta criada e login automático | [ ] |
+| 1.8 | Cadastrar de novo o mesmo e-mail, trocando maiúsculas e minúsculas | Recusa informando que o e-mail já existe | [ ] |
+
+## 2. Login, bloqueio e sessão
+
+| # | O que fazer | O que deve acontecer | OK? |
+|---|---|---|---|
+| 2.1 | Entrar com senha errada, com e-mail que existe e com e-mail que não existe | A mensagem é a mesma nos dois casos ("Credenciais inválidas" ou equivalente) | [ ] |
+| 2.2 | Errar a senha 3 vezes seguidas e tentar uma 4ª vez, agora com a senha certa | A 4ª tentativa é bloqueada com mensagem de "muitas tentativas" | [ ] |
+| 2.3 | Esperar o fim do bloqueio e entrar | Entra normalmente | [ ] |
+| 2.4 | Errar 2 vezes, acertar, errar mais 2 | Não bloqueia (o acerto zera a contagem) | [ ] |
+| 2.5 | Fazer login, fechar o app por completo e abrir de novo (com "Mantenha-me conectado") | Continua logado | [ ] |
+| 2.6 | Tocar em "Sair" e abrir o app | Volta para a tela inicial, sem sessão | [ ] |
+
+## 3. Esqueci minha senha
+
+| # | O que fazer | O que deve acontecer | OK? |
+|---|---|---|---|
+| 3.1 | No login, tocar em "Esqueci minha senha" e informar um e-mail cadastrado | Mensagem genérica de que, se o e-mail existir, as instruções serão enviadas | [ ] |
+| 3.2 | Repetir com um e-mail que não existe | Exatamente a mesma mensagem | [ ] |
+| 3.3 | Pegar o código (no e-mail ou no log) e usar em "Redefinir senha" com uma senha forte | Senha trocada, e o login com a senha nova funciona | [ ] |
+| 3.4 | Tentar redefinir com uma senha fraca | Recusa explicando o motivo, e o código continua valendo | [ ] |
+| 3.5 | Usar o mesmo código uma segunda vez | Recusa ("inválido ou expirado") | [ ] |
+| 3.6 | Pedir o código e esperar mais de 30 minutos (ou usar `TOKEN_REDEFINICAO_MINUTOS=1`) | Código expirado é recusado | [ ] |
+| 3.7 | Bloquear uma conta com 3 senhas erradas e depois redefinir a senha | O login volta a funcionar logo após a redefinição | [ ] |
+
+## 4. Termos de uso (contas antigas e nova versão)
+
+| # | O que fazer | O que deve acontecer | OK? |
+|---|---|---|---|
+| 4.1 | Entrar com uma conta criada antes desta versão (que nunca aceitou os termos) | O app mostra a tela "Privacidade e termos" antes de liberar as telas | [ ] |
+| 4.2 | Tocar em "Li e aceito" | Entra na tela normal, e não pergunta de novo no próximo login | [ ] |
+| 4.3 | Tocar em "Sair" nessa tela | Volta para a tela inicial, sem sessão | [ ] |
+
+## 5. Meus dados (toque no nome no topo da lista de denúncias ou do painel do gestor)
+
+| # | O que fazer | O que deve acontecer | OK? |
+|---|---|---|---|
+| 5.1 | Abrir a tela | Mostra nome, e-mail, tipo de conta (e órgão, se for gestor) | [ ] |
+| 5.2 | Mudar o nome e salvar | Salva; o nome novo aparece no topo das telas | [ ] |
+| 5.3 | Mudar o e-mail e salvar, depois sair e entrar com o e-mail novo | Funciona; com um e-mail que já existe em outra conta, recusa | [ ] |
+| 5.4 | Trocar a senha informando a senha atual errada | Recusa | [ ] |
+| 5.5 | Trocar a senha corretamente, estando logado em dois aparelhos/emuladores | Este continua logado; no outro, a próxima ação pede login de novo | [ ] |
+| 5.6 | Tocar em "Exportar meus dados" | Abre a folha de compartilhamento com um JSON com os dados da conta e das denúncias (fotos só contadas) | [ ] |
+| 5.7 | Tocar em "Ler Política de Privacidade e Termos de Uso" | Abre a tela de leitura | [ ] |
+| 5.8 | Criar uma conta de teste com uma denúncia com foto e excluir a conta (pede a senha) | Volta para a tela inicial; o login com essa conta deixa de funcionar | [ ] |
+| 5.9 | Depois disso, entrar como gestor e abrir aquela denúncia | A denúncia continua lá, sem e-mail de solicitante e sem foto | [ ] |
+
+## 6. Gestor por órgão
+
+| # | O que fazer | O que deve acontecer | OK? |
+|---|---|---|---|
+| 6.1 | Cadastrar um gestor com um código inválido | Recusa ("código de acesso inválido") | [ ] |
+| 6.2 | Cadastrar um gestor com o código de `ILUMINACAO` | Cadastra; na tela "Meus dados" aparece o órgão | [ ] |
+| 6.3 | Com cidadãos, criar denúncias de iluminação, de lixo e de vias | As denúncias são criadas | [ ] |
+| 6.4 | Entrar como gestor de iluminação | A lista e o painel mostram só denúncias de iluminação, e os números do painel batem com isso | [ ] |
+| 6.5 | Entrar como gestor geral | Vê todas as categorias, e os números do painel somam tudo | [ ] |
+| 6.6 | Como gestor de iluminação, tentar mudar o status de uma denúncia de outra categoria (pela API, se quiser: `PATCH /demands/gestor/{id}/status`) | Responde 404 e nada muda | [ ] |
+| 6.7 | Mudar o status de uma denúncia para "Resolvida" e depois voltar para "Aberta" | Funciona nas duas direções | [ ] |
+
+## 7. Privacidade entre cidadãos (pela API)
+
+| # | O que fazer | O que deve acontecer | OK? |
+|---|---|---|---|
+| 7.1 | Com o token do cidadão B, chamar `GET /demands/feed` | As denúncias do cidadão A aparecem sem `email_solicitante` e sem `cidadao_id`, com coordenadas de 3 casas | [ ] |
+| 7.2 | Com o token do cidadão B, chamar `GET /demands/{id da denúncia do A}` | 404 | [ ] |
+| 7.3 | Chamar `GET /demands/gestor` com o token de um cidadão | 403 | [ ] |
+
+## 8. Verificação em duas etapas (gestor)
+
+A MFA vem desligada. Para testar, ligar `MFA_HABILITADO=true` no auth-service, deixar `MFA_OBRIGATORIO_GESTOR=false` no primeiro teste e ter um app autenticador no celular. Com ela desligada, o cartão não aparece em "Meus dados" e o gestor entra só com e-mail e senha (vale conferir isso também).
+
+| # | O que fazer | O que deve acontecer | OK? |
+|---|---|---|---|
+| 8.1 | Como gestor, abrir "Meus dados" | Aparece o cartão de verificação em duas etapas (cidadão não vê) | [ ] |
+| 8.2 | Tocar em "Ativar" e depois em "Abrir no autenticador" | O app autenticador adiciona a conta "RESOLVE" | [ ] |
+| 8.3 | Informar um código errado e depois o certo | Recusa o errado; o certo ativa e mostra 8 códigos de recuperação | [ ] |
+| 8.4 | Sair e entrar com e-mail e senha | Pede o código antes de abrir o painel | [ ] |
+| 8.5 | Tentar de novo o mesmo código que acabou de usar | Recusa, cada código vale uma vez | [ ] |
+| 8.6 | Entrar com um código de recuperação | Entra; usar o mesmo de novo é recusado | [ ] |
+| 8.7 | Errar o código 3 vezes | Bloqueia por 15 minutos | [ ] |
+| 8.8 | Desativar em "Meus dados" com senha e código | Desativa e o login volta a ser só com a senha | [ ] |
+| 8.9 | Com `MFA_OBRIGATORIO_GESTOR=true`, entrar como gestor sem MFA | O app leva para a configuração e só abre o painel depois de ativar | [ ] |
+
+## 9. Infraestrutura (para quem faz o deploy)
+
+| # | O que conferir | O que deve acontecer | OK? |
+|---|---|---|---|
+| 9.1 | Subir um serviço sem `JWT_SECRET` | O serviço não sobe e avisa o motivo | [ ] |
+| 9.2 | Tentar conectar no Redis sem senha | Recusa (NOAUTH) | [ ] |
+| 9.3 | No `docker-compose.prod.yml`, entrar no banco com cada usuário (`auth_svc`, `demand_svc`, `metrics_svc`) | Cada um só enxerga o próprio schema, e o `metrics_svc` só consegue ler | [ ] |
+| 9.4 | Em produção, sem `GESTOR_ACCESS_CODES`, cadastrar um gestor | Recusa (403) | [ ] |
+| 9.5 | Mais de 100 chamadas em `/auth` em 15 minutos pelo mesmo IP | O gateway começa a responder 429 | [ ] |
+
+## 10. E-mail cifrado e confirmação de e-mail
+
+### 10.1 E-mail cifrado no banco (para quem faz o deploy)
+
+Gere `DADOS_ENCRYPTION_KEY` e `EMAIL_HASH_KEY` com `openssl rand -base64 32`, uma para cada, e defina as duas no auth-service (a primeira também no demand-service). Faça um backup do banco antes.
+
+| # | O que fazer | O que deve acontecer | OK? |
+|---|---|---|---|
+| 10.1 | Subir o auth-service e o demand-service em produção sem as chaves | Os dois não sobem e avisam qual variável falta | [ ] |
+| 10.2 | Cadastrar uma conta e consultar `SELECT email, email_hash FROM auth.usuarios` | A coluna `email` mostra algo começando por `enc:v1:` (ilegível) e `email_hash` tem 64 caracteres hexadecimais | [ ] |
+| 10.3 | Entrar com essa conta, em maiúsculas e minúsculas diferentes | Entra normalmente, e o app mostra o e-mail em texto | [ ] |
+| 10.4 | Registrar uma denúncia e consultar `SELECT email_solicitante FROM demand.denuncias` | A coluna mostra `enc:v1:` (ilegível), mas o gestor do órgão vê o e-mail em texto na tela da denúncia | [ ] |
+| 10.5 | Em um banco com contas antigas (e-mail em texto), subir o auth-service | O log mostra "e-mail(s) migrado(s) para o formato cifrado", as contas antigas entram, e a coluna `email` passa a ficar ilegível | [ ] |
+| 10.6 | Trocar o e-mail pela tela "Meus dados" | O novo entra e o antigo não | [ ] |
+
+### 10.2 Confirmação de e-mail
+
+Ligue `CONFIRMACAO_EMAIL_HABILITADA=true` no auth-service. Sem SMTP o código aparece no log (`docker compose logs auth-service`). Só o app mobile foi adaptado.
+
+| # | O que fazer | O que deve acontecer | OK? |
+|---|---|---|---|
+| 10.7 | Cadastrar uma conta nova | O app vai para a tela "Confirmar e-mail" e não entra ainda | [ ] |
+| 10.8 | Tentar entrar com essa conta antes de confirmar | O app leva para a tela "Confirmar e-mail" | [ ] |
+| 10.9 | Informar um código errado | Recusa ("Código inválido ou expirado") | [ ] |
+| 10.10 | Informar o código do e-mail (ou abrir o link) | "E-mail confirmado" e o login funciona | [ ] |
+| 10.11 | Usar o mesmo código de novo | Recusa | [ ] |
+| 10.12 | Tocar em "Reenviar o código" | Mensagem genérica; chega um código novo (e o anterior deixa de valer). Dois toques seguidos em menos de 1 minuto só enviam um | [ ] |
+| 10.13 | Cadastrar de novo um e-mail que já tem conta | A tela mostra o mesmo que no item 10.7. O dono do e-mail recebe um aviso ("você já tem uma conta"), e nenhuma conta nova é criada | [ ] |
+| 10.14 | Com a conta pendente, repetir o cadastro com outra senha e confirmar | Vale a senha do último cadastro | [ ] |
+| 10.15 | Uma conta criada antes de ligar o recurso | Continua entrando sem confirmar nada | [ ] |
+| 10.16 | Usar "Esqueci minha senha" em uma conta pendente e redefinir | A conta fica confirmada e entra com a nova senha | [ ] |
+
+## O que eu já testei
+
+- Testes automáticos: auth 192, demand 370, metrics 14 e app 18, todos passando (auth e demand em um Postgres 16 local).
+- Antes da criptografia de coluna e da confirmação de e-mail, dois roteiros (45 verificações gerais e 26 de MFA) com os serviços rodando juntos (gateway, auth, demand, metrics, Postgres e um Redis com senha): cadastro, senha, bloqueio, órgão, feed, troca e recuperação de senha, exportação e exclusão da conta, e MFA (ativação, duas etapas, recuperação, bloqueio e desativação).
+- App: tipagem, lint, testes de utilitários e geração do bundle Android. **Os dois roteiros de ponta a ponta não foram repetidos depois da criptografia de coluna e da confirmação de e-mail.**
+
+## O que eu não consegui testar (por favor, olhem com mais atenção)
+
+- As telas novas em celular ou emulador (cadastro, esqueci/redefinir senha, termos, Meus dados, MFA e a confirmação de e-mail). Principalmente o visual e o compartilhamento do JSON.
+- O envio de e-mail real (SMTP).
+- O deploy no Render e no Docker de produção. O script dos usuários de banco foi testado em um Postgres local nos dois cenários (banco novo e banco existente), mas não no servidor de vocês.
+- O comportamento com o Redis fora do ar em produção. A ideia é o sistema continuar funcionando e só deixar de encerrar as sessões antigas.
+
+## O que ficou de fora
+
+- KMS para as chaves de criptografia (as chaves vêm de variáveis de ambiente) e criptografia das fotos, que a documentação trata como melhoria futura.
+- Preencher e aprovar o RIPD e o termo de cooperação com o órgão: os rascunhos existem, mas dependem de quem for o controlador.
+- Os textos da Política de Privacidade e dos Termos de Uso são um rascunho meu, e precisam de revisão antes de ir para produção.
+- Com a confirmação de e-mail desligada (o padrão), o cadastro ainda diz "E-mail já cadastrado", o que permite descobrir se um e-mail existe.
+- Alguns trechos dos documentos dos entregáveis não batem com o que o projeto tem (por exemplo, AsyncStorage e geolocalização em coluna própria). Estão listados na seção 5 do IMPLEMENTACAO.md.
+
+Obrigado por testar! Qualquer coisa estranha, me chama.

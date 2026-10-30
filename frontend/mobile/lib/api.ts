@@ -4,15 +4,27 @@ import { getAuthToken, notifyUnauthorized } from '@/lib/authToken';
 export const API_GATEWAY_URL =
   process.env.EXPO_PUBLIC_API_GATEWAY_URL ?? 'https://smartcity-api.beholder.app.br';
 
-const AUTH_ENDPOINTS = ['/auth/login', '/auth/register'];
+// Nestas rotas um 401 é erro de credencial/código, não sessão expirada.
+const AUTH_ENDPOINTS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/auth/mfa/configurar',
+  '/auth/mfa/ativar',
+  '/auth/mfa/desativar',
+];
 
 export class ApiError extends Error {
   status: number;
+  // Código de máquina enviado pela API em alguns erros (ex.: EMAIL_NAO_CONFIRMADO).
+  codigo?: string;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, codigo?: string) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.codigo = codigo;
   }
 }
 
@@ -32,9 +44,14 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<{ error?: string; message?: string }>) => {
+  (error: AxiosError<{ error?: string; message?: string; detalhes?: string[] }>) => {
     const status = error.response?.status ?? 0;
-    const message = error.response?.data?.error ?? error.response?.data?.message;
+    // Quando a senha não atende à política o servidor devolve cada motivo em `detalhes`.
+    const detalhes = error.response?.data?.detalhes;
+    const message =
+      detalhes && detalhes.length > 0
+        ? detalhes.join('\n')
+        : (error.response?.data?.error ?? error.response?.data?.message);
     const isAuthRequest = AUTH_ENDPOINTS.some((path) => error.config?.url?.includes(path));
 
     if (status === 401 && !isAuthRequest) {
@@ -57,6 +74,8 @@ api.interceptors.response.use(
       403: message ?? 'Você não tem permissão para esta ação.',
       404: message ?? 'Recurso não encontrado.',
       409: message ?? 'Conflito ao processar a solicitação.',
+      429: message ?? 'Muitas tentativas. Aguarde alguns minutos e tente de novo.',
+      502: message ?? 'Não foi possível concluir agora. Tente novamente em instantes.',
       500: 'Erro interno do servidor. Tente mais tarde.',
     };
 
@@ -68,8 +87,8 @@ export function toApiError(err: unknown): ApiError {
   if (err instanceof ApiError) return err;
   if (axios.isAxiosError(err)) {
     const status = err.response?.status ?? 0;
-    const message = (err.response?.data as { error?: string } | undefined)?.error;
-    return new ApiError(message ?? 'Erro na requisição', status);
+    const corpo = err.response?.data as { error?: string; codigo?: string } | undefined;
+    return new ApiError(corpo?.error ?? 'Erro na requisição', status, corpo?.codigo);
   }
   return new ApiError('Erro na requisição', 0);
 }

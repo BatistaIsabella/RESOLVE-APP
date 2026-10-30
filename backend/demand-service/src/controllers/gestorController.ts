@@ -7,7 +7,7 @@ export async function listarTodasDenuncias(req: AuthRequest, res: Response, next
   try {
     const pagination = parsePagination(req.query as Record<string, unknown>);
     const filtros = denunciaService.parseListFilters(req.query as Record<string, unknown>);
-    const resultado = await denunciaService.listAllDenuncias(pagination, filtros);
+    const resultado = await denunciaService.listAllDenuncias(pagination, filtros, req.user!.categorias);
     return res.json(resultado);
   } catch (err) {
     next(err);
@@ -17,7 +17,7 @@ export async function listarTodasDenuncias(req: AuthRequest, res: Response, next
 export async function getDenunciaDetalhesGestor(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const denunciaId = denunciaService.parseDenunciaId(req.params.id);
-    const denuncia = await denunciaService.getDenunciaByIdForGestor(denunciaId);
+    const denuncia = await denunciaService.getDenunciaByIdForGestor(denunciaId, req.user!.categorias);
     return res.json(denuncia);
   } catch (err) {
     next(err);
@@ -27,7 +27,7 @@ export async function getDenunciaDetalhesGestor(req: AuthRequest, res: Response,
 export async function excluirDenunciaGestor(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const denunciaId = denunciaService.parseDenunciaId(req.params.id);
-    await denunciaService.deleteDenunciaGestor(denunciaId);
+    await denunciaService.deleteDenunciaGestor(denunciaId, req.user!.categorias);
     return res.status(204).send();
   } catch (err) {
     next(err);
@@ -42,7 +42,8 @@ export async function atualizarStatusDenuncia(req: AuthRequest, res: Response, n
     const resultado = await denunciaService.updateDenunciaStatus(
       req.user!.userId,
       denunciaId,
-      novoStatus
+      novoStatus,
+      req.user!.categorias
     );
 
     return res.json(resultado);
@@ -59,7 +60,8 @@ export async function atualizarPrioridadeDenuncia(req: AuthRequest, res: Respons
     const resultado = await denunciaService.updateDenunciaPrioridade(
       req.user!.userId,
       denunciaId,
-      novaPrioridade
+      novaPrioridade,
+      req.user!.categorias
     );
 
     return res.json(resultado);

@@ -28,7 +28,7 @@ export async function listarFeedDenuncias(req: AuthRequest, res: Response, next:
   try {
     const pagination = parsePagination(req.query as Record<string, unknown>);
     const filtros = denunciaService.parseListFilters(req.query as Record<string, unknown>);
-    const resultado = await denunciaService.listAllDenuncias(pagination, filtros);
+    const resultado = await denunciaService.listFeedPublico(pagination, filtros);
     return res.json(resultado);
   } catch (err) {
     next(err);

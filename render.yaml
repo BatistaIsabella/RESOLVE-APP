@@ -27,10 +27,41 @@ services:
     dockerContext: ./backend/auth-service
     plan: free
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: DATABASE_URL_AUTH
         fromDatabase:
           name: smartcity-auth-db
           property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: smartcity-redis
+          type: redis
+          property: connectionString
+      - key: DEMAND_SERVICE_URL
+        fromService:
+          name: smartcity-demand
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      # Defina no painel do Render. Sem esta variável o cadastro de gestor fica fechado.
+      - key: GESTOR_ACCESS_CODES
+        sync: false
+      - key: MFA_ENCRYPTION_KEY
+        sync: false
+      - key: DADOS_ENCRYPTION_KEY
+        sync: false
+      - key: CONFIRMACAO_EMAIL_HABILITADA
+        value: "false"
+      - key: EMAIL_HASH_KEY
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
       - fromGroup: smartcity-shared
       - key: PORT
         value: 3001
@@ -51,6 +82,9 @@ services:
           name: smartcity-redis
           type: redis
           property: connectionString
+      # Tem de ser igual à do auth-service: cifra o e-mail do solicitante. Sem ela o serviço não sobe em produção.
+      - key: DADOS_ENCRYPTION_KEY
+        sync: false
       - fromGroup: smartcity-shared
       - key: PORT
         value: 3002

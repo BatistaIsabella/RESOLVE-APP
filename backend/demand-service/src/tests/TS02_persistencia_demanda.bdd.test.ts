@@ -22,9 +22,10 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import app from '../app';
+import { getJwtSecret } from '../config/env';
 
 const prisma = new PrismaClient();
-const SECRET = process.env.JWT_SECRET || 'smartcity-dev-secret';
+const SECRET = getJwtSecret();
 
 let token: string;
 let tokenGestor: string;

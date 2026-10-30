@@ -3,11 +3,13 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: redis-server --appendonly yes
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?defina REDIS_PASSWORD}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?defina REDIS_PASSWORD}
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD --no-auth-warning ping | grep PONG"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -19,6 +21,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?defina AUTH_DB_PASSWORD}
+      DEMAND_DB_PASSWORD: ${DEMAND_DB_PASSWORD:?defina DEMAND_DB_PASSWORD}
+      METRICS_DB_PASSWORD: ${METRICS_DB_PASSWORD:?defina METRICS_DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres-init:/docker-entrypoint-initdb.d:ro
@@ -34,11 +39,27 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-postgres}?schema=public
+      DATABASE_URL: postgresql://auth_svc:${AUTH_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:-postgres}?schema=auth
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET}
-      GESTOR_ACCESS_CODE: ${GESTOR_ACCESS_CODE:?defina GESTOR_ACCESS_CODE}
+      GESTOR_ACCESS_CODE: ${GESTOR_ACCESS_CODE:-}
+      GESTOR_ACCESS_CODES: ${GESTOR_ACCESS_CODES:-}
+      DEMAND_SERVICE_URL: http://demand-service:3002
+      MFA_HABILITADO: ${MFA_HABILITADO:-false}
+      MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:-}
+      DADOS_ENCRYPTION_KEY: ${DADOS_ENCRYPTION_KEY:?defina DADOS_ENCRYPTION_KEY}
+      EMAIL_HASH_KEY: ${EMAIL_HASH_KEY:?defina EMAIL_HASH_KEY}
+      MFA_OBRIGATORIO_GESTOR: ${MFA_OBRIGATORIO_GESTOR:-false}
+      CONFIRMACAO_EMAIL_HABILITADA: ${CONFIRMACAO_EMAIL_HABILITADA:-false}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/health"]
@@ -53,9 +74,10 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3002
-      REDIS_URL: redis://redis:6379
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-postgres}?schema=public
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      DATABASE_URL: postgresql://demand_svc:${DEMAND_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:-postgres}?schema=demand
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET}
+      DADOS_ENCRYPTION_KEY: ${DADOS_ENCRYPTION_KEY:?defina DADOS_ENCRYPTION_KEY}
     depends_on:
       redis:
         condition: service_healthy
@@ -74,8 +96,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3003
-      REDIS_URL: redis://redis:6379
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-postgres}?schema=public
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      DATABASE_URL: postgresql://metrics_svc:${METRICS_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:-postgres}?schema=demand
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET}
     depends_on:
       redis:

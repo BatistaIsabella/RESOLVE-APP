@@ -19,7 +19,7 @@ permissions:
 env:
   DATABASE_URL_AUTH: postgresql://postgres:postgrespassword@localhost:5432/postgres?schema=auth
   DATABASE_URL_DEMAND: postgresql://postgres:postgrespassword@localhost:5432/postgres?schema=demand
-  REDIS_URL: redis://localhost:6379
+  REDIS_URL: redis://:redis-dev@localhost:6379
   JWT_SECRET: ci-secret-resolve-app
 
 jobs:
@@ -43,7 +43,7 @@ jobs:
         id: unitarios_mobile
         continue-on-error: true
         working-directory: resolve-app
-        run: node --test frontend/mobile/utils/__tests__/extractBairro.test.mjs
+        run: node --experimental-strip-types --test frontend/mobile/utils/__tests__/extractBairro.test.mjs frontend/mobile/utils/__tests__/senha.test.mjs frontend/mobile/utils/__tests__/mfa.test.mjs
 
       - name: Instalar dependências — demand-service
         working-directory: resolve-app/backend/demand-service
@@ -64,7 +64,7 @@ jobs:
       - name: Aguardar PostgreSQL e Redis ficarem prontos
         run: |
           timeout 60 bash -c 'until docker exec smartcity_postgres pg_isready -U postgres; do sleep 2; done'
-          timeout 30 bash -c 'until docker exec smartcity_redis redis-cli ping | grep -q PONG; do sleep 2; done'
+          timeout 30 bash -c 'until docker exec smartcity_redis redis-cli -a redis-dev --no-auth-warning ping | grep -q PONG; do sleep 2; done'
 
       - name: Instalar dependências — auth-service
         working-directory: resolve-app/backend/auth-service
@@ -135,7 +135,7 @@ jobs:
       - name: Liberar PostgreSQL e Redis para a stack E2E
         if: github.event_name != 'push'
         working-directory: resolve-app/backend
-        run: docker compose down
+        run: docker compose down -v
 
       - name: Checkout RESOLVE
         if: github.event_name != 'push'

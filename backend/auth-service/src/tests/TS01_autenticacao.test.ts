@@ -1,20 +1,21 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import app from '../app';
+import { CODIGO_GESTOR, SENHA_FORTE, TERMOS } from './helpers/dados';
 
 const cidadao = {
   nome: 'Cidadao Teste TS01',
   email: `ts01.cidadao.${Date.now()}@test.com`,
-  senha: 'senha123',
-  papel: 'cidadao',
+  senha: SENHA_FORTE,
+  papel: 'cidadao', ...TERMOS,
 };
 
 const gestor = {
   nome: 'Gestor Teste TS01',
   email: `ts01.gestor.${Date.now()}@test.com`,
-  senha: 'senha456',
-  papel: 'gestor',
-  codigoAcesso: process.env.GESTOR_ACCESS_CODE || 'change-me-codigo-gestor',
+  senha: SENHA_FORTE,
+  papel: 'gestor', ...TERMOS,
+  codigoAcesso: CODIGO_GESTOR,
 };
 
 beforeAll(async () => {

@@ -2,6 +2,8 @@ import { describe, it, expect, afterAll } from 'vitest';
 import request from 'supertest';
 import { PrismaClient } from '@prisma/client';
 import app from '../app';
+import { hashDoEmail } from '../utils/emailProtegido';
+import { CODIGO_GESTOR, SENHA_FORTE, TERMOS } from './helpers/dados';
 
 const prisma = new PrismaClient();
 const emailsParaLimpar: string[] = [];
@@ -9,7 +11,7 @@ const emailsParaLimpar: string[] = [];
 afterAll(async () => {
   if (emailsParaLimpar.length > 0) {
     await prisma.usuario.deleteMany({
-      where: { email: { in: emailsParaLimpar } },
+      where: { email_hash: { in: emailsParaLimpar.map(hashDoEmail) } },
     });
   }
   await prisma.$disconnect();
@@ -25,7 +27,7 @@ describe('TS03 - Registro de usuário', () => {
 
       const res = await request(app)
         .post('/auth/register')
-        .send({ nome: 'Cidadão TS03', email, senha: 'senha123', papel: 'cidadao' });
+        .send({ nome: 'Cidadão TS03', email, senha: SENHA_FORTE, papel: 'cidadao', ...TERMOS });
 
       expect(res.status).toBe(201);
       expect(res.body.id).toBeDefined();
@@ -37,11 +39,11 @@ describe('TS03 - Registro de usuário', () => {
     it('Given dados válidos de gestor com código de acesso correto, When POST /auth/register, Then retorna 201 com papel gestor', async () => {
       const email = `ts03.gestor.${Date.now()}@test.com`;
       emailsParaLimpar.push(email);
-      const codigoAcesso = process.env.GESTOR_ACCESS_CODE || 'change-me-codigo-gestor';
+      const codigoAcesso = CODIGO_GESTOR;
 
       const res = await request(app)
         .post('/auth/register')
-        .send({ nome: 'Gestor TS03', email, senha: 'gestor456', papel: 'gestor', codigoAcesso });
+        .send({ nome: 'Gestor TS03', email, senha: SENHA_FORTE, papel: 'gestor', ...TERMOS, codigoAcesso });
 
       expect(res.status).toBe(201);
       expect(res.body.papel).toBe('gestor');
@@ -54,7 +56,7 @@ describe('TS03 - Registro de usuário', () => {
     it('Given body sem nome, When POST /auth/register, Then retorna 400', async () => {
       const res = await request(app)
         .post('/auth/register')
-        .send({ email: 'sem.nome@test.com', senha: 'abc123', papel: 'cidadao' });
+        .send({ email: 'sem.nome@test.com', senha: SENHA_FORTE, papel: 'cidadao', ...TERMOS });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toMatch(/obrigatório/i);
@@ -63,7 +65,7 @@ describe('TS03 - Registro de usuário', () => {
     it('Given body sem email, When POST /auth/register, Then retorna 400', async () => {
       const res = await request(app)
         .post('/auth/register')
-        .send({ nome: 'Sem Email', senha: 'abc123', papel: 'cidadao' });
+        .send({ nome: 'Sem Email', senha: SENHA_FORTE, papel: 'cidadao', ...TERMOS });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toMatch(/obrigatório/i);
@@ -72,7 +74,7 @@ describe('TS03 - Registro de usuário', () => {
     it('Given body sem senha, When POST /auth/register, Then retorna 400', async () => {
       const res = await request(app)
         .post('/auth/register')
-        .send({ nome: 'Sem Senha', email: 'sem.senha@test.com', papel: 'cidadao' });
+        .send({ nome: 'Sem Senha', email: 'sem.senha@test.com', papel: 'cidadao', ...TERMOS });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toMatch(/obrigatório/i);
@@ -81,7 +83,7 @@ describe('TS03 - Registro de usuário', () => {
     it('Given body sem papel, When POST /auth/register, Then retorna 400', async () => {
       const res = await request(app)
         .post('/auth/register')
-        .send({ nome: 'Sem Papel', email: 'sem.papel@test.com', senha: 'abc123' });
+        .send({ nome: 'Sem Papel', email: 'sem.papel@test.com', senha: SENHA_FORTE });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toMatch(/obrigatório/i);
@@ -102,15 +104,15 @@ describe('TS03 - Registro de usuário', () => {
     it('Given e-mail já cadastrado, When POST /auth/register com o mesmo e-mail, Then retorna 409', async () => {
       const email = `ts03.dup.${Date.now()}@test.com`;
       emailsParaLimpar.push(email);
-      const codigoAcesso = process.env.GESTOR_ACCESS_CODE || 'change-me-codigo-gestor';
+      const codigoAcesso = CODIGO_GESTOR;
 
       await request(app)
         .post('/auth/register')
-        .send({ nome: 'Primeiro TS03', email, senha: 'abc123', papel: 'cidadao' });
+        .send({ nome: 'Primeiro TS03', email, senha: SENHA_FORTE, papel: 'cidadao', ...TERMOS });
 
       const res = await request(app)
         .post('/auth/register')
-        .send({ nome: 'Segundo TS03', email, senha: 'xyz789', papel: 'gestor', codigoAcesso });
+        .send({ nome: 'Segundo TS03', email, senha: SENHA_FORTE, papel: 'gestor', ...TERMOS, codigoAcesso });
 
       expect(res.status).toBe(409);
       expect(res.body.error).toBeDefined();
@@ -119,7 +121,7 @@ describe('TS03 - Registro de usuário', () => {
     it('Given papel diferente de cidadao/gestor, When POST /auth/register, Then retorna 400', async () => {
       const res = await request(app)
         .post('/auth/register')
-        .send({ nome: 'Admin Inválido', email: 'admin@test.com', senha: 'abc123', papel: 'admin' });
+        .send({ nome: 'Admin Inválido', email: 'admin@test.com', senha: SENHA_FORTE, papel: 'admin' });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('papel');
@@ -128,7 +130,7 @@ describe('TS03 - Registro de usuário', () => {
     it('Given papel em maiúsculas "CIDADAO", When POST /auth/register, Then retorna 400 (papel case-sensitive)', async () => {
       const res = await request(app)
         .post('/auth/register')
-        .send({ nome: 'Case Errado', email: `ts03.upper.${Date.now()}@test.com`, senha: 'abc123', papel: 'CIDADAO' });
+        .send({ nome: 'Case Errado', email: `ts03.upper.${Date.now()}@test.com`, senha: SENHA_FORTE, papel: 'CIDADAO' });
 
       expect(res.status).toBe(400);
     });
@@ -142,7 +144,7 @@ describe('TS03 - Registro de usuário', () => {
 
       const res = await request(app)
         .post('/auth/register')
-        .send({ nome: 'Gestor Sem Código', email, senha: 'gestor456', papel: 'gestor' });
+        .send({ nome: 'Gestor Sem Código', email, senha: SENHA_FORTE, papel: 'gestor', ...TERMOS });
 
       expect(res.status).toBe(403);
       expect(res.body.error).toMatch(/código de acesso/i);
@@ -156,8 +158,8 @@ describe('TS03 - Registro de usuário', () => {
         .send({
           nome: 'Gestor Código Errado',
           email,
-          senha: 'gestor456',
-          papel: 'gestor',
+          senha: SENHA_FORTE,
+          papel: 'gestor', ...TERMOS,
           codigoAcesso: 'codigo-invalido-qualquer',
         });
 
@@ -170,7 +172,7 @@ describe('TS03 - Registro de usuário', () => {
 
       const res = await request(app)
         .post('/auth/register')
-        .send({ nome: 'Cidadão Sem Código', email, senha: 'senha123', papel: 'cidadao' });
+        .send({ nome: 'Cidadão Sem Código', email, senha: SENHA_FORTE, papel: 'cidadao', ...TERMOS });
 
       expect(res.status).toBe(201);
     });
@@ -185,7 +187,7 @@ describe('TS03 - Registro de usuário', () => {
 
       const res = await request(app)
         .post('/auth/register')
-        .send({ nome: 'Contrato TS03', email, senha: 'abc123', papel: 'cidadao' });
+        .send({ nome: 'Contrato TS03', email, senha: SENHA_FORTE, papel: 'cidadao', ...TERMOS });
 
       expect(res.status).toBe(201);
       expect(res.headers['content-type']).toMatch(/application\/json/);
@@ -197,7 +199,7 @@ describe('TS03 - Registro de usuário', () => {
 
       const res = await request(app)
         .post('/auth/register')
-        .send({ nome: 'Campos TS03', email, senha: 'abc123', papel: 'cidadao' });
+        .send({ nome: 'Campos TS03', email, senha: SENHA_FORTE, papel: 'cidadao', ...TERMOS });
 
       expect(res.status).toBe(201);
       expect(typeof res.body.id).toBe('number');
@@ -212,7 +214,7 @@ describe('TS03 - Registro de usuário', () => {
 
       const res = await request(app)
         .post('/auth/register')
-        .send({ nome: 'Teste Segurança', email, senha: 'segredo123', papel: 'cidadao' });
+        .send({ nome: 'Teste Segurança', email, senha: SENHA_FORTE, papel: 'cidadao', ...TERMOS });
 
       expect(res.status).toBe(201);
       expect(res.body.senha).toBeUndefined();
