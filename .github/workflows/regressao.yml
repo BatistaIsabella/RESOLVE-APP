@@ -135,7 +135,7 @@ jobs:
       - name: Liberar PostgreSQL e Redis para a stack E2E
         if: github.event_name != 'push'
         working-directory: resolve-app/backend
-        run: docker compose down
+        run: docker compose down -v
 
       - name: Checkout RESOLVE
         if: github.event_name != 'push'
