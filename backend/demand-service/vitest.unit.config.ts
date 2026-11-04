@@ -18,6 +18,7 @@ export default defineConfig({
       ],
       reporter: ['text', 'json-summary', 'html'],
       reportsDirectory: './coverage-unit',
+      reportOnFailure: true,
     },
   },
 });

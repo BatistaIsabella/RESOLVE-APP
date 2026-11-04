@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 env:
   DATABASE_URL_AUTH: postgresql://postgres:postgrespassword@localhost:5432/postgres?schema=auth
@@ -43,7 +44,14 @@ jobs:
         id: unitarios_mobile
         continue-on-error: true
         working-directory: resolve-app
-        run: node --experimental-strip-types --test frontend/mobile/utils/__tests__/extractBairro.test.mjs frontend/mobile/utils/__tests__/senha.test.mjs frontend/mobile/utils/__tests__/mfa.test.mjs
+        run: |
+          mkdir -p relatorios/mobile
+          node --experimental-strip-types --test \
+            --test-reporter=spec --test-reporter-destination=stdout \
+            --test-reporter=junit --test-reporter-destination=relatorios/mobile/unit-mobile.xml \
+            frontend/mobile/utils/__tests__/extractBairro.test.mjs \
+            frontend/mobile/utils/__tests__/senha.test.mjs \
+            frontend/mobile/utils/__tests__/mfa.test.mjs
 
       - name: Instalar dependências — demand-service
         working-directory: resolve-app/backend/demand-service
@@ -55,7 +63,7 @@ jobs:
         working-directory: resolve-app/backend/demand-service
         run: |
           mkdir -p relatorios
-          npm run test:unit -- --reporter=default --reporter=junit --outputFile.junit=relatorios/unit-demand.xml
+          npm run test:unit -- --coverage --reporter=default --reporter=junit --outputFile.junit=relatorios/unit-demand.xml
 
       - name: Subir PostgreSQL e Redis
         working-directory: resolve-app/backend
@@ -196,6 +204,7 @@ jobs:
         env:
           E2E_API_URL: http://localhost:8080
           E2E_REUSE_SERVER: 'true'
+          E2E_JUNIT_FILE: test-results/smoke-e2e.xml
           CI: true
 
       - name: Regressão E2E completa — agendamento diário ou execução manual
@@ -207,6 +216,7 @@ jobs:
         env:
           E2E_API_URL: http://localhost:8080
           E2E_REUSE_SERVER: 'true'
+          E2E_JUNIT_FILE: test-results/regressao-e2e.xml
           CI: true
 
       - name: Resumo das suites
@@ -223,6 +233,95 @@ jobs:
             echo "| Smoke E2E — pull request | ${{ steps.smoke_e2e.outcome }} |"
             echo "| Regressão E2E completa | ${{ steps.regressao_e2e.outcome }} |"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Gerar métricas e relatórios de qualidade
+        if: always()
+        working-directory: resolve-app
+        env:
+          MOBILE_UNIT_OUTCOME: ${{ steps.unitarios_mobile.outcome }}
+          DEMAND_UNIT_OUTCOME: ${{ steps.unitarios_backend.outcome }}
+          AUTH_API_OUTCOME: ${{ steps.api_auth.outcome }}
+          DEMAND_API_OUTCOME: ${{ steps.api_demand.outcome }}
+          E2E_SMOKE_OUTCOME: ${{ steps.smoke_e2e.outcome }}
+          E2E_FULL_OUTCOME: ${{ steps.regressao_e2e.outcome }}
+        run: |
+          python3 .github/scripts/generate_quality_reports.py
+
+      - name: Abrir issue para falhas reais de testes
+        if: >-
+          always() &&
+          (steps.unitarios_mobile.outcome == 'failure' ||
+          steps.unitarios_backend.outcome == 'failure' ||
+          steps.api_auth.outcome == 'failure' ||
+          steps.api_demand.outcome == 'failure' ||
+          steps.smoke_e2e.outcome == 'failure' ||
+          steps.regressao_e2e.outcome == 'failure')
+        continue-on-error: true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const metrics = JSON.parse(fs.readFileSync('resolve-app/quality-reports/metrics.json', 'utf8'));
+            const outcomes = {
+              'Unitários mobile': '${{ steps.unitarios_mobile.outcome }}',
+              'Unitários demand-service': '${{ steps.unitarios_backend.outcome }}',
+              'API auth-service': '${{ steps.api_auth.outcome }}',
+              'API demand-service': '${{ steps.api_demand.outcome }}',
+              'Smoke E2E': '${{ steps.smoke_e2e.outcome }}',
+              'Regressão E2E': '${{ steps.regressao_e2e.outcome }}',
+            };
+            const failed = Object.entries(outcomes).filter(([, outcome]) => outcome === 'failure');
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const suiteRows = failed.map(([name]) => {
+              const suite = metrics.suites.find((item) => item.name === name);
+              if (suite?.runner_error) {
+                return `| ${name} | indisponível | indisponível | indisponível |`;
+              }
+              return suite
+                ? `| ${name} | ${suite.passed} | ${suite.failed} | ${suite.skipped} |`
+                : `| ${name} | indisponível | indisponível | indisponível |`;
+            }).join('\n');
+            const failedCases = failed.flatMap(([name]) => {
+              const suite = metrics.suites.find((item) => item.name === name);
+              return (suite?.test_cases ?? [])
+                .filter((testCase) => testCase.status === 'failed')
+                .map((testCase) => `- **${name} / ${testCase.name}:** ${testCase.detail || 'falha sem mensagem no JUnit'}`);
+            });
+            const body = [
+              'Uma ou mais suites de testes falharam no pipeline de qualidade.',
+              '',
+              `- Execução: [${context.runId}](${runUrl})`,
+              `- Branch: \`${context.ref.replace('refs/heads/', '')}\``,
+              `- Commit: \`${context.sha}\``,
+              '',
+              '| Suite | Passed | Failed | Skipped |',
+              '|---|---:|---:|---:|',
+              suiteRows,
+              ...(failedCases.length ? ['', 'Casos com falha:', ...failedCases] : []),
+              '',
+              'Consulte os relatórios técnicos e artefatos na execução do workflow. O Quality Gate permanece reprovado para esta execução.',
+            ].join('\n');
+            await github.rest.issues.create({
+              ...context.repo,
+              title: `[CI] Falha em testes (${context.sha.slice(0, 7)})`,
+              body,
+            });
+
+      - name: Publicar relatórios e evidências
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencias-testes-${{ github.run_id }}
+          path: |
+            resolve-app/backend/demand-service/relatorios/
+            resolve-app/backend/auth-service/relatorios/
+            resolve-app/backend/demand-service/coverage-unit/
+            resolve-app/relatorios/mobile/
+            resolve-app/e2e/playwright-report/
+            resolve-app/e2e/test-results/
+            resolve-app/quality-reports/
+          retention-days: 14
+          if-no-files-found: warn
 
       - name: Reprovar o Quality Gate se alguma suite falhou
         if: always()
@@ -244,16 +343,3 @@ jobs:
             echo "::error::Uma ou mais suites automatizadas falharam."
             exit 1
           fi
-
-      - name: Publicar relatórios e evidências
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: evidencias-testes-${{ github.run_id }}
-          path: |
-            resolve-app/backend/demand-service/relatorios/
-            resolve-app/backend/auth-service/relatorios/
-            resolve-app/e2e/playwright-report/
-            resolve-app/e2e/test-results/
-          retention-days: 14
-          if-no-files-found: warn
