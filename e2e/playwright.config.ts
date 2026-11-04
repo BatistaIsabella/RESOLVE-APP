@@ -6,7 +6,10 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: 1,
-  reporter: [['html', { open: 'never' }]],
+  reporter: [
+    ['html', { open: 'never' }],
+    ['junit', { outputFile: process.env.E2E_JUNIT_FILE ?? 'test-results/results.xml' }],
+  ],
   timeout: 60_000,
   expect: {
     timeout: 8_000,

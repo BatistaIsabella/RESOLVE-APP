@@ -28,6 +28,43 @@ falhou. Assim, a regressão diária produz evidências das demais suites sem
 deixar uma execução com falhas terminar como aprovada. Falhas de instalação
 ou de infraestrutura também reprovam o job.
 
+## Métricas e relatórios
+
+Em toda execução, inclusive quando testes falham, o workflow tenta gerar
+`quality-reports/metrics.json`, `technical-report.html` e
+`business-report.html` antes de publicar os artefatos. XML JUnit é produzido
+pelas suites mobile, backend e E2E; a cobertura é coletada somente para os
+arquivos instrumentados pelo `vitest.unit.config.ts` do `demand-service`.
+Relatórios e evidências são publicados por 14 dias. Suites que não fazem parte
+do evento (por exemplo, E2E em um push) aparecem como não executadas, não como
+aprovadas.
+
+As métricas automáticas são taxa de sucesso por suite, contagens de testes
+aprovados/falhos/ignorados, duração e cobertura instrumentada. A taxa de
+sucesso é `passed / (passed + failed)`; casos ignorados não entram no
+denominador e a taxa fica indisponível quando não há testes executados. A
+cobertura não representa o sistema inteiro: seu escopo atual é o conjunto de
+utilitários, serviços e middlewares listado na configuração unitária do
+`demand-service`.
+
+Não medimos densidade de defeitos por linha de código porque o repositório não
+mantém uma fonte de defeitos vinculada ao tamanho do código, nem cobertura
+global porque não há instrumentação de todas as camadas. Riscos e lacunas de
+automação são informações complementares, mantidas em
+`.github/quality-context.json`, e exibidas no relatório de negócio; não são
+tratadas como métricas calculadas pelo pipeline.
+
+O relatório técnico detalha resultados e erros por caso de teste. O relatório
+de negócio consolida os resultados e a cobertura disponível, explicita suites
+não executadas e lista os riscos complementares. Issues são abertas somente
+quando uma etapa de testes reporta falha; erros de instalação ou infraestrutura
+continuam reprovando o job, mas não são classificados como falha de teste. A
+criação de issue pode ser restringida pelo GitHub em pull requests originados
+de forks, embora o check e a publicação dos relatórios continuem disponíveis.
+O repositório ou a organização também precisa permitir que o `GITHUB_TOKEN`
+receba `issues: write`; se essa permissão for bloqueada, a etapa de issue não
+interrompe a publicação dos relatórios nem altera a reprovação do Quality Gate.
+
 ## Alinhamento entre backlog e execução
 
 | Camada | Implementação encontrada | Push | Pull request | Diário/manual |

@@ -1,0 +1,16 @@
+{
+  "risks": [
+    {
+      "title": "Cenários E2E conhecidos como pendentes",
+      "detail": "Busca por palavra-chave (C3), paginação (C5), histórico da demanda (C6) e indicadores por status (C9) estão documentados como falhas esperadas, ignorados ou ainda não implementados; consulte docs/testes/PIPELINE_CI_QUALITY_GATE.md para o estado detalhado."
+    },
+    {
+      "title": "Automação mobile nativa ausente",
+      "detail": "O CI executa testes unitários mobile, mas não possui testes de interface em dispositivo ou emulador."
+    },
+    {
+      "title": "Cobertura de código parcial",
+      "detail": "A cobertura automatizada instrumenta apenas os caminhos configurados em backend/demand-service/vitest.unit.config.ts; não representa cobertura global do produto."
+    }
+  ]
+}
