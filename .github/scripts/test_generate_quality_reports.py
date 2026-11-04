@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from generate_quality_reports import collect_metrics, generate, parse_suite
+from generate_quality_reports import collect_metrics, compute_verdict, generate, parse_suite
 
 
 class QualityReportTests(unittest.TestCase):
@@ -96,6 +96,34 @@ class QualityReportTests(unittest.TestCase):
         self.assertIn("invalid input", technical)
         self.assertIn("expected valid value", technical)
         self.assertIn("1</strong></div>", business)
+
+    def test_verdict_is_red_when_any_suite_fails(self):
+        with tempfile.TemporaryDirectory() as directory:
+            metrics = collect_metrics(Path(directory), {"mobile": "failure"})
+        self.assertEqual(metrics["verdict"]["level"], "red")
+
+    def test_verdict_is_gray_without_any_execution(self):
+        with tempfile.TemporaryDirectory() as directory:
+            metrics = collect_metrics(Path(directory))
+        self.assertEqual(metrics["verdict"]["level"], "gray")
+
+    def test_verdict_is_green_only_when_all_pass_and_coverage_meets_target(self):
+        suites = [{"name": "A", "status": "passed", "failed": 0}]
+        self.assertEqual(compute_verdict(suites, {"lines": 92.0})["level"], "green")
+        self.assertEqual(compute_verdict(suites, {"lines": 50.0})["level"], "yellow")
+        self.assertEqual(compute_verdict(suites, None)["level"], "yellow")
+
+    def test_business_report_shows_verdict_and_pending_features(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / ".github").mkdir()
+            (root / ".github/quality-context.json").write_text(
+                '{"pending_features":[{"id":"C3","title":"Busca","impact":"Sem busca."}]}', encoding="utf-8"
+            )
+            generate(root)
+            business = (root / "quality-reports/business-report.html").read_text(encoding="utf-8")
+        self.assertIn("Situação geral da qualidade", business)
+        self.assertIn("C3 — Busca", business)
 
 
 if __name__ == "__main__":

@@ -111,6 +111,44 @@ def read_risks(root):
         return []
 
 
+def read_pending(root):
+    path = root / ".github/quality-context.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data.get("pending_features", [])
+    except (OSError, json.JSONDecodeError, AttributeError):
+        return []
+
+
+COVERAGE_TARGET = 80.0
+
+
+def compute_verdict(suites, coverage):
+    """Semáforo de qualidade para stakeholders: red, yellow, green ou gray."""
+    reasons = []
+    failed = [s["name"] for s in suites if s["status"] == "failed" or s["failed"]]
+    executed = [s for s in suites if s["status"] != "not_run"]
+    if failed:
+        reasons.append("Há falhas nas verificações: " + ", ".join(failed) + ".")
+        return {"level": "red", "label": "Não recomendado para release", "reasons": reasons}
+    if not executed:
+        return {"level": "gray", "label": "Sem dados suficientes", "reasons": ["Nenhuma verificação foi executada."]}
+    not_run = [s["name"] for s in suites if s["status"] == "not_run"]
+    missing = [s["name"] for s in suites if s["status"] in ("report_missing", "report_error")]
+    if not_run:
+        reasons.append("Não executadas neste evento: " + ", ".join(not_run) + ".")
+    if missing:
+        reasons.append("Sem relatório legível: " + ", ".join(missing) + ".")
+    lines = (coverage or {}).get("lines")
+    if lines is None:
+        reasons.append("Cobertura de código indisponível.")
+    elif lines < COVERAGE_TARGET:
+        reasons.append(f"Cobertura de linhas ({lines:.1f}%) abaixo da meta de {COVERAGE_TARGET:.0f}%.")
+    if reasons:
+        return {"level": "yellow", "label": "Aprovado com ressalvas", "reasons": reasons}
+    return {"level": "green", "label": "Apto para release", "reasons": ["Todas as verificações passaram e a cobertura atingiu a meta."]}
+
+
 def collect_metrics(root, outcomes=None):
     outcomes = outcomes or {}
     suites = [parse_suite(root, *suite) for suite in SUITES]
@@ -126,6 +164,7 @@ def collect_metrics(root, outcomes=None):
         for key in ("passed", "failed", "skipped")
     }
     executed = totals["passed"] + totals["failed"]
+    coverage = read_coverage(root)
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "suites": suites,
@@ -134,8 +173,10 @@ def collect_metrics(root, outcomes=None):
             "duration_seconds": round(sum(suite["duration_seconds"] for suite in suites), 3),
             "success_rate": totals["passed"] / executed if executed else None,
         },
-        "coverage": read_coverage(root),
+        "coverage": coverage,
+        "verdict": compute_verdict(suites, coverage),
         "risks": read_risks(root),
+        "pending_features": read_pending(root),
     }
 
 
@@ -213,13 +254,59 @@ def _risk_list(risks):
     ) + "</ul>"
 
 
+VERDICT_COLORS = {"green": "#1d7a46", "yellow": "#b7791f", "red": "#b3261e", "gray": "#586674"}
+
+
+def _pending_list(items):
+    if not items:
+        return "<p>Nenhuma pendência conhecida registrada.</p>"
+    return "<ul>" + "".join(
+        f"<li><strong>{html.escape(i.get('id', ''))} — {html.escape(i.get('title', ''))}.</strong> "
+        f"{html.escape(i.get('impact', ''))}</li>"
+        for i in items
+    ) + "</ul>"
+
+
+def _business_status(suite):
+    if suite["runner_error"] or suite["status"] == "failed":
+        return "Com falhas"
+    return {
+        "passed": "Aprovada",
+        "not_run": "Não verificada neste evento",
+        "report_missing": "Sem resultado",
+        "report_error": "Sem resultado",
+    }[suite["status"]]
+
+
+def _business_sections(metrics):
+    verdict = metrics["verdict"]
+    color = VERDICT_COLORS[verdict["level"]]
+    reasons = "".join(f"<li>{html.escape(r)}</li>" for r in verdict["reasons"])
+    layers = "".join(
+        f"<tr><td>{html.escape(s['name'])}</td><td>{html.escape(_business_status(s))}</td>"
+        f"<td>{s['passed'] + s['failed']}</td><td>{_display_rate(s['success_rate'])}</td></tr>"
+        for s in metrics["suites"]
+    )
+    return (
+        f'<section><div class="verdict" style="border-left:8px solid {color}">'
+        f'<span class="muted">Situação geral da qualidade</span><h2 style="color:{color};margin:4px 0">'
+        f'{html.escape(verdict["label"])}</h2><ul>{reasons}</ul></div></section>'
+        f"<section><h2>Áreas verificadas</h2><table><thead><tr><th>Área</th><th>Situação</th>"
+        f"<th>Testes executados</th><th>Taxa de sucesso</th></tr></thead><tbody>{layers}</tbody></table></section>"
+        f"<section><h2>Funcionalidades pendentes (falhas esperadas)</h2>"
+        f"{_pending_list(metrics['pending_features'])}"
+        '<p class="muted">Estes cenários estão marcados como falha esperada ou ignorados nos testes. '
+        "Eles não reprovam o pipeline, mas não devem ser entendidos como funcionalidades entregues.</p></section>"
+    )
+
+
 def render_report(metrics, technical):
     totals = metrics["totals"]
     title = "Relatório Técnico de Qualidade" if technical else "Relatório de Qualidade do Produto"
     table_headers = """
       <thead><tr><th>Suite / Caso</th><th>Resultado</th><th>Passed</th><th>Failed</th><th>Skipped</th><th>Taxa de sucesso</th><th>Duração</th></tr></thead>
     """
-    details = _suite_rows(metrics["suites"], technical=technical)
+    details = _suite_rows(metrics["suites"], technical=True)
     coverage = _coverage_rows(metrics["coverage"])
     complementary = "" if technical else f"<section><h2>Riscos e lacunas complementares</h2>{_risk_list(metrics['risks'])}</section>"
     notes = """
@@ -227,6 +314,16 @@ def render_report(metrics, technical):
     """
     if not technical:
         notes += '<p class="muted">Suites não executadas neste evento não são consideradas aprovadas. Falhas de infraestrutura podem reprovar o job mesmo sem falhas de teste nos resultados coletados.</p>'
+    if technical:
+        body = (
+            f"<section><h2>Resultados por suite</h2><table>{table_headers}<tbody>{details}</tbody></table></section>"
+            f"<section><h2>Cobertura instrumentada</h2>{coverage}</section>{notes}"
+        )
+    else:
+        body = (
+            _business_sections(metrics)
+            + f"<section><h2>Cobertura de código</h2>{coverage}</section>{complementary}{notes}"
+        )
     return f"""<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title}</title><style>
@@ -238,15 +335,14 @@ h1{{font-size:28px;margin:0 0 4px}}h2{{font-size:19px;margin:28px 0 12px}}.muted
 .metric,.coverage-grid div{{background:white;border:1px solid var(--line);padding:14px}}
 .metric span,.coverage-grid span{{display:block;color:var(--muted);font-size:13px}}.metric strong,.coverage-grid strong{{font-size:23px}}
 table{{width:100%;border-collapse:collapse;background:white;font-size:13px}}th,td{{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}}
-th{{background:#e8eff0;color:#253942}}.case-row td{{color:var(--muted)}}.error-row td{{color:var(--warn)}}section{{margin-top:24px}}
+th{{background:#e8eff0;color:#253942}}.case-row td{{color:var(--muted)}}.error-row td{{color:var(--warn)}}.verdict{{background:white;border:1px solid var(--line);padding:16px 20px}}section{{margin-top:24px}}
 @media(max-width:700px){{main{{padding:0 12px}}table{{display:block;overflow-x:auto;white-space:nowrap}}h1{{font-size:23px}}}}
 </style></head><body><main><header><h1>{title}</h1>
 <div class="muted">Gerado em {html.escape(metrics['generated_at'])}</div></header>
 <div class="metrics"><div class="metric"><span>Taxa de sucesso</span><strong>{_display_rate(totals['success_rate'])}</strong></div>
 <div class="metric"><span>Passed</span><strong>{totals['passed']}</strong></div><div class="metric"><span>Failed</span><strong>{totals['failed']}</strong></div>
 <div class="metric"><span>Skipped</span><strong>{totals['skipped']}</strong></div><div class="metric"><span>Duração somada</span><strong>{_display_duration(totals['duration_seconds'])}</strong></div></div>
-<section><h2>Resultados por suite</h2><table>{table_headers}<tbody>{details}</tbody></table></section>
-<section><h2>Cobertura instrumentada</h2>{coverage}</section>{complementary}{notes}
+{body}
 </main></body></html>"""
 
 
