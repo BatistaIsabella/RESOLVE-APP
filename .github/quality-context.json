@@ -12,5 +12,32 @@
       "title": "Cobertura de código parcial",
       "detail": "A cobertura automatizada instrumenta apenas os caminhos configurados em backend/demand-service/vitest.unit.config.ts; não representa cobertura global do produto."
     }
+  ],
+  "pending_features": [
+    {
+      "id": "C3",
+      "title": "Busca por palavra-chave",
+      "impact": "Usuários ainda não conseguem localizar demandas por texto."
+    },
+    {
+      "id": "C5",
+      "title": "Paginação de demandas",
+      "impact": "Listas longas não são divididas em páginas."
+    },
+    {
+      "id": "C6",
+      "title": "Histórico da demanda",
+      "impact": "Não é possível acompanhar as mudanças de uma demanda."
+    },
+    {
+      "id": "C9",
+      "title": "Indicadores por status",
+      "impact": "O painel do gestor não mostra totais por status."
+    },
+    {
+      "id": "C10",
+      "title": "Recarga do painel do gestor (BUG-04)",
+      "impact": "Defeito conhecido ao recarregar o painel."
+    }
   ]
 }

@@ -301,11 +301,28 @@ jobs:
               '',
               'Consulte os relatórios técnicos e artefatos na execução do workflow. O Quality Gate permanece reprovado para esta execução.',
             ].join('\n');
-            await github.rest.issues.create({
-              ...context.repo,
-              title: `[CI] Falha em testes (${context.sha.slice(0, 7)})`,
-              body,
+            const label = 'ci-failure';
+            const title = `[CI] Falha em testes (${context.sha.slice(0, 7)})`;
+            try {
+              await github.rest.issues.createLabel({
+                ...context.repo, name: label, color: 'b60205',
+                description: 'Falha automática detectada pelo pipeline de qualidade',
+              });
+            } catch (error) {
+              // rótulo já existe
+            }
+            // Evita duplicatas: se já há issue aberta de falha de CI, comenta nela.
+            const { data: open } = await github.rest.issues.listForRepo({
+              ...context.repo, state: 'open', labels: label, per_page: 1,
             });
+            if (open.length) {
+              await github.rest.issues.createComment({
+                ...context.repo, issue_number: open[0].number,
+                body: 'Nova falha em `' + context.sha.slice(0, 7) + '`.\n\n' + body,
+              });
+            } else {
+              await github.rest.issues.create({ ...context.repo, title, body, labels: [label] });
+            }
 
       - name: Publicar relatórios e evidências
         if: always()

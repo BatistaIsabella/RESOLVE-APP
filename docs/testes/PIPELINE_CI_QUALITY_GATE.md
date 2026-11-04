@@ -47,6 +47,11 @@ cobertura não representa o sistema inteiro: seu escopo atual é o conjunto de
 utilitários, serviços e middlewares listado na configuração unitária do
 `demand-service`.
 
+A seleção e a justificativa completas, incluindo as métricas descartadas,
+estão em [`METRICAS_QUALIDADE.md`](METRICAS_QUALIDADE.md). O relatório de
+negócio também exibe um veredito (verde, amarelo, vermelho ou cinza) e a lista
+de funcionalidades pendentes.
+
 Não medimos densidade de defeitos por linha de código porque o repositório não
 mantém uma fonte de defeitos vinculada ao tamanho do código, nem cobertura
 global porque não há instrumentação de todas as camadas. Riscos e lacunas de
@@ -57,7 +62,9 @@ tratadas como métricas calculadas pelo pipeline.
 O relatório técnico detalha resultados e erros por caso de teste. O relatório
 de negócio consolida os resultados e a cobertura disponível, explicita suites
 não executadas e lista os riscos complementares. Issues são abertas somente
-quando uma etapa de testes reporta falha; erros de instalação ou infraestrutura
+quando uma etapa de testes reporta falha, com o rótulo `ci-failure`; se já
+existir uma issue aberta com esse rótulo, a falha é adicionada como comentário
+nela, evitando duplicatas; erros de instalação ou infraestrutura
 continuam reprovando o job, mas não são classificados como falha de teste. A
 criação de issue pode ser restringida pelo GitHub em pull requests originados
 de forks, embora o check e a publicação dos relatórios continuem disponíveis.
