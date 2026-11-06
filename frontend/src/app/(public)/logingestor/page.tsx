@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChakraProvider, Box, Button, Input, Text, VStack, Heading } from "@chakra-ui/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useDemandStore } from "@/stores/useDemandStore";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { ApiError } from "@/lib/api";
 
 export default function LoginGestorPage() {
@@ -13,7 +13,7 @@ export default function LoginGestorPage() {
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const login = useDemandStore((state) => state.login);
+  const login = useAuthStore((state) => state.login);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

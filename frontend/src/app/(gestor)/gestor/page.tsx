@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useDemandStore } from "@/stores/useDemandStore";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { DemandFilters } from "@/types/demand";
 import { Button } from "@/components/UI/Button";
 import { Select } from "@/components/UI/Select";
@@ -12,8 +13,6 @@ import Link from "next/link";
 export default function Page() {
   const router = useRouter();
   
-  const [mounted, setMounted] = useState(false);
-
   const { 
     filters, 
     setFilters, 
@@ -22,28 +21,12 @@ export default function Page() {
     getDemandStats, 
     fetchDemands,
     error,
-    token,
-    role,
-    logout,
-    _hasHydrated 
   } = useDemandStore();
+  const logout = useAuthStore((state) => state.logout);
 
   useEffect(() => {
-    setMounted(true);
-    if (!token || role !== 'gestor') {
-      router.push('/logingestor');
-      return;
-    }
     fetchDemands();
-  }, [fetchDemands, token, role, router]);
-
-  if (!mounted || !_hasHydrated) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-      </div>
-    );
-  }
+  }, [fetchDemands]);
 
   const filteredDemands = getFilteredDemands();
   const stats = getDemandStats();
@@ -69,9 +52,16 @@ export default function Page() {
           <Link href="/gestor/dashboard" className="text-purple-600 font-bold mr-4 hover:text-purple-700">
             Painel de gestão
           </Link>
-          <Link href="/login" className="text-purple-400 font-normal hover:text-purple-500">
+          <button
+            type="button"
+            onClick={() => {
+              logout();
+              router.push("/logingestor");
+            }}
+            className="text-purple-400 font-normal hover:text-purple-500"
+          >
             Sair
-          </Link>
+          </button>
         </div>
       </nav>
 

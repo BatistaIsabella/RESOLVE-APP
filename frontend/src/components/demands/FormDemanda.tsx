@@ -2,7 +2,8 @@
 
 import { useState, useRef } from 'react'
 import { useDemandStore } from '@/stores/useDemandStore'
-import { DemandCategory, DemandRegion } from '@/types/demand'
+import { useAuthStore } from '@/stores/useAuthStore'
+import { Demand, DemandCategory, DemandRegion } from '@/types/demand'
 import { useRouter } from "next/navigation"
 import { ApiError } from '@/lib/api'
 
@@ -25,10 +26,17 @@ const PROBLEMAS_POR_CATEGORIA: Record<string, string[]> = {
   "Outros Empecilhos": ["Risco de queda de árvore", "Carro abandonado", "Animal morto na pista", "Criadouro de insetos", "Objeto obstruindo passagem"]
 };
 
-export function FormDemanda() {
+interface FormDemandaProps {
+  /** Quando informada, o formulário edita esta denúncia em vez de criar uma nova. */
+  demand?: Demand
+}
+
+export function FormDemanda({ demand }: FormDemandaProps = {}) {
+  const isEdit = !!demand
   const router = useRouter()
   const createDemand = useDemandStore((state) => state.createDemand)
-  const token = useDemandStore((state) => state.token)
+  const editDemand = useDemandStore((state) => state.editDemand)
+  const token = useAuthStore((state) => state.token)
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   
@@ -39,11 +47,11 @@ export function FormDemanda() {
   const [erro, setErro] = useState('')
 
   const [formData, setFormData] = useState({
-    problema: '', 
-    categoria: '', 
-    regiao: '', 
-    endereco: '', 
-    descricao: ''
+    problema: demand?.problema ?? '',
+    categoria: demand?.category ?? '',
+    regiao: demand?.region ?? '',
+    endereco: demand?.endereco ?? '',
+    descricao: demand?.description ?? demand?.detalhes ?? ''
   })
 
   const openExplorer = (index: number) => {
@@ -94,6 +102,19 @@ export function FormDemanda() {
     setLoading(true)
 
     try {
+      if (demand) {
+        await editDemand(demand.id, {
+          titulo: formData.problema,
+          categoria: formData.categoria as DemandCategory,
+          regiao: formData.regiao as DemandRegion,
+          descricao: formData.descricao,
+          endereco: formData.endereco,
+        })
+        alert("✅ Denúncia atualizada com sucesso!")
+        router.push(`/demandas/${demand.id}`)
+        return
+      }
+
       const imagensEnviar = imagesBase64.filter((img): img is string => img !== null)
 
       await createDemand({
@@ -170,6 +191,12 @@ export function FormDemanda() {
       <div className="flex flex-col gap-6">
         <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
 
+        {isEdit ? (
+          <p className="grow text-center text-sm text-gray-500 flex items-center justify-center px-4">
+            As fotos enviadas no registro não podem ser alteradas na edição.
+          </p>
+        ) : (
+        <>
         <div 
           onClick={() => openExplorer(0)} 
           className="relative grow border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center overflow-hidden hover:border-purple-400 hover:bg-purple-50 transition-all cursor-pointer min-h-[200px] bg-gray-50"
@@ -205,6 +232,8 @@ export function FormDemanda() {
             </div>
           ))}
         </div>
+        </>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-4 w-full">
           <button 
@@ -220,7 +249,7 @@ export function FormDemanda() {
             disabled={loading}
             className="w-full sm:w-2/3 bg-purple-600 text-white font-bold py-4 rounded-xl uppercase tracking-wider transition-all duration-200 cursor-pointer hover:bg-purple-700 hover:shadow-2xl hover:-translate-y-1 active:scale-95 active:translate-y-0 shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {loading ? "Salvando..." : "Salvar Denúncia"}
+            {loading ? "Salvando..." : isEdit ? "Salvar Alterações" : "Salvar Denúncia"}
           </button>
         </div>
         

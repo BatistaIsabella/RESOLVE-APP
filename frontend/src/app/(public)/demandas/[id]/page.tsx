@@ -2,45 +2,51 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useDemandStore } from '@/stores/useDemandStore';
+import { useAuthStore } from '@/stores/useAuthStore';
 import { Button } from '@/components/UI/Button';
 import { DemandDetails } from '@/components/UI/DemandDetails';
 import { useEffect, useState } from 'react';
 import Link from "next/link";
 import { Demand } from '@/types/demand';
+import { ApiError } from '@/lib/api';
 
 export default function DemandDetailsCitizenPage() {
   const params = useParams();
   const router = useRouter();
   const demandId = params.id as string;
-  const [isMounted, setIsMounted] = useState(false);
   const [demand, setDemand] = useState<Demand | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [erro, setErro] = useState('');
 
-  const token = useDemandStore((state) => state.token);
-  const userName = useDemandStore((state) => state.userName);
-  const logout = useDemandStore((state) => state.logout);
+  const userName = useAuthStore((state) => state.userName);
+  const logout = useAuthStore((state) => state.logout);
   const fetchDemandById = useDemandStore((state) => state.fetchDemandById);
+  const deleteDemand = useDemandStore((state) => state.deleteDemand);
   const isLoading = useDemandStore((state) => state.isLoading);
-  const _hasHydrated = useDemandStore((state) => state._hasHydrated);
 
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isMounted || !_hasHydrated) return;
-    if (!token) {
-      router.push('/login');
-      return;
-    }
-
     fetchDemandById(demandId).then(setDemand);
-  }, [isMounted, _hasHydrated, demandId, fetchDemandById, token, router]);
+  }, [demandId, fetchDemandById]);
 
   const handleBack = () => {
     router.push('/telaUsuario');
   };
 
-  if (!isMounted || !_hasHydrated || !token) return <div className="min-h-screen bg-neutral-100" />;
+  const handleDelete = async () => {
+    if (!window.confirm('Excluir esta denúncia? Essa ação não pode ser desfeita.')) return;
+    setErro('');
+    setIsDeleting(true);
+    try {
+      await deleteDemand(demandId);
+      router.replace('/telaUsuario');
+    } catch (err) {
+      setErro(err instanceof ApiError ? err.message : 'Erro ao excluir denúncia');
+      setIsDeleting(false);
+    }
+  };
+
+  // Editar e excluir só enquanto a denúncia está aberta; o servidor confere se ela é do usuário.
+  const podeAlterar = demand?.status === 'Aberta';
 
   if (isLoading && !demand) {
     return (
@@ -113,7 +119,11 @@ export default function DemandDetailsCitizenPage() {
             demand={demand}
             onBack={handleBack}
             isManager={false}
+            onEdit={podeAlterar ? () => router.push(`/demandas/${demandId}/editar`) : undefined}
+            onDelete={podeAlterar ? handleDelete : undefined}
+            isDeleting={isDeleting}
           />
+          {erro && <p className="text-sm text-red-500 text-center mt-4">{erro}</p>}
         </div>
       </div>
 
