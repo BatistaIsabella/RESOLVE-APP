@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useDemandStore } from '@/stores/useDemandStore';
+import { useAuthStore } from '@/stores/useAuthStore';
 import { Button } from '@/components/UI/Button';
 import { DemandDetails } from '@/components/UI/DemandDetails';
 import { useEffect, useState } from 'react';
@@ -13,32 +14,18 @@ export default function DemandDetailsManagerPage() {
   const params = useParams();
   const router = useRouter();
   const demandId = params.id as string;
-  const [isMounted, setIsMounted] = useState(false);
   const [demand, setDemand] = useState<Demand | null>(null);
   const [erro, setErro] = useState('');
 
-  const token = useDemandStore((state) => state.token);
-  const role = useDemandStore((state) => state.role);
-  const logout = useDemandStore((state) => state.logout);
+  const logout = useAuthStore((state) => state.logout);
   const fetchDemandById = useDemandStore((state) => state.fetchDemandById);
   const updateDemandStatus = useDemandStore((state) => state.updateDemandStatus);
   const updateDemandPriority = useDemandStore((state) => state.updateDemandPriority);
   const isLoading = useDemandStore((state) => state.isLoading);
-  const _hasHydrated = useDemandStore((state) => state._hasHydrated);
 
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isMounted || !_hasHydrated) return;
-    if (!token || role !== 'gestor') {
-      router.push('/logingestor');
-      return;
-    }
-
     fetchDemandById(demandId).then(setDemand);
-  }, [isMounted, _hasHydrated, demandId, fetchDemandById, token, role, router]);
+  }, [demandId, fetchDemandById]);
 
   const handleBack = () => {
     router.push('/gestor/dashboard');
@@ -71,8 +58,6 @@ export default function DemandDetailsManagerPage() {
       setDemand(rollback);
     }
   };
-
-  if (!isMounted || !_hasHydrated || !token || role !== 'gestor') return <div className="min-h-screen bg-white" />;
 
   if (isLoading && !demand) {
     return (

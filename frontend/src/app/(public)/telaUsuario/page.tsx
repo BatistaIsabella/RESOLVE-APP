@@ -1,10 +1,11 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import React, { useEffect, useState, ChangeEvent } from 'react'
+import React, { useEffect, ChangeEvent } from 'react'
 
 import { DemandCard } from "@/components/UI/DemandCard"
 import { useDemandStore } from "@/stores/useDemandStore"
+import { useAuthStore } from "@/stores/useAuthStore"
 import Link from "next/link";
 
 import { CATEGORIAS, REGIOES, STATUS, PRIORIDADES } from '@/constants/demanda'
@@ -12,41 +13,23 @@ import { CATEGORIAS, REGIOES, STATUS, PRIORIDADES } from '@/constants/demanda'
 type FilterKeys = "status" | "category" | "region" | "priority"
 
 export default function TelaUsuarioPage() {
-  const [isMounted, setIsMounted] = useState(false)
-
   const filters = useDemandStore((state) => state.filters)
   const isLoading = useDemandStore((state) => state.isLoading)
   const error = useDemandStore((state) => state.error)
-  const token = useDemandStore((state) => state.token)
-  const userName = useDemandStore((state) => state.userName)
-  const logout = useDemandStore((state) => state.logout)
+  const userName = useAuthStore((state) => state.userName)
+  const logout = useAuthStore((state) => state.logout)
   const setFilters = useDemandStore((state) => state.setFilters)
   const resetFilters = useDemandStore((state) => state.resetFilters)
   const getFilteredDemands = useDemandStore((state) => state.getFilteredDemands)
   const fetchDemands = useDemandStore((state) => state.fetchDemands)
 
-  const _hasHydrated = useDemandStore((state) => state._hasHydrated)
   const router = useRouter()
 
   useEffect(() => {
-    setIsMounted(true)
-  }, [])
-
-  useEffect(() => {
-    if (isMounted && _hasHydrated) {
-      if (!token) {
-        router.push("/login")
-        return
-      }
-      fetchDemands()
-    }
-  }, [isMounted, _hasHydrated, token, router, fetchDemands])
+    fetchDemands()
+  }, [fetchDemands])
 
   const filteredDemands = getFilteredDemands()
-
-  if (!isMounted || !_hasHydrated) {
-    return <div className="min-h-screen bg-neutral-100 flex items-center justify-center text-gray-500">Carregando dados...</div>
-  }
 
   const getOptions = (key: FilterKeys) => {
     switch (key) {

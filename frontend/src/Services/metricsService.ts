@@ -39,12 +39,12 @@ function mapLabels(
 }
 
 export const metricsService = {
-  async getKpis(token: string): Promise<{
+  async getKpis(): Promise<{
     total: number;
     byCategory: Record<string, number>;
     byRegion: Record<string, number>;
   }> {
-    const raw = await apiFetch<MetricsKpis>(METRICS_API_URL, '', { token });
+    const raw = await apiFetch<MetricsKpis>(METRICS_API_URL, '');
     return {
       total: raw.total,
       byCategory: mapLabels(raw.byCategory, CATEGORY_LABELS),

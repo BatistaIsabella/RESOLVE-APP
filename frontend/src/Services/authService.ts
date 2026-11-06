@@ -1,10 +1,12 @@
-import { apiFetch, AUTH_API_URL } from '@/lib/api';
+import { ApiError, apiFetch, AUTH_API_URL } from '@/lib/api';
+import { VERSAO_TERMOS } from '@/constants/termos';
 
 export interface AuthResponse {
   token: string;
   papel: 'cidadao' | 'gestor';
   userId: number;
   nome: string;
+  email?: string;
 }
 
 export interface RegisterResponse {
@@ -14,41 +16,45 @@ export interface RegisterResponse {
   papel: string;
 }
 
+export interface RegisterInput {
+  nome: string;
+  email: string;
+  senha: string;
+  papel: 'cidadao' | 'gestor';
+  codigoAcesso?: string;
+}
+
 export const authService = {
   async login(email: string, senha: string): Promise<AuthResponse> {
-    const resposta = await apiFetch<AuthResponse>(AUTH_API_URL, '/login', {
+    const resposta = await apiFetch<Partial<AuthResponse>>(AUTH_API_URL, '/login', {
       method: 'POST',
       body: JSON.stringify({ email, senha }),
     });
 
-    if (resposta && resposta.token) {
-      localStorage.setItem('@SmartCity:token', resposta.token);
-
-      const stateStore = {
-        state: {
-          token: resposta.token,
-          role: resposta.papel,
-          userEmail: email,
-          userName: resposta.nome,
-        },
-        version: 0,
-      };
-
-      localStorage.setItem('smart-city-storage-v2', JSON.stringify(stateStore));
+    // Contas com verificação em duas etapas recebem um desafio em vez da sessão; o fluxo ainda só existe no app.
+    if (!resposta?.token || !resposta.papel) {
+      throw new ApiError(
+        'Esta conta exige verificação em duas etapas, disponível por enquanto apenas no aplicativo.',
+        403
+      );
     }
 
-    return resposta;
+    return resposta as AuthResponse;
   },
 
-  async register(
-    nome: string,
-    email: string,
-    senha: string,
-    tipo: 'cidadao' | 'gestor'
-  ): Promise<RegisterResponse> {
+  async register(input: RegisterInput): Promise<RegisterResponse> {
     return apiFetch<RegisterResponse>(AUTH_API_URL, '/register', {
       method: 'POST',
-      body: JSON.stringify({ nome, email, senha, papel: tipo }),
+      body: JSON.stringify({
+        ...input,
+        aceiteTermos: true,
+        versaoTermos: VERSAO_TERMOS,
+      }),
     });
+  },
+
+  // Registra a saída no servidor (auditoria e invalidação da sessão).
+  async logout(token: string): Promise<void> {
+    await apiFetch<void>(AUTH_API_URL, '/logout', { method: 'POST', token });
   },
 };

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/UI/Button";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { authService } from "@/Services/authService";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { ApiError } from "@/lib/api";
 
 export default function CadastroPage() {
@@ -15,7 +15,9 @@ export default function CadastroPage() {
   const [confirmarSenha, setConfirmarSenha] = useState("");
   const [tipoUsuario, setTipoUsuario] = useState<"cidadao" | "gestor">("cidadao");
   const [codigoAcesso, setCodigoAcesso] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [aceitouTermos, setAceitouTermos] = useState(false);
+  const register = useAuthStore((state) => state.register);
+  const loading = useAuthStore((state) => state.isLoading);
   const [erro, setErro] = useState("");
 
   const inputStyle =
@@ -37,16 +39,23 @@ export default function CadastroPage() {
       return;
     }
 
-    setLoading(true);
+    if (!aceitouTermos) {
+      setErro("É preciso aceitar os Termos de Uso e a Política de Privacidade.");
+      return;
+    }
 
     try {
-      await authService.register(nome, email, senha, tipoUsuario);
+      await register({
+        nome,
+        email: email.trim().toLowerCase(),
+        senha,
+        papel: tipoUsuario,
+        ...(tipoUsuario === "gestor" ? { codigoAcesso } : {}),
+      });
       alert("Conta criada com sucesso! Faça login para continuar.");
       router.push(tipoUsuario === "gestor" ? "/logingestor" : "/login");
     } catch (err) {
       setErro(err instanceof ApiError ? err.message : "Erro ao criar conta");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -160,6 +169,17 @@ export default function CadastroPage() {
                 className={inputStyle}
               />
             )}
+
+            <label className="flex items-start gap-2 text-xs text-gray-600">
+              <input
+                type="checkbox"
+                required
+                checked={aceitouTermos}
+                onChange={(e) => setAceitouTermos(e.target.checked)}
+                className="accent-purple-600 mt-0.5"
+              />
+              Li e aceito os Termos de Uso e a Política de Privacidade do RESOLVE.
+            </label>
 
             <Button type="submit" className="w-full mt-2" disabled={loading}>
               {loading ? "Criando..." : "Criar Conta"}

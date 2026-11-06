@@ -34,6 +34,14 @@ export interface Demand {
   detalhes: string;
 }
 
+export interface DemandUpdateInput {
+  titulo?: string;
+  descricao?: string;
+  categoria?: DemandCategory;
+  regiao?: DemandRegion;
+  endereco?: string;
+}
+
 export interface DemandFilters {
   status: DemandStatus | "";
   category: DemandCategory | "";

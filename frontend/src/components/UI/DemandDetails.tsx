@@ -9,6 +9,10 @@ interface DemandDetailsProps {
   isManager: boolean;
   onStatusChange?: (status: DemandStatus) => void;
   onPriorityChange?: (priority: DemandPriority) => void;
+  /** Ações do cidadão sobre a própria denúncia; só passe enquanto ela está aberta. */
+  onEdit?: () => void;
+  onDelete?: () => void;
+  isDeleting?: boolean;
 }
 
 const statusOptions: DemandStatus[] = ["Aberta", "Em análise", "Resolvida"];
@@ -20,6 +24,9 @@ export function DemandDetails({
   isManager,
   onStatusChange,
   onPriorityChange,
+  onEdit,
+  onDelete,
+  isDeleting = false,
 }: DemandDetailsProps) {
   const [isEditingStatus, setIsEditingStatus] = useState(false);
   const [isEditingPriority, setIsEditingPriority] = useState(false);
@@ -154,7 +161,26 @@ export function DemandDetails({
         </div>
       </div>
 
-      <div className="flex justify-end pt-6 border-t border-gray-200">
+      <div className="flex flex-wrap justify-end gap-3 pt-6 border-t border-gray-200">
+        {onEdit && (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="bg-purple-600 text-white px-6 py-2 rounded-full text-sm font-bold hover:bg-purple-700 transition-all cursor-pointer"
+          >
+            Editar
+          </button>
+        )}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={isDeleting}
+            className="bg-red-50 text-red-600 border border-red-200 px-6 py-2 rounded-full text-sm font-bold hover:bg-red-100 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isDeleting ? "Excluindo..." : "Excluir"}
+          </button>
+        )}
         <button
           onClick={onBack}
           className="bg-gray-100 text-gray-600 px-6 py-2 rounded-full text-sm font-bold hover:bg-gray-200 transition-all"

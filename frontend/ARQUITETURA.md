@@ -59,13 +59,12 @@ Smart-City/
 │   │   └── page.tsx                   # Custom hooks
 │   ├── lib/
 │   │   └── page.tsx                   # Funções utilitárias
-│   ├── mocks/
-│   │   └── fake-data.ts               # Dados mock para desenvolvimento
 │   ├── services/
 │   │   └── page.tsx                   # Serviços de API
 │   ├── stores/
 │   │   ├── page.tsx
-│   │   └── useDemandStore.ts          # Zustand store para demandas
+│   │   ├── useAuthStore.ts            # Zustand store da sessão (token JWT, perfil, login/logout/cadastro)
+│   │   └── useDemandStore.ts          # Zustand store das demandas (CRUD via API)
 │   └── types/
 │       └── demand.ts                  # Tipos TypeScript
 ├── public/

@@ -1,9 +1,14 @@
+import { getAuthToken, notifyUnauthorized } from '@/lib/authToken';
+
 export const API_GATEWAY_URL =
   process.env.NEXT_PUBLIC_API_GATEWAY_URL ?? 'http://localhost:8080';
 
 export const AUTH_API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080') + '/auth';
 export const DEMAND_API_URL = `${API_GATEWAY_URL}/demands`;
 export const METRICS_API_URL = `${API_GATEWAY_URL}/metrics`;
+
+// Nestas rotas um 401 é erro de credencial, não sessão expirada.
+const AUTH_CREDENTIAL_PATHS = ['/login', '/register'];
 
 export class ApiError extends Error {
   status: number;
@@ -24,22 +29,8 @@ export async function apiFetch<T>(
   path: string,
   options: ApiFetchOptions = {}
 ): Promise<T> {
-  let { token, headers, ...rest } = options;
-
-  // 👉 CORRIGIDO PARA O ZUSTAND PERSIST:
-  if (!token && typeof window !== 'undefined') {
-    try {
-      // 1. Pega a string grandona que o Zustand salvou
-      const storageJson = localStorage.getItem('smart-city-storage-v2');
-      if (storageJson) {
-        // 2. Transforma em objeto e navega até o token que está dentro de "state"
-        const parsed = JSON.parse(storageJson);
-        token = parsed?.state?.token || undefined;
-      }
-    } catch (e) {
-      console.error("Erro ao ler token do Zustand:", e);
-    }
-  }
+  const { token: explicitToken, headers, ...rest } = options;
+  const token = explicitToken ?? getAuthToken();
 
   const response = await fetch(`${baseUrl}${path}`, {
     ...rest,
@@ -52,6 +43,13 @@ export async function apiFetch<T>(
 
   if (!response.ok) {
     const body = (await response.json().catch(() => ({}))) as { error?: string };
+    const isCredentialRequest =
+      baseUrl === AUTH_API_URL && AUTH_CREDENTIAL_PATHS.some((p) => path.startsWith(p));
+
+    // Token vencido ou sessão encerrada no servidor: o authStore limpa a sessão local.
+    if (response.status === 401 && !isCredentialRequest) {
+      notifyUnauthorized();
+    }
     throw new ApiError(body.error ?? 'Erro na requisição', response.status);
   }
 

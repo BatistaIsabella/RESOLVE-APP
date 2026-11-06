@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useDemandStore } from "@/stores/useDemandStore";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { DemandFilters } from "@/types/demand";
 import { Button } from "@/components/UI/Button";
 import { Select } from "@/components/UI/Select";
@@ -12,8 +13,6 @@ import Link from "next/link";
 export default function Page() {
   const router = useRouter();
   
-  const [mounted, setMounted] = useState(false);
-
   const { 
     filters, 
     setFilters, 
@@ -25,38 +24,19 @@ export default function Page() {
     isLoading,
     error,
     apiMetrics,
-    token,
-    role,
-    logout,
-    _hasHydrated 
   } = useDemandStore();
+  const logout = useAuthStore((state) => state.logout);
 
   const [tempFilters, setTempFilters] = useState(filters);
 
   useEffect(() => {
-    setMounted(true);
-    if (!token || role !== 'gestor') {
-      router.push('/logingestor');
-      return;
-    }
     fetchDemands();
     fetchMetrics();
-  }, [fetchDemands, fetchMetrics, token, role, router]);
+  }, [fetchDemands, fetchMetrics]);
 
   useEffect(() => {
     setTempFilters(filters);
   }, [filters]);
-
-  if (!mounted || !_hasHydrated) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-           <p className="text-gray-500 animate-pulse">Sincronizando dados...</p>
-        </div>
-      </div>
-    );
-  }
 
   const PRIORITY_ORDER: Record<string, number> = { Alta: 0, "Média": 1, Baixa: 2 };
   const filteredDemands = getFilteredDemands().slice().sort(

@@ -67,7 +67,9 @@ Responsável por:
 - [x] Sistema de filtros avançados (categoria, região, prioridade e status);
 - [x] Atualização manual de status (exclusivo para gestores);
 - [x] Painel administrativo para gestores (Métricas e KPIs);
-- [x] Integração com API *fake* para simulação de dados.
+- [x] Integração com a API REST real (gateway), sem dados mockados;
+- [x] Estado global em dois stores Zustand: `useAuthStore` (sessão/JWT) e `useDemandStore` (demandas);
+- [x] Rotas privadas protegidas por `AuthGuard`; o cidadão edita e exclui a própria denúncia enquanto ela está aberta.
 
 ---
 
@@ -105,7 +107,7 @@ O painel administrativo acompanha, no mínimo:
 | :--- | :--- |
 | **Front-end** | `TypeScript`, `Next.js`, `Chakra UI`, `Tailwind CSS`, `Zustand` |
 | **Back-end & Integração** | `Node.js`, `Express`, `Prisma ORM` |
-| **Autenticação & Dados** | `JWT`, `Cookies`, `Redis`, `Cron Jobs`, `API Fake` |
+| **Autenticação & Dados** | `JWT`, `Cookies`, `Redis`, `Cron Jobs` |
 
 ---
 
@@ -160,17 +162,15 @@ src/
       StatusBadge.tsx
   constants/
     demanda.ts
-  hooks/
-    useDemands.ts
   lib/
     api.ts
-  mocks/
-    fake-data.ts
+    authToken.ts
   Services/
     authService.ts
     demandService.ts
     metricsService.ts
   stores/
+    useAuthStore.ts
     useDemandStore.ts
   types/
     demand.ts
