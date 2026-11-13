@@ -35,6 +35,12 @@ export default function GestorScreen() {
         <Text style={styles.heroValue}>{vm.total}</Text>
       </View>
 
+      <View style={styles.tempoCard}>
+        <Text style={styles.tempoLabel}>Tempo médio de atendimento</Text>
+        <Text style={styles.tempoValue}>{vm.tempoMedio}</Text>
+        <Text style={styles.tempoNote}>Do registro à conclusão, nas denúncias resolvidas.</Text>
+      </View>
+
       <ChartCard title="Denúncias por categoria" legend={vm.categoryData} total={vm.categoryTotal}>
         <PieChart data={vm.categoryData} size={Math.min(chartWidth * 0.62, 190)} />
       </ChartCard>
@@ -125,6 +131,35 @@ const styles = StyleSheet.create({
     color: AppColors.white,
     fontSize: 56,
     fontWeight: '800',
+  },
+  tempoCard: {
+    backgroundColor: AppColors.cardBg,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: AppColors.border,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  tempoLabel: {
+    color: AppColors.textMuted,
+    fontSize: 13,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  tempoValue: {
+    color: AppColors.primary,
+    fontSize: 32,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  tempoNote: {
+    color: AppColors.textMuted,
+    fontSize: 11,
+    marginTop: 4,
+    textAlign: 'center',
   },
   periodNote: {
     color: 'rgba(255,255,255,0.72)',

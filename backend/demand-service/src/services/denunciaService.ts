@@ -11,6 +11,7 @@ import { validarImagens } from '../utils/imagem';
 import { httpError } from '../utils/httpError';
 import { buildPaginatedResult, PaginatedResult, PaginationParams } from '../utils/pagination';
 import { getRedisPublisher, publishDenunciaStatusEvent } from '../config/redis';
+import { notificarMudancaStatus } from './pushService';
 import { generalizarEndereco } from '../utils/endereco';
 import { limparCacheMetricas } from '../utils/metricsCache';
 
@@ -474,6 +475,14 @@ export async function updateDenunciaStatus(
   } catch (err) {
     console.error('[demand] Falha ao publicação de evento:', err);
   }
+
+  // Não espera o envio: o gestor recebe a resposta sem depender do serviço de push.
+  void notificarMudancaStatus({
+    cidadaoId: denunciaExistente.cidadao_id,
+    denunciaId,
+    titulo: denunciaExistente.titulo,
+    statusNovo: novoStatus,
+  });
 
   return resultado;
 }

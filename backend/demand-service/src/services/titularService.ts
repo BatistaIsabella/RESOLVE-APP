@@ -78,6 +78,8 @@ export async function anonimizarTitular(usuarioId: number, papel: Papel) {
     });
     // ids de usuário negativos nunca colidem com contas reais e mantêm a coluna única.
     await tx.cidadao.update({ where: { id_cidadao: cidadao.id_cidadao }, data: { usuario_id: -cidadao.id_cidadao } });
+    // Sem a conta, o aparelho não deve mais receber nada.
+    await tx.dispositivoPush.deleteMany({ where: { usuario_id: usuarioId } });
 
     return { denuncias: denuncias.count, fotos: fotos.count };
   });

@@ -2,6 +2,7 @@ import { api } from '@/lib/api';
 import {
   ApiDenuncia,
   buildCreatePayload,
+  buildListParams,
   buildUpdatePayload,
   mapDenunciaFromApi,
   mapDenunciasFromApi,
@@ -11,6 +12,7 @@ import {
 import {
   Demand,
   DemandCategory,
+  DemandFilters,
   DemandPriority,
   DemandRegion,
   DemandStatus,
@@ -23,14 +25,9 @@ interface PaginatedResponse<T> {
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 
-export interface ListOptions {
-  q?: string;
-}
+export type ListOptions = Partial<DemandFilters>;
 
-function listParams({ q }: ListOptions) {
-  const termo = q?.trim();
-  return { page: 1, limit: 100, ...(termo ? { q: termo } : {}) };
-}
+const listParams = buildListParams;
 
 export const demandService = {
   async getMyDemands(solicitante = '', options: ListOptions = {}): Promise<Demand[]> {

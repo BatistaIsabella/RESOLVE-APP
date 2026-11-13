@@ -18,6 +18,7 @@ import {
 } from '../controllers/gestorController';
 import { createDemand } from '../controllers/demandController';
 import { exportarMeusDados, excluirMeusDados } from '../controllers/titularController';
+import { registrarDispositivo, removerDispositivo } from '../controllers/dispositivoController';
 
 const router = Router();
 
@@ -40,6 +41,10 @@ router.get('/feed', authMiddleware, roleMiddleware('cidadao'), listarFeedDenunci
 // Direitos do titular (acesso/portabilidade e eliminação). Precisam vir antes das rotas com :id.
 router.get('/me/export', authMiddleware, roleMiddleware('cidadao', 'gestor'), exportarMeusDados);
 router.delete('/me', authMiddleware, roleMiddleware('cidadao', 'gestor'), excluirMeusDados);
+
+// Aparelhos para notificação push (só cidadão). Antes das rotas com :id.
+router.post('/devices', authMiddleware, roleMiddleware('cidadao'), registrarDispositivo);
+router.delete('/devices', authMiddleware, roleMiddleware('cidadao'), removerDispositivo);
 
 // 3. ROTA DINÂMICA COMPLETA (Sempre por ÚLTIMO no arquivo)
 // Se essa rota ficar em cima, ela tenta "comer" o /gestor/:id achando que "gestor" é o ID da denúncia.

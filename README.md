@@ -157,7 +157,9 @@ A plataforma RESOLVE utiliza um API Gateway como ponto central de entrada (Porta
 | **Demandas (gestor)** | `PATCH` | `/demands/gestor/:id/status` | Altera o status e registra no histórico. |
 | **Demandas (gestor)** | `PATCH` | `/demands/gestor/:id/prioridade` | Altera a prioridade e registra no histórico. |
 | **Demandas (gestor)** | `DELETE` | `/demands/gestor/:id` | Exclui uma demanda. |
-| **Métricas** | `GET` | `/metrics` | Retorna KPIs e indicadores operacionais para o gestor. |
+| **Notificações (cidadão)** | `POST` | `/demands/devices` | Registra o token de push (Expo) do aparelho. Corpo: `{ "token": "ExponentPushToken[...]" }`. |
+| **Notificações (cidadão)** | `DELETE` | `/demands/devices` | Remove o token do aparelho (ao sair). |
+| **Métricas** | `GET` | `/metrics` | Retorna KPIs para o gestor: total, por categoria, região e status, e `tempoMedioAtendimentoHoras`. |
 
 Todas as rotas de demandas e métricas exigem o header `Authorization: Bearer <token>`. A documentação completa está no [Postman](https://documenter.getpostman.com/view/40719566/2sBXwtrADd).
 

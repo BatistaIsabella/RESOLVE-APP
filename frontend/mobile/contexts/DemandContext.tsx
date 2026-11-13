@@ -121,7 +121,7 @@ export function DemandProvider({ children }: { children: React.ReactNode }) {
     filtersRef.current = filters;
   }, [filters]);
 
-  const carregarLista = useCallback(async (mostrarLoading: boolean, search?: string) => {
+  const carregarLista = useCallback(async (mostrarLoading: boolean, filtros?: DemandFilters) => {
     const busca = ++ultimaBusca.current;
     const { token: tokenInicial, role, userEmail } = getAuthSnapshot();
     if (mostrarLoading) {
@@ -129,7 +129,7 @@ export function DemandProvider({ children }: { children: React.ReactNode }) {
       setListError(null);
     }
     try {
-      const options = { q: search ?? filtersRef.current.search };
+      const options = filtros ?? filtersRef.current;
       const lista =
         role === 'gestor'
           ? await demandService.getAllForGestor(options)
@@ -248,9 +248,14 @@ export function DemandProvider({ children }: { children: React.ReactNode }) {
       const next = { ...anterior, ...parcial };
       filtersRef.current = next;
       setFiltersState(next);
-      if ((next.search?.trim() ?? '') !== (anterior.search?.trim() ?? '')) {
-        carregarLista(false, next.search);
-      }
+      // Qualquer filtro muda o que a API devolve: busca de novo, sem trocar a lista por um carregando.
+      const mudou =
+        (next.search?.trim() ?? '') !== (anterior.search?.trim() ?? '') ||
+        next.status !== anterior.status ||
+        next.category !== anterior.category ||
+        next.region !== anterior.region ||
+        next.priority !== anterior.priority;
+      if (mudou) carregarLista(false, next);
     },
     [carregarLista]
   );

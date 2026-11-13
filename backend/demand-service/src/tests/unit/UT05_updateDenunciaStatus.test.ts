@@ -17,8 +17,13 @@ vi.mock('../../config/redis', () => ({
   publishDenunciaStatusEvent: vi.fn(),
 }));
 
+vi.mock('../../services/pushService', () => ({
+  notificarMudancaStatus: vi.fn(),
+}));
+
 import { prisma } from '../../lib/prisma';
 import { publishDenunciaStatusEvent } from '../../config/redis';
+import { notificarMudancaStatus } from '../../services/pushService';
 import { updateDenunciaStatus } from '../../services/denunciaService';
 
 const db = prisma as any;
@@ -91,6 +96,27 @@ describe('updateDenunciaStatus', () => {
       denuncia: denunciaEmAnalise,
       historico: mockHistorico,
     });
+  });
+
+  it('avisa o cidadão da mudança de status, sem esperar o envio', async () => {
+    setupTransactionMock();
+
+    await updateDenunciaStatus(USUARIO_ID, DENUNCIA_ID, 'EM_ANALISE');
+
+    expect(notificarMudancaStatus).toHaveBeenCalledWith({
+      cidadaoId: 10,
+      denunciaId: DENUNCIA_ID,
+      titulo: 'Buraco na pista',
+      statusNovo: 'EM_ANALISE',
+    });
+  });
+
+  it('não notifica quando o status não muda', async () => {
+    db.denuncia.findUnique.mockResolvedValue(denunciaEmAnalise);
+
+    await expect(updateDenunciaStatus(USUARIO_ID, DENUNCIA_ID, 'EM_ANALISE')).rejects.toThrow();
+
+    expect(notificarMudancaStatus).not.toHaveBeenCalled();
   });
 
   it('executa a atualização dentro de uma transação', async () => {

@@ -57,5 +57,7 @@ export interface MetricsKpis {
   byCategory: Record<string, number>;
   byRegion: Record<string, number>;
   byStatus: Record<string, number>;
+  /** Média, em horas, entre registro e conclusão das denúncias resolvidas. null enquanto não há nenhuma. */
+  tempoMedioAtendimentoHoras: number | null;
   updatedAt: string;
 }

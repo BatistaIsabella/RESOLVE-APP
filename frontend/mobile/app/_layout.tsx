@@ -4,11 +4,19 @@ import 'react-native-reanimated';
 
 import { AuthProvider } from '@/contexts/AuthContext';
 import { DemandProvider } from '@/contexts/DemandContext';
+import { useNotificacoes } from '@/hooks/useNotificacoes';
+
+// Precisa ficar dentro dos providers: usa a sessão e o roteador.
+function Notificacoes() {
+  useNotificacoes();
+  return null;
+}
 
 export default function RootLayout() {
   return (
     <AuthProvider>
       <DemandProvider>
+        <Notificacoes />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
           <Stack.Screen name="login" />
