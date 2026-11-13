@@ -6,6 +6,8 @@ export interface ApiMetricsKpis {
   byCategory: Record<string, number>;
   byRegion: Record<string, number>;
   byStatus: Record<string, number>;
+  // Ausente em respostas antigas, ainda em cache no servidor.
+  tempoMedioAtendimentoHoras?: number | null;
   updatedAt: string;
 }
 
@@ -37,5 +39,6 @@ export function mapMetricsFromApi(data: ApiMetricsKpis): MetricsKpis {
     byCategory: translateKeys(data.byCategory, mapCategoryFromApi),
     byRegion: translateKeys(data.byRegion, mapRegionFromApi),
     byStatus: translateKeys(data.byStatus, mapStatusFromApi),
+    tempoMedioAtendimentoHoras: data.tempoMedioAtendimentoHoras ?? null,
   };
 }

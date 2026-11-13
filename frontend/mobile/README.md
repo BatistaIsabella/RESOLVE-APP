@@ -26,7 +26,7 @@ Atalhos:
 | `npm run android` | Inicia e abre no emulador/dispositivo Android |
 | `npm run ios`     | Inicia e abre no simulador iOS (macOS)    |
 | `npm run lint`    | Roda o ESLint                             |
-| `npm test`        | Testes dos utilitários (senha, endereço)  |
+| `npm test`        | Testes dos utilitários (senha, endereço, filtros, notificações) |
 | `npx tsc --noEmit`| Checagem de tipos                         |
 
 ### Expo Go x development build
@@ -41,6 +41,32 @@ Atalhos:
   ```
 
   Depois, rode `npm start` e abra o app instalado.
+
+### Primeiro build com o EAS (APK)
+
+O `eas.json` já tem os perfis `development`, `preview` (gera **APK**, para instalar direto) e `production`. Falta vincular o projeto à sua conta Expo, uma vez:
+
+```bash
+npm install -g eas-cli
+eas login
+eas init                                  # cria o projeto e grava extra.eas.projectId no app.json
+eas build -p android --profile preview    # APK de teste, apontando para o gateway de produção
+```
+
+Commite o `app.json` com o `projectId` gerado. O iOS (IPA) exige conta Apple Developer: `eas build -p ios --profile preview`.
+
+### Notificações push
+
+O cidadão recebe um aviso quando o gestor muda o status de uma denúncia dele (registrar → acompanhar → notificar):
+
+1. Ao entrar, o app pede permissão e registra o token do Expo em `POST /demands/devices`; ao sair, remove em `DELETE /demands/devices`.
+2. Quando o gestor muda o status, o `demand-service` envia a mensagem pela API do Expo Push. Tocar no aviso abre a denúncia.
+
+Requisitos para funcionar:
+
+- **Aparelho físico** (emulador não recebe push) e **development build ou APK** (o Expo Go não recebe push remoto no Android).
+- `extra.eas.projectId` no `app.json` (`eas init`). Sem ele o app só registra um aviso no log e segue sem notificações.
+- **Android**: credencial de envio do Firebase (FCM V1). Crie um projeto no Firebase, baixe a chave de conta de serviço e envie com `eas credentials` (Android → Google Service Account Key for FCM V1).
 
 ## backend
 

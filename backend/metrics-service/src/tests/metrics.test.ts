@@ -21,15 +21,21 @@ vi.mock('../config/redis', () => ({
 }));
 
 const contagens = vi.fn();
+const consultaBruta = vi.fn();
 vi.mock('../lib/prisma', () => ({
   prisma: {
     denuncia: { count: (args: { where: Record<string, unknown> }) => contagens(args) },
-    $queryRaw: vi.fn(),
+    $queryRaw: (...args: unknown[]) => consultaBruta(...args),
   },
 }));
 
 import app from '../app';
-import { aggregateMetrics, getMetrics, renovarCacheAposMudanca } from '../services/metricsService';
+import {
+  aggregateMetrics,
+  getMetrics,
+  renovarCacheAposMudanca,
+  tempoMedioAtendimentoHoras,
+} from '../services/metricsService';
 import { getJwtSecret } from '../config/env';
 
 const token = (claims: Record<string, unknown>) => jwt.sign({ userId: 1, ...claims }, getJwtSecret());
@@ -40,6 +46,7 @@ const tokenCidadao = token({ papel: 'cidadao' });
 beforeEach(() => {
   cache.clear();
   vi.clearAllMocks();
+  consultaBruta.mockResolvedValue([{ horas: null }]);
   // Simula uma base com 10 denúncias no total, 4 delas de iluminação.
   contagens.mockImplementation(async ({ where }: { where: Record<string, unknown> }) => {
     const categoria = where.categoria as string | { in: string[] } | undefined;
@@ -108,6 +115,43 @@ describe('Métricas por escopo de órgão', () => {
   });
 });
 
+describe('Tempo médio de atendimento', () => {
+  it('devolve a média em horas, arredondada a uma casa', async () => {
+    consultaBruta.mockResolvedValue([{ horas: 51.3456 }]);
+
+    expect(await tempoMedioAtendimentoHoras(undefined)).toBe(51.3);
+  });
+
+  it('é null quando ainda não há denúncia resolvida', async () => {
+    consultaBruta.mockResolvedValue([{ horas: null }]);
+
+    expect(await tempoMedioAtendimentoHoras(undefined)).toBeNull();
+  });
+
+  it('é null, sem consultar o banco, quando o escopo do gestor não tem categoria', async () => {
+    expect(await tempoMedioAtendimentoHoras([])).toBeNull();
+    expect(consultaBruta).not.toHaveBeenCalled();
+  });
+
+  it('o escopo do órgão entra na consulta como parâmetro, não como texto', async () => {
+    consultaBruta.mockResolvedValue([{ horas: 12 }]);
+
+    await tempoMedioAtendimentoHoras(['ILUMINACAO_PUBLICA']);
+
+    const [consulta] = consultaBruta.mock.calls[0];
+    expect(consulta.values).toContain('ILUMINACAO_PUBLICA');
+    expect(consulta.sql).not.toContain('ILUMINACAO_PUBLICA');
+  });
+
+  it('entra no resultado do /metrics', async () => {
+    consultaBruta.mockResolvedValue([{ horas: 30 }]);
+
+    const res = await request(app).get('/metrics').set('Authorization', `Bearer ${tokenGeral}`);
+
+    expect(res.body.tempoMedioAtendimentoHoras).toBe(30);
+  });
+});
+
 describe('GET /metrics', () => {
   const consultar = (t?: string) => {
     const req = request(app).get('/metrics');
@@ -139,7 +183,15 @@ describe('GET /metrics', () => {
   it('o resultado não traz nenhum dado pessoal', async () => {
     const res = await consultar(tokenGeral);
 
-    expect(Object.keys(res.body).sort()).toEqual(['byCategory', 'byRegion', 'byStatus', 'total', 'updatedAt']);
+    // Só agregados: contagens e a média de tempo de atendimento.
+    expect(Object.keys(res.body).sort()).toEqual([
+      'byCategory',
+      'byRegion',
+      'byStatus',
+      'tempoMedioAtendimentoHoras',
+      'total',
+      'updatedAt',
+    ]);
   });
 
   it('recusa token de sessão encerrada (versão menor que a vigente no Redis)', async () => {

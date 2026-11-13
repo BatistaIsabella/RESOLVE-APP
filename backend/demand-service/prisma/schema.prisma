@@ -27,6 +27,19 @@ model Gestor {
   @@schema("demand")
 }
 
+// Aparelhos que recebem notificação push (token do Expo). Um token pertence a uma conta por vez.
+model DispositivoPush {
+  id            Int      @id @default(autoincrement())
+  usuario_id    Int
+  token         String   @unique
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  @@index([usuario_id])
+  @@map("dispositivos_push")
+  @@schema("demand")
+}
+
 model Denuncia {
   id_denuncia   Int             @id @default(autoincrement())
   titulo        String          @db.VarChar(50)

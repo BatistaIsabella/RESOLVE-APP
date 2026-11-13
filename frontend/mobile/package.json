@@ -7,7 +7,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "lint": "expo lint",
-    "test": "node --experimental-strip-types --test utils/__tests__/extractBairro.test.mjs utils/__tests__/senha.test.mjs utils/__tests__/mfa.test.mjs"
+    "test": "node --experimental-strip-types --test utils/__tests__/extractBairro.test.mjs utils/__tests__/senha.test.mjs utils/__tests__/mfa.test.mjs utils/__tests__/listParams.test.mjs utils/__tests__/tempoMedio.test.mjs utils/__tests__/notificacaoRota.test.mjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -19,6 +19,7 @@
     "expo": "~57.0.25",
     "expo-camera": "~57.0.5",
     "expo-constants": "~57.0.18",
+    "expo-device": "~57.0.2",
     "expo-file-system": "~57.0.7",
     "expo-font": "~57.0.4",
     "expo-haptics": "~57.0.3",
@@ -28,6 +29,7 @@
     "expo-linear-gradient": "~57.0.2",
     "expo-linking": "~57.0.11",
     "expo-location": "~57.0.20",
+    "expo-notifications": "~57.0.25",
     "expo-router": "~57.0.23",
     "expo-secure-store": "~57.0.4",
     "expo-splash-screen": "~57.0.9",

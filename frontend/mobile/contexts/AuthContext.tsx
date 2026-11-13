@@ -5,6 +5,7 @@ import { contaService } from '@/services/contaService';
 import { ApiError } from '@/lib/api';
 import { setAuthSnapshot, setUnauthorizedHandler } from '@/lib/authToken';
 import { clearSession, loadSession, saveSession, StoredSession } from '@/lib/secureStorage';
+import { desregistrarDispositivo } from '@/lib/pushRegistration';
 import { VERSAO_TERMOS } from '@/constants/termos';
 
 type Papel = 'cidadao' | 'gestor';
@@ -92,7 +93,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Saída pedida pelo usuário: avisa o servidor (para o registro de auditoria) e limpa o aparelho.
   const logout = useCallback(() => {
     const token = sessionRef.current?.token;
-    if (token) authService.logout(token).catch(() => {});
+    if (token) {
+      authService.logout(token).catch(() => {});
+      desregistrarDispositivo(token);
+    }
     encerrarLocalmente();
   }, [encerrarLocalmente]);
 

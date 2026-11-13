@@ -6,6 +6,7 @@ import { useDemandContext } from '@/contexts/DemandContext';
 import { DemandFilters } from '@/types/demand';
 import { buildPeriodSeries, countBy, toSlices } from '@/utils/metricsAggregator';
 import { filterDemands, hasActiveFilters } from '@/utils/demandFilters';
+import { formatTempoMedio } from '@/utils/tempoMedio';
 import { REGIAO_ABREVIADA } from '@/constants/demanda';
 import { ChartPalette, ChartStatusColors } from '@/constants/colors';
 
@@ -115,6 +116,8 @@ export function useGestorDashboardViewModel() {
     error,
 
     total: source.total,
+    // Calculado no servidor sobre todas as resolvidas; não muda com os filtros da lista.
+    tempoMedio: formatTempoMedio(metrics?.tempoMedioAtendimentoHoras),
     categoryData,
     categoryTotal,
     statusData,

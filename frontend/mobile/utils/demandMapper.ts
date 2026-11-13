@@ -1,6 +1,7 @@
 import type {
   Demand,
   DemandCategory,
+  DemandFilters,
   DemandPriority,
   DemandRegion,
   DemandStatus,
@@ -126,6 +127,21 @@ export function mapStatusToApi(status: DemandStatus): string {
 
 export function mapPriorityToApi(priority: DemandPriority): string {
   return PRIORIDADE_TO_API[priority];
+}
+
+// Parâmetros da listagem na API. Os filtros viajam na consulta (e não só no aparelho), porque a
+// resposta é paginada e filtrar apenas o que já chegou esconderia demandas fora da primeira página.
+export function buildListParams(filters: Partial<DemandFilters> = {}) {
+  const termo = filters.search?.trim();
+  return {
+    page: 1,
+    limit: 100,
+    ...(termo ? { q: termo } : {}),
+    ...(filters.status ? { status: mapStatusToApi(filters.status) } : {}),
+    ...(filters.category ? { categoria: mapCategoryToApi(filters.category) } : {}),
+    ...(filters.region ? { regiao: mapRegionToApi(filters.region) } : {}),
+    ...(filters.priority ? { prioridade: mapPriorityToApi(filters.priority) } : {}),
+  };
 }
 
 export function formatPriorityLabel(priority: DemandPriority): string {

@@ -1,4 +1,4 @@
-import { Categorias, Regioes, StatusDenuncia } from '@prisma/client';
+import { Categorias, Prisma, Regioes, StatusDenuncia } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { getRedisClient, METRICS_CACHE_KEY } from '../config/redis';
 import { withRetry } from '../utils/retry';
@@ -8,6 +8,8 @@ export interface MetricsKpis {
   byCategory: Record<string, number>;
   byRegion: Record<string, number>;
   byStatus: Record<string, number>;
+  // Média, em horas, entre o registro e a conclusão das denúncias resolvidas. null quando ainda não há nenhuma.
+  tempoMedioAtendimentoHoras: number | null;
   updatedAt: string;
 }
 
@@ -29,6 +31,21 @@ function filtroDoEscopo(escopo: Escopo) {
   return escopo ? { categoria: { in: escopo as Categorias[] } } : {};
 }
 
+export async function tempoMedioAtendimentoHoras(escopo: Escopo): Promise<number | null> {
+  if (escopo && escopo.length === 0) return null;
+
+  const filtroCategoria = escopo ? Prisma.sql`AND categoria::text IN (${Prisma.join([...escopo])})` : Prisma.empty;
+  const linhas = await prisma.$queryRaw<{ horas: number | null }[]>(Prisma.sql`
+    SELECT (AVG(EXTRACT(EPOCH FROM (data_conclusao - data_registro))) / 3600.0)::float8 AS horas
+    FROM demand.denuncias
+    WHERE status = 'RESOLVIDA' AND data_conclusao IS NOT NULL ${filtroCategoria}
+  `);
+
+  const horas = linhas?.[0]?.horas;
+  if (horas === null || horas === undefined) return null;
+  return Math.round(Number(horas) * 10) / 10;
+}
+
 export async function aggregateMetrics(escopo?: Escopo): Promise<MetricsKpis> {
   const base = filtroDoEscopo(escopo);
   const categorias = Object.values(Categorias).filter((c) => !escopo || escopo.includes(c));
@@ -38,11 +55,12 @@ export async function aggregateMetrics(escopo?: Escopo): Promise<MetricsKpis> {
     return [valor, count];
   };
 
-  const [total, categoryResults, regionResults, statusResults] = await Promise.all([
+  const [total, categoryResults, regionResults, statusResults, tempoMedio] = await Promise.all([
     prisma.denuncia.count({ where: base }),
     Promise.all(categorias.map((c) => contar('categoria', c))),
     Promise.all(Object.values(Regioes).map((r) => contar('regiao', r))),
     Promise.all(Object.values(StatusDenuncia).map((s) => contar('status', s))),
+    tempoMedioAtendimentoHoras(escopo),
   ]);
 
   return {
@@ -50,6 +68,7 @@ export async function aggregateMetrics(escopo?: Escopo): Promise<MetricsKpis> {
     byCategory: Object.fromEntries(categoryResults),
     byRegion: Object.fromEntries(regionResults),
     byStatus: Object.fromEntries(statusResults),
+    tempoMedioAtendimentoHoras: tempoMedio,
     updatedAt: new Date().toISOString(),
   };
 }
