@@ -90,6 +90,12 @@
         "projectId": "6718b7f1-f433-4666-a9bf-97b76eb4c54f"
       }
     },
-    "owner": "icarusss"
+    "owner": "icarusss",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/6718b7f1-f433-4666-a9bf-97b76eb4c54f"
+    }
   }
 }
