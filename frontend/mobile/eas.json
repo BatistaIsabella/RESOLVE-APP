@@ -9,7 +9,8 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_API_GATEWAY_URL": "http://localhost:8080"
-      }
+      },
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
@@ -18,13 +19,15 @@
       },
       "env": {
         "EXPO_PUBLIC_API_GATEWAY_URL": "https://smartcity-api.beholder.app.br"
-      }
+      },
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_GATEWAY_URL": "https://smartcity-api.beholder.app.br"
-      }
+      },
+      "channel": "production"
     }
   },
   "submit": {
