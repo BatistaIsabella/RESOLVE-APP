@@ -1,0 +1,3 @@
+# Dumps gerados localmente. Nunca versionar: mesmo o de teste não precisa ir para o repositório.
+*
+!.gitignore
