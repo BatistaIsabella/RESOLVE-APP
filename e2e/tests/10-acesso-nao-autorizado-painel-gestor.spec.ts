@@ -62,6 +62,8 @@ import { test, expect, APIRequestContext, Page } from '@playwright/test';
 
 const API_BASE_URL = process.env.E2E_API_URL ?? 'http://localhost:8080';
 const SENHA_PADRAO = 'Senha@teste123';
+// Código que o auth-service exige para cadastrar gestor (padrão do docker-compose; mesmo do cenário 9).
+const CODIGO_GESTOR = process.env.E2E_GESTOR_CODE ?? 'change-me-codigo-gestor';
 
 /** Rotas protegidas da área do gestor que um cidadão pode tentar digitar direto. */
 const ROTAS_DO_PAINEL = ['/gestor/dashboard', '/gestor', '/gestor/demandas/1'];
@@ -214,7 +216,7 @@ test.describe('Cenário 10 — acesso não autorizado ao Painel do Gestor', () =
       };
 
       const registro = await request.post(`${API_BASE_URL}/auth/register`, {
-        data: { ...gestor, papel: 'gestor' },
+        data: { ...gestor, papel: 'gestor', codigoAcesso: CODIGO_GESTOR },
       });
       if (!registro.ok()) {
         throw new Error(

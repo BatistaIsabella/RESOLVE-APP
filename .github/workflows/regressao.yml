@@ -145,41 +145,40 @@ jobs:
         working-directory: resolve-app/backend
         run: docker compose down -v
 
-      - name: Checkout RESOLVE
+      # O E2E valida o backend e o frontend DESTE repositório (mesmo commit dos testes).
+      - name: Subir backend para E2E
         if: github.event_name != 'push'
-        uses: actions/checkout@v4
-        with:
-          repository: Cecimedeiros/RESOLVE
-          path: resolve-web
-
-      - name: Subir backend do RESOLVE para E2E
-        if: github.event_name != 'push'
-        working-directory: resolve-web/backend
+        working-directory: resolve-app/backend
         run: docker compose up -d --build
         env:
           JWT_SECRET: ${{ env.JWT_SECRET }}
 
-      - name: Aguardar api-gateway do RESOLVE (:8080)
+      - name: Aguardar api-gateway e serviços (:8080)
         if: github.event_name != 'push'
-        run: timeout 180 bash -c 'until nc -z localhost 8080; do sleep 3; done'
+        run: |
+          timeout 240 bash -c 'until nc -z localhost 8080; do sleep 3; done'
+          # Gateway no ar não garante serviços prontos (cada um roda prisma db push ao iniciar).
+          # auth responde 400 a login vazio; demand responde 401 sem token.
+          timeout 240 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:8080/auth/login -H "Content-Type: application/json" -d "{}")" = "400" ]; do sleep 3; done'
+          timeout 240 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/demands/gestor)" = "401" ]; do sleep 3; done'
 
-      - name: Instalar dependências — frontend RESOLVE
+      - name: Instalar dependências — frontend
         if: github.event_name != 'push'
-        working-directory: resolve-web/frontend
+        working-directory: resolve-app/frontend
         run: npm ci
 
-      - name: Build frontend RESOLVE
+      - name: Build frontend
         if: github.event_name != 'push'
-        working-directory: resolve-web/frontend
+        working-directory: resolve-app/frontend
         run: npm run build
         env:
           NEXT_PUBLIC_API_GATEWAY_URL: http://localhost:8080
 
-      - name: Iniciar frontend RESOLVE em segundo plano
+      - name: Iniciar frontend em segundo plano
         if: github.event_name != 'push'
-        working-directory: resolve-web/frontend
+        working-directory: resolve-app/frontend
         run: |
-          NEXT_PUBLIC_API_GATEWAY_URL=http://localhost:8080 npm run start &
+          NEXT_PUBLIC_API_GATEWAY_URL=http://localhost:8080 npm run start > ../frontend-e2e.log 2>&1 &
           timeout 60 bash -c 'until nc -z localhost 3000; do sleep 2; done'
 
       - name: Instalar dependências — E2E
@@ -324,6 +323,12 @@ jobs:
               await github.rest.issues.create({ ...context.repo, title, body, labels: [label] });
             }
 
+      - name: Coletar logs da stack E2E
+        if: always() && github.event_name != 'push'
+        continue-on-error: true
+        working-directory: resolve-app/backend
+        run: docker compose logs --no-color > ../stack-e2e.log 2>&1
+
       - name: Publicar relatórios e evidências
         if: always()
         uses: actions/upload-artifact@v4
@@ -337,6 +342,8 @@ jobs:
             resolve-app/e2e/playwright-report/
             resolve-app/e2e/test-results/
             resolve-app/quality-reports/
+            resolve-app/stack-e2e.log
+            resolve-app/frontend-e2e.log
           retention-days: 14
           if-no-files-found: warn
 
