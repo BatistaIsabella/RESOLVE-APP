@@ -1,0 +1,36 @@
+# Override EXCLUSIVO do ambiente de testes E2E. Não é usado em desenvolvimento comum nem em produção.
+#
+# Sobe um receptor que imita o envio do Expo Push e aponta o demand-service para ele, para o
+# E2E poder conferir a notificação que o serviço emite quando o status de uma demanda muda.
+#
+# Uso (a partir de backend/):
+#   docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d --build
+#
+# Hostnames: dentro da rede do Compose o demand-service alcança o mock por "expo-mock"
+# ("localhost" apontaria para o próprio container do demand-service). Do lado do host, o
+# Playwright consulta http://127.0.0.1:4010 (E2E_EXPO_MOCK_URL).
+
+services:
+  expo-mock:
+    image: node:20-alpine
+    container_name: smartcity_expo_mock
+    command: node /mock/server.mjs
+    environment:
+      PORT: 4010
+    volumes:
+      - ../e2e/support/expo-push-mock.mjs:/mock/server.mjs:ro
+    # Só em loopback: o mock não deve ficar acessível fora da máquina.
+    ports:
+      - "127.0.0.1:${E2E_EXPO_MOCK_PORT:-4010}:4010"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:4010/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  demand-service:
+    environment:
+      EXPO_PUSH_URL: http://expo-mock:4010/push
+    depends_on:
+      expo-mock:
+        condition: service_healthy
