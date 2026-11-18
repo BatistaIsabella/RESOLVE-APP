@@ -34,3 +34,10 @@ services:
     depends_on:
       expo-mock:
         condition: service_healthy
+
+  # O gateway só libera CORS para origens listadas em CORS_ORIGINS (vazio por padrão). O navegador
+  # do E2E abre o frontend em http://localhost:3000 e chama a API em http://localhost:8080, então
+  # essa origem precisa ser autorizada, e somente ela. O compose base e a produção seguem fechados.
+  api-gateway:
+    environment:
+      CORS_ORIGINS: http://localhost:3000
