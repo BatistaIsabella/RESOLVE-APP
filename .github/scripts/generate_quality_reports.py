@@ -111,15 +111,6 @@ def read_risks(root):
         return []
 
 
-def read_pending(root):
-    path = root / ".github/quality-context.json"
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        return data.get("pending_features", [])
-    except (OSError, json.JSONDecodeError, AttributeError):
-        return []
-
-
 COVERAGE_TARGET = 80.0
 
 
@@ -163,20 +154,24 @@ def collect_metrics(root, outcomes=None):
         key: sum(suite[key] for suite in suites)
         for key in ("passed", "failed", "skipped")
     }
-    executed = totals["passed"] + totals["failed"]
+    # Suite que falhou na execução (sem JUnit) conta como 1 falha: nunca pode
+    # resultar em 100% de aprovação.
+    execution_errors = sum(1 for suite in suites if suite["runner_error"])
+    executed = totals["passed"] + totals["failed"] + execution_errors
     coverage = read_coverage(root)
+    verdict = compute_verdict(suites, coverage)
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "suites": suites,
         "totals": {
             **totals,
+            "execution_errors": execution_errors,
             "duration_seconds": round(sum(suite["duration_seconds"] for suite in suites), 3),
             "success_rate": totals["passed"] / executed if executed else None,
         },
         "coverage": coverage,
-        "verdict": compute_verdict(suites, coverage),
+        "verdict": verdict,
         "risks": read_risks(root),
-        "pending_features": read_pending(root),
     }
 
 
@@ -257,16 +252,6 @@ def _risk_list(risks):
 VERDICT_COLORS = {"green": "#1d7a46", "yellow": "#b7791f", "red": "#b3261e", "gray": "#586674"}
 
 
-def _pending_list(items):
-    if not items:
-        return "<p>Nenhuma pendência conhecida registrada.</p>"
-    return "<ul>" + "".join(
-        f"<li><strong>{html.escape(i.get('id', ''))} — {html.escape(i.get('title', ''))}.</strong> "
-        f"{html.escape(i.get('impact', ''))}</li>"
-        for i in items
-    ) + "</ul>"
-
-
 def _business_status(suite):
     if suite["runner_error"] or suite["status"] == "failed":
         return "Com falhas"
@@ -278,51 +263,99 @@ def _business_status(suite):
     }[suite["status"]]
 
 
-def _business_sections(metrics):
+COVERAGE_SCOPE = "somente o código instrumentado do demand-service; não representa a cobertura de todo o produto"
+
+RATE_SCOPE_NOTE = (
+    "A taxa considera apenas os testes efetivamente executados: entram aprovados, reprovados e falhas de "
+    "execução de suites; ficam fora os testes ignorados e as suites não executadas. Cenários configurados "
+    "como falha esperada (test.fail) podem ser reportados pelo Playwright/JUnit de forma que não representa "
+    "uma validação funcional normal, e isso deve ser considerado na leitura da taxa e da cobertura."
+)
+
+INCOMPLETE_VALIDATION_ALERT = (
+    "Existem cenários ignorados ou não executados. Portanto, a taxa de sucesso dos testes executados "
+    "não representa validação integral dos cenários planejados."
+)
+
+
+def _incomplete_validation(metrics):
+    """Mensagem de validação incompleta, derivada só dos resultados desta execução."""
+    ignored = metrics["totals"]["skipped"]
+    missing = [s["name"] for s in metrics["suites"] if s["status"] in ("not_run", "report_missing", "report_error")]
+    if not ignored and not missing:
+        return ""
+    evidence = []
+    if ignored:
+        evidence.append(f"{ignored} teste(s) ignorado(s)")
+    if missing:
+        evidence.append("suites sem resultado nesta execução: " + ", ".join(missing))
+    return (
+        f'<div class="alert"><strong>Atenção.</strong> {html.escape(INCOMPLETE_VALIDATION_ALERT)} '
+        f'<span class="muted">({html.escape("; ".join(evidence))}.)</span></div>'
+    )
+
+
+def _summary_section(metrics):
+    """Resumo da execução: veredito, taxa e contagens, sempre no topo do relatório."""
     verdict = metrics["verdict"]
+    totals = metrics["totals"]
     color = VERDICT_COLORS[verdict["level"]]
     reasons = "".join(f"<li>{html.escape(r)}</li>" for r in verdict["reasons"])
+    errors = totals.get("execution_errors", 0)
+    return (
+        "<section><h2>Resumo da execução</h2>"
+        f'<div class="verdict" style="border-left:8px solid {color}">'
+        f'<span class="muted">Situação geral da qualidade</span><h2 style="color:{color};margin:4px 0">'
+        f'{html.escape(verdict["label"])}</h2><ul>{reasons}</ul></div>'
+        '<div class="metrics" style="margin-top:12px">'
+        f'<div class="metric"><span>Taxa de sucesso (apenas testes executados)</span><strong>{_display_rate(totals["success_rate"])}</strong></div>'
+        f'<div class="metric"><span>Passed</span><strong>{totals["passed"]}</strong></div>'
+        f'<div class="metric"><span>Failed</span><strong>{totals["failed"]}</strong></div>'
+        f'<div class="metric"><span>Falhas de execução</span><strong>{errors}</strong></div>'
+        f'<div class="metric"><span>Ignorados (não executados)</span><strong>{totals["skipped"]}</strong></div>'
+        f'<div class="metric"><span>Duração somada</span><strong>{_display_duration(totals["duration_seconds"])}</strong></div>'
+        "</div>"
+        f'<p class="muted rate-scope">{html.escape(RATE_SCOPE_NOTE)}</p>'
+        f"{_incomplete_validation(metrics)}</section>"
+    )
+
+
+def _business_sections(metrics):
     layers = "".join(
         f"<tr><td>{html.escape(s['name'])}</td><td>{html.escape(_business_status(s))}</td>"
         f"<td>{s['passed'] + s['failed']}</td><td>{_display_rate(s['success_rate'])}</td></tr>"
         for s in metrics["suites"]
     )
     return (
-        f'<section><div class="verdict" style="border-left:8px solid {color}">'
-        f'<span class="muted">Situação geral da qualidade</span><h2 style="color:{color};margin:4px 0">'
-        f'{html.escape(verdict["label"])}</h2><ul>{reasons}</ul></div></section>'
         f"<section><h2>Áreas verificadas</h2><table><thead><tr><th>Área</th><th>Situação</th>"
-        f"<th>Testes executados</th><th>Taxa de sucesso</th></tr></thead><tbody>{layers}</tbody></table></section>"
-        f"<section><h2>Funcionalidades pendentes (falhas esperadas)</h2>"
-        f"{_pending_list(metrics['pending_features'])}"
-        '<p class="muted">Estes cenários estão marcados como falha esperada ou ignorados nos testes. '
-        "Eles não reprovam o pipeline, mas não devem ser entendidos como funcionalidades entregues.</p></section>"
+        f"<th>Testes executados</th><th>Taxa (executados)</th></tr></thead><tbody>{layers}</tbody></table></section>"
     )
 
 
 def render_report(metrics, technical):
-    totals = metrics["totals"]
     title = "Relatório Técnico de Qualidade" if technical else "Relatório de Qualidade do Produto"
     table_headers = """
-      <thead><tr><th>Suite / Caso</th><th>Resultado</th><th>Passed</th><th>Failed</th><th>Skipped</th><th>Taxa de sucesso</th><th>Duração</th></tr></thead>
+      <thead><tr><th>Suite / Caso</th><th>Resultado</th><th>Passed</th><th>Failed</th><th>Skipped</th><th>Taxa (executados)</th><th>Duração</th></tr></thead>
     """
     details = _suite_rows(metrics["suites"], technical=True)
     coverage = _coverage_rows(metrics["coverage"])
     complementary = "" if technical else f"<section><h2>Riscos e lacunas complementares</h2>{_risk_list(metrics['risks'])}</section>"
     notes = """
-      <p class="muted">A taxa de sucesso é passed / (passed + failed); skipped não entra no denominador. A cobertura representa somente os arquivos instrumentados na configuração unitária do demand-service.</p>
+      <p class="muted">A taxa de sucesso é passed / (passed + failed + falhas de execução); skipped não entra no denominador. A cobertura representa somente os arquivos instrumentados na configuração unitária do demand-service.</p>
     """
     if not technical:
         notes += '<p class="muted">Suites não executadas neste evento não são consideradas aprovadas. Falhas de infraestrutura podem reprovar o job mesmo sem falhas de teste nos resultados coletados.</p>'
     if technical:
         body = (
-            f"<section><h2>Resultados por suite</h2><table>{table_headers}<tbody>{details}</tbody></table></section>"
-            f"<section><h2>Cobertura instrumentada</h2>{coverage}</section>{notes}"
+            _summary_section(metrics)
+            + f"<section><h2>Cobertura instrumentada ({COVERAGE_SCOPE})</h2>{coverage}</section>"
+            f"<section><h2>Resultados por suite</h2><table>{table_headers}<tbody>{details}</tbody></table></section>{notes}"
         )
     else:
         body = (
-            _business_sections(metrics)
-            + f"<section><h2>Cobertura de código</h2>{coverage}</section>{complementary}{notes}"
+            _summary_section(metrics)
+            + _business_sections(metrics)
+            + f"<section><h2>Cobertura de código ({COVERAGE_SCOPE})</h2>{coverage}</section>{complementary}{notes}"
         )
     return f"""<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -335,13 +368,10 @@ h1{{font-size:28px;margin:0 0 4px}}h2{{font-size:19px;margin:28px 0 12px}}.muted
 .metric,.coverage-grid div{{background:white;border:1px solid var(--line);padding:14px}}
 .metric span,.coverage-grid span{{display:block;color:var(--muted);font-size:13px}}.metric strong,.coverage-grid strong{{font-size:23px}}
 table{{width:100%;border-collapse:collapse;background:white;font-size:13px}}th,td{{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}}
-th{{background:#e8eff0;color:#253942}}.case-row td{{color:var(--muted)}}.error-row td{{color:var(--warn)}}.verdict{{background:white;border:1px solid var(--line);padding:16px 20px}}section{{margin-top:24px}}
+th{{background:#e8eff0;color:#253942}}.case-row td{{color:var(--muted)}}.error-row td{{color:var(--warn)}}.verdict{{background:white;border:1px solid var(--line);padding:16px 20px}}.alert{{background:#fff7e6;border:1px solid #e0b252;border-left:6px solid #b7791f;padding:12px 16px;margin-top:12px}}section{{margin-top:24px}}
 @media(max-width:700px){{main{{padding:0 12px}}table{{display:block;overflow-x:auto;white-space:nowrap}}h1{{font-size:23px}}}}
 </style></head><body><main><header><h1>{title}</h1>
 <div class="muted">Gerado em {html.escape(metrics['generated_at'])}</div></header>
-<div class="metrics"><div class="metric"><span>Taxa de sucesso</span><strong>{_display_rate(totals['success_rate'])}</strong></div>
-<div class="metric"><span>Passed</span><strong>{totals['passed']}</strong></div><div class="metric"><span>Failed</span><strong>{totals['failed']}</strong></div>
-<div class="metric"><span>Skipped</span><strong>{totals['skipped']}</strong></div><div class="metric"><span>Duração somada</span><strong>{_display_duration(totals['duration_seconds'])}</strong></div></div>
 {body}
 </main></body></html>"""
 

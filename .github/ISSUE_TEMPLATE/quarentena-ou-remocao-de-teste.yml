@@ -1,0 +1,109 @@
+name: Quarentena ou remoção de teste
+description: Registra a quarentena, a saída da quarentena ou a remoção de um teste automatizado (ver docs/tas.md).
+title: "[TAS] Quarentena/remoção: "
+labels:
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use este modelo quando um teste for **colocado em quarentena**, **sair da quarentena** ou for **removido**.
+        Regras: [Política de Manutenção da TAS](https://github.com/BatistaIsabella/RESOLVE-APP/blob/main/docs/tas.md), seções 3 (quarentena) e 5 (remoção).
+
+        - **Quarentena** só vale para teste instável ou variação esperada, com esta issue vinculada, responsável, prazo máximo de 10 dias úteis e critério de saída.
+        - **Remoção** exige justificativa objetiva e evidência da cobertura remanescente. Um teste não é removido por ser instável, lento ou incômodo.
+        - Referencie esta issue no PR (`Closes #N` ou `Refs #N`).
+  - type: dropdown
+    id: acao
+    attributes:
+      label: Ação
+      options:
+        - Colocar em quarentena
+        - Prorrogar quarentena (uma única vez, com justificativa)
+        - Sair da quarentena
+        - Remover teste
+    validations:
+      required: true
+  - type: input
+    id: teste
+    attributes:
+      label: Teste afetado
+      description: Arquivo e título do teste (por exemplo, e2e/tests/05-...spec.ts, "deve navegar entre páginas...") e o cenário do backlog (C1 a C11).
+    validations:
+      required: true
+  - type: dropdown
+    id: classe
+    attributes:
+      label: Classe
+      options:
+        - "SUT: defeito ou comportamento inadequado do sistema sob teste"
+        - "TAS: problema na automação, spec, seletor, payload, expectativa ou código de suporte"
+        - "Ambiente: CI, Docker, CORS, banco, Redis, configuração ou indisponibilidade externa"
+        - "Variação esperada: limitação conhecida e explicitamente acompanhada"
+    validations:
+      required: true
+  - type: dropdown
+    id: prioridade
+    attributes:
+      label: Prioridade
+      options:
+        - "P1: Quality Gate bloqueado, regressão do SUT ou ambiente da TAS indisponível"
+        - "P2: teste instável, spec desatualizado ou teste em quarentena"
+        - "P3: duplicação, lentidão, refatoração ou melhoria"
+    validations:
+      required: true
+  - type: input
+    id: responsavel
+    attributes:
+      label: Responsável
+      description: Usuário do GitHub designado. Designe-o também em Assignees.
+      placeholder: usuário do GitHub
+    validations:
+      required: true
+  - type: input
+    id: prazo
+    attributes:
+      label: Prazo
+      description: Quarentena, no máximo 10 dias úteis a partir de hoje; remoção, data prevista do PR. Formato AAAA-MM-DD.
+      placeholder: AAAA-MM-DD
+    validations:
+      required: true
+  - type: textarea
+    id: justificativa
+    attributes:
+      label: Justificativa objetiva
+      description: |
+        Quarentena: critério de instabilidade atendido (execuções que passaram e falharam no mesmo commit) ou variação esperada acompanhada.
+        Remoção: requisito removido, cenário substituído, cobertura equivalente comprovada, duplicação comprovada ou funcionalidade retirada.
+    validations:
+      required: true
+  - type: textarea
+    id: evidencia
+    attributes:
+      label: Evidência
+      description: Links das execuções, trace, log, relatório técnico, ou comparação que comprove a cobertura equivalente ou a duplicação.
+    validations:
+      required: true
+  - type: textarea
+    id: impacto
+    attributes:
+      label: Impacto e cobertura remanescente
+      description: Que risco deixa de ser verificado e qual teste, ou qual outro mecanismo, continua cobrindo o requisito. Para quarentena, descreva o risco enquanto durar.
+    validations:
+      required: true
+  - type: textarea
+    id: saida
+    attributes:
+      label: Critério de saída ou de conclusão
+      description: Quarentena, causa raiz corrigida e 3 execuções consecutivas da regressão completa sem falha; variação esperada, funcionalidade implementada (unexpected pass). Remoção, PR aprovado e documentação atualizada.
+    validations:
+      required: true
+  - type: checkboxes
+    id: conferencias
+    attributes:
+      label: Conferências
+      options:
+        - label: O teste não está sendo desativado apenas para deixar o pipeline verde.
+          required: true
+        - label: A documentação afetada (backlog de cenários, tabela de exceções em docs/tas.md) será atualizada no mesmo PR.
+          required: true

@@ -145,41 +145,43 @@ jobs:
         working-directory: resolve-app/backend
         run: docker compose down -v
 
-      - name: Checkout RESOLVE
+      # O E2E valida o backend e o frontend DESTE repositório (mesmo commit dos testes).
+      # O override docker-compose.e2e.yml acrescenta um receptor que imita o Expo Push (só para testes).
+      - name: Subir backend para E2E
         if: github.event_name != 'push'
-        uses: actions/checkout@v4
-        with:
-          repository: Cecimedeiros/RESOLVE
-          path: resolve-web
-
-      - name: Subir backend do RESOLVE para E2E
-        if: github.event_name != 'push'
-        working-directory: resolve-web/backend
-        run: docker compose up -d --build
+        working-directory: resolve-app/backend
+        run: docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d --build
         env:
           JWT_SECRET: ${{ env.JWT_SECRET }}
 
-      - name: Aguardar api-gateway do RESOLVE (:8080)
+      - name: Aguardar api-gateway e serviços (:8080)
         if: github.event_name != 'push'
-        run: timeout 180 bash -c 'until nc -z localhost 8080; do sleep 3; done'
+        run: |
+          timeout 240 bash -c 'until nc -z localhost 8080; do sleep 3; done'
+          # Gateway no ar não garante serviços prontos (cada um roda prisma db push ao iniciar).
+          # auth responde 400 a login vazio; demand responde 401 sem token.
+          timeout 240 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:8080/auth/login -H "Content-Type: application/json" -d "{}")" = "400" ]; do sleep 3; done'
+          timeout 240 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/demands/gestor)" = "401" ]; do sleep 3; done'
+          # Receptor que imita o Expo Push (usado pelo teste de notificação do cenário 9).
+          timeout 60 bash -c 'until curl -fs http://127.0.0.1:4010/health >/dev/null; do sleep 2; done'
 
-      - name: Instalar dependências — frontend RESOLVE
+      - name: Instalar dependências — frontend
         if: github.event_name != 'push'
-        working-directory: resolve-web/frontend
+        working-directory: resolve-app/frontend
         run: npm ci
 
-      - name: Build frontend RESOLVE
+      - name: Build frontend
         if: github.event_name != 'push'
-        working-directory: resolve-web/frontend
+        working-directory: resolve-app/frontend
         run: npm run build
         env:
           NEXT_PUBLIC_API_GATEWAY_URL: http://localhost:8080
 
-      - name: Iniciar frontend RESOLVE em segundo plano
+      - name: Iniciar frontend em segundo plano
         if: github.event_name != 'push'
-        working-directory: resolve-web/frontend
+        working-directory: resolve-app/frontend
         run: |
-          NEXT_PUBLIC_API_GATEWAY_URL=http://localhost:8080 npm run start &
+          NEXT_PUBLIC_API_GATEWAY_URL=http://localhost:8080 npm run start > ../frontend-e2e.log 2>&1 &
           timeout 60 bash -c 'until nc -z localhost 3000; do sleep 2; done'
 
       - name: Instalar dependências — E2E
@@ -217,6 +219,7 @@ jobs:
           E2E_API_URL: http://localhost:8080
           E2E_REUSE_SERVER: 'true'
           E2E_JUNIT_FILE: test-results/regressao-e2e.xml
+          E2E_EXPO_MOCK_URL: http://127.0.0.1:4010
           CI: true
 
       - name: Resumo das suites
@@ -300,16 +303,31 @@ jobs:
               ...(failedCases.length ? ['', 'Casos com falha:', ...failedCases] : []),
               '',
               'Consulte os relatórios técnicos e artefatos na execução do workflow. O Quality Gate permanece reprovado para esta execução.',
+              '',
+              '### Triagem (Política de Manutenção da TAS, ver docs/tas.md)',
+              'Classifique esta falha em até 3 dias úteis (P1: 1 dia útil). Não use test.fail, test.fixme ou test.skip apenas para deixar o pipeline verde.',
+              '',
+              '- [ ] **Classe:** SUT | TAS | Ambiente | Variação esperada',
+              '- [ ] **Prioridade:** P1 | P2 | P3',
+              '- [ ] **Responsável:** usuário do GitHub designado nesta issue',
+              '- [ ] **Prazo:** AAAA-MM-DD',
+              '- [ ] **Evidência:** link desta execução e do artefato `evidencias-testes-<id>`',
+              '- [ ] **Decisão/encaminhamento:** correção, quarentena (com issue e prazo) ou aceite como variação esperada',
+              '',
+              'Se a causa for diferente da de outras falhas já registradas nesta issue, abra uma issue separada com o modelo "Falha ou manutenção da TAS".',
             ].join('\n');
             const label = 'ci-failure';
             const title = `[CI] Falha em testes (${context.sha.slice(0, 7)})`;
-            try {
-              await github.rest.issues.createLabel({
-                ...context.repo, name: label, color: 'b60205',
-                description: 'Falha automática detectada pelo pipeline de qualidade',
-              });
-            } catch (error) {
-              // rótulo já existe
+            const rotulos = [
+              [label, 'b60205', 'Falha automática detectada pelo pipeline de qualidade'],
+              ['needs-triage', 'fbca04', 'Aguardando classificação conforme docs/tas.md'],
+            ];
+            for (const [name, color, description] of rotulos) {
+              try {
+                await github.rest.issues.createLabel({ ...context.repo, name, color, description });
+              } catch (error) {
+                // rótulo já existe
+              }
             }
             // Evita duplicatas: se já há issue aberta de falha de CI, comenta nela.
             const { data: open } = await github.rest.issues.listForRepo({
@@ -321,8 +339,14 @@ jobs:
                 body: 'Nova falha em `' + context.sha.slice(0, 7) + '`.\n\n' + body,
               });
             } else {
-              await github.rest.issues.create({ ...context.repo, title, body, labels: [label] });
+              await github.rest.issues.create({ ...context.repo, title, body, labels: [label, 'needs-triage'] });
             }
+
+      - name: Coletar logs da stack E2E
+        if: always() && github.event_name != 'push'
+        continue-on-error: true
+        working-directory: resolve-app/backend
+        run: docker compose -f docker-compose.yml -f docker-compose.e2e.yml logs --no-color > ../stack-e2e.log 2>&1
 
       - name: Publicar relatórios e evidências
         if: always()
@@ -337,6 +361,8 @@ jobs:
             resolve-app/e2e/playwright-report/
             resolve-app/e2e/test-results/
             resolve-app/quality-reports/
+            resolve-app/stack-e2e.log
+            resolve-app/frontend-e2e.log
           retention-days: 14
           if-no-files-found: warn
 

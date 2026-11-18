@@ -20,11 +20,25 @@
  *
  * Testes deste arquivo:
  *   1. Total, categoria e região: o gestor abre o painel, anota os números,
- *      o cidadão registra duas demandas pela API e, depois de recarregar o
- *      painel, os três números precisam ter subido.
+ *      o cidadão registra duas demandas pela API, o gestor força a renovação
+ *      dos KPIs (POST /metrics/refresh) e, depois de recarregar o painel, os
+ *      três números precisam ter subido.
  *   2. Volume por status: três demandas novas ficam, uma em cada status, e o
  *      filtro do painel precisa separar cada uma delas, com o contador
  *      batendo com a quantidade de cards exibidos.
+ *   3. Registrar → acompanhar → atualizar → notificar: o cidadão tem uma demanda
+ *      e um aparelho registrado, o gestor muda o status para "Em análise" pela
+ *      tela de detalhes, o demand-service emite a notificação push e o cidadão
+ *      vê o novo status ao abrir a demanda.
+ *
+ * Limite da evidência do teste 3: o demand-service envia as notificações com um
+ * POST para EXPO_PUSH_URL. No E2E essa variável aponta para um receptor local
+ * (e2e/support/expo-push-mock.mjs, subido por backend/docker-compose.e2e.yml), e
+ * o teste confere a mensagem que ele recebeu. Isso comprova que o SISTEMA EMITIU a
+ * notificação destinada ao aparelho registrado do solicitante. Não comprova a
+ * entrega pelo serviço real do Expo nem a exibição em um celular, que ficam fora
+ * do ambiente automatizado. O app web também não tem tela de notificações; o que o
+ * cidadão vê na web é o status atualizado da demanda.
  *
  * Sobre a comparação "pelo menos N" no teste 1: o /metrics conta as demandas
  * do banco inteiro, e o ambiente pode ter dados de outras execuções (ou de
@@ -33,14 +47,22 @@
  * o tanto que foi criado ainda pega o problema real, que é o painel não
  * refletir as demandas novas.
  *
- * As métricas passam por cache no Redis. O demand-service limpa esse cache
- * quando uma demanda é criada, mas o recálculo pode levar um instante, então
- * o teste 1 recarrega a página e tenta de novo até os números aparecerem.
+ * As métricas passam por cache no Redis (TTL de 5 minutos, populado na subida
+ * do metrics-service e renovado pelo cron de 5 em 5 minutos, por eventos de
+ * mudança de status e pela invalidação ao editar ou excluir uma demanda).
+ * Registrar uma demanda NÃO invalida esse cache, então o painel pode levar até
+ * 5 minutos para refletir demandas novas. Para o teste 1 não depender da fase do
+ * cron, o gestor força a renovação pelo endpoint do próprio sistema, sem espera
+ * fixa e sem aumentar timeout. A invalidação do cache na criação de uma demanda
+ * seria uma melhoria de produto, tratada à parte.
  *
  * Variáveis de ambiente (opcionais):
  *   E2E_API_URL      URL do api-gateway (padrão http://localhost:8080)
  *   E2E_GESTOR_CODE  código de cadastro de gestor da gestão geral
  *                    (padrão change-me-codigo-gestor, o mesmo do docker-compose)
+ *   E2E_EXPO_MOCK_URL  URL do receptor que imita o Expo Push (ex.: http://127.0.0.1:4010).
+ *                    Sem ela, o teste 3 é ignorado com o motivo explícito; com ela
+ *                    definida e o receptor fora do ar, o teste falha.
  */
 
 import { test, expect, APIRequestContext, Locator, Page, Response } from '@playwright/test';
@@ -52,6 +74,8 @@ const CODIGO_GESTOR = process.env.E2E_GESTOR_CODE ?? 'change-me-codigo-gestor';
 const SENHA_PADRAO = 'Cajueiro#Verde2026!';
 // Mesma versão de frontend/src/constants/termos.ts e da variável TERMOS_VERSAO do auth-service.
 const VERSAO_TERMOS = '1.0';
+// Receptor local que imita o endpoint de envio do Expo Push (só existe no ambiente de E2E).
+const EXPO_MOCK_URL = process.env.E2E_EXPO_MOCK_URL;
 
 const CATEGORIA_TESTE = 'Manutenção de vias';
 const REGIAO_TESTE = 'Região Metropolitana do Recife';
@@ -168,6 +192,81 @@ async function atualizarStatusViaApi(
       `Falha ao mudar o status da demanda ${idDemanda} para ${status}: ${resposta.status()} ${await resposta.text()}`
     );
   }
+}
+
+/**
+ * Força o recálculo dos KPIs do gestor (POST /metrics/refresh, rota exclusiva de gestor).
+ * Evita depender do TTL de 5 minutos do cache e da fase do cron.
+ */
+async function renovarMetricasViaApi(request: APIRequestContext, tokenGestor: string): Promise<void> {
+  const resposta = await request.post(`${API_BASE_URL}/metrics/refresh`, {
+    headers: { Authorization: `Bearer ${tokenGestor}` },
+  });
+
+  if (!resposta.ok()) {
+    throw new Error(`Falha ao renovar as métricas: ${resposta.status()} ${await resposta.text()}`);
+  }
+}
+
+/* ---------- Notificação push: aparelho do cidadão e receptor local do Expo ---------- */
+
+interface MensagemPush {
+  to: string;
+  title?: string;
+  body?: string;
+  data?: { denunciaId?: number; status?: string };
+}
+
+function urlDoMock(): string {
+  if (!EXPO_MOCK_URL) {
+    throw new Error('E2E_EXPO_MOCK_URL não definida.');
+  }
+  return EXPO_MOCK_URL;
+}
+
+/** Registra o token do aparelho na conta do cidadão (o mesmo POST que o app mobile faz ao logar). */
+async function registrarAparelho(
+  request: APIRequestContext,
+  tokenCidadao: string,
+  tokenPush: string
+): Promise<void> {
+  const resposta = await request.post(`${API_BASE_URL}/demands/devices`, {
+    headers: { Authorization: `Bearer ${tokenCidadao}` },
+    data: { token: tokenPush },
+  });
+
+  if (resposta.status() !== 204) {
+    throw new Error(`Falha ao registrar o aparelho: ${resposta.status()} ${await resposta.text()}`);
+  }
+}
+
+/** Remove o aparelho da conta do cidadão (o mesmo DELETE que o app mobile faz ao sair). */
+async function removerAparelho(
+  request: APIRequestContext,
+  tokenCidadao: string,
+  tokenPush: string
+): Promise<void> {
+  const resposta = await request.delete(`${API_BASE_URL}/demands/devices`, {
+    headers: { Authorization: `Bearer ${tokenCidadao}` },
+    data: { token: tokenPush },
+  });
+
+  if (resposta.status() !== 204) {
+    throw new Error(`Falha ao remover o aparelho: ${resposta.status()} ${await resposta.text()}`);
+  }
+}
+
+/** Mensagens que o receptor recebeu para esse token. Cada teste usa um token só seu. */
+async function mensagensDoMock(request: APIRequestContext, tokenPush: string): Promise<MensagemPush[]> {
+  const resposta = await request.get(`${urlDoMock()}/messages`, { params: { to: tokenPush } });
+  if (!resposta.ok()) {
+    throw new Error(`Receptor do Expo respondeu ${resposta.status()} ao listar as mensagens.`);
+  }
+  return (await resposta.json()) as MensagemPush[];
+}
+
+async function limparMensagensDoMock(request: APIRequestContext, tokenPush: string): Promise<void> {
+  await request.delete(`${urlDoMock()}/messages`, { params: { to: tokenPush } });
 }
 
 /* ---------- Painel: espera de carregamento e leitura dos números ---------- */
@@ -289,7 +388,13 @@ test.describe('Cenário 9 — Painel Administrativo do Gestor', () => {
       await criarDemandaDeTeste(request, tokenCidadao, `[E2E] Demanda painel ${Date.now()}-${i}`);
     }
 
-    // O recálculo das métricas pode demorar um pouco, então recarrega e confere de novo até aparecer.
+    // Registrar demanda não invalida o cache de KPIs: sem isso o painel continuaria com os números
+    // da subida até o próximo tick do cron. A renovação é forçada e confirmada antes de recarregar.
+    const tokenGestor = await logarViaApi(request, gestor);
+    await renovarMetricasViaApi(request, tokenGestor);
+
+    // Com o cache renovado, o painel já recebe os números novos ao recarregar. O toPass cobre apenas
+    // a carga da página (recarrega e confere de novo), sem alterar o limite de tempo original.
     await expect(async () => {
       await recarregarPainel(page);
 
@@ -365,6 +470,119 @@ test.describe('Cenário 9 — Painel Administrativo do Gestor', () => {
     await page.getByRole('button', { name: 'Limpar' }).click();
     for (const titulo of todosOsTitulos) {
       await expect(cardDe(titulo)).toBeVisible();
+    }
+  });
+
+  test('o gestor muda o status pela tela, a notificação push é registrada no receptor do Expo e o cidadão vê o novo status', async ({
+    page,
+    request,
+    browser,
+    baseURL,
+  }) => {
+    test.skip(
+      !EXPO_MOCK_URL,
+      'Defina E2E_EXPO_MOCK_URL (receptor do Expo Push, ver backend/docker-compose.e2e.yml) para rodar este teste.'
+    );
+    test.setTimeout(120_000);
+
+    // Falha clara (e não verde falso) se o ambiente foi configurado mas o receptor não está no ar.
+    const saude = await request.get(`${urlDoMock()}/health`).catch(() => null);
+    expect(saude?.ok(), `Receptor do Expo Push não respondeu em ${urlDoMock()}/health`).toBeTruthy();
+
+    // Token e título únicos: o teste só enxerga a mensagem dele, mesmo com outros dados no ambiente.
+    // O título fica bem abaixo do limite de 50 caracteres do backend (cerca de 28).
+    const marca = `${Date.now().toString(36)}${Math.floor(Math.random() * 1296).toString(36)}`;
+    const titulo = `[E2E] Notificação ${marca}`;
+    const tokenPush = `ExponentPushToken[e2e-${marca}]`;
+
+    // ---------- Arrange: cidadão com demanda ----------
+    const cidadao = await criarUsuario(request, 'cidadao');
+    const tokenCidadao = await logarViaApi(request, cidadao);
+    // A demanda vem antes do aparelho: é ela que cria o registro do cidadão no demand-service.
+    const idDemanda = await criarDemandaDeTeste(request, tokenCidadao, titulo);
+
+    try {
+      // ---------- Arrange: aparelho registrado ----------
+      await registrarAparelho(request, tokenCidadao, tokenPush);
+      await limparMensagensDoMock(request, tokenPush);
+
+      // ---------- Act 1: o gestor abre a demanda pela interface ----------
+      const gestor = await criarUsuario(request, 'gestor');
+      await logarGestorNoPainel(page, gestor);
+
+      const card = cardsDaLista(page).filter({ hasText: titulo });
+      await expect(card).toBeVisible();
+      await card.getByRole('button', { name: 'Ver Detalhes' }).click();
+      await expect(page).toHaveURL(new RegExp(`/gestor/demandas/${idDemanda}$`));
+
+      // ---------- Act 2: o gestor muda o status para "Em análise" ----------
+      // A tela não tem nome acessível nos botões ✏️ e ✓; o bloco é localizado pelo rótulo "Status Atual".
+      const linhaStatus = page.getByText('Status Atual', { exact: true }).locator('xpath=..');
+      const blocoStatus = linhaStatus.locator('xpath=..');
+      await expect(blocoStatus).toContainText('Aberta');
+
+      await linhaStatus.getByRole('button').click(); // ✏️ entra em modo de edição
+      await page.locator('select').selectOption('Em análise');
+
+      // A espera é registrada antes do clique, senão a resposta pode passar antes de alguém ouvir.
+      const respostaDoPatch = page.waitForResponse(
+        (resposta) =>
+          resposta.request().method() === 'PATCH' &&
+          new URL(resposta.url()).pathname === `/demands/gestor/${idDemanda}/status`
+      );
+      await page.getByRole('button', { name: '✓' }).click();
+      const patch = await respostaDoPatch;
+      expect(patch.ok(), `PATCH do status respondeu ${patch.status()}`).toBeTruthy();
+      await expect(blocoStatus).toContainText('Em análise');
+
+      // ---------- Assert 1: o demand-service enviou a notificação ao receptor do Expo ----------
+      // O envio é assíncrono (sai depois da resposta ao gestor), então consulta o receptor até chegar,
+      // com limite de tempo explícito. Isso prova a emissão; não prova entrega ao aparelho.
+      await expect
+        .poll(async () => (await mensagensDoMock(request, tokenPush)).length, {
+          message: 'O demand-service não enviou a notificação ao receptor do Expo Push',
+          timeout: 15_000,
+          intervals: [250, 500, 1_000],
+        })
+        .toBe(1);
+
+      const [mensagem] = await mensagensDoMock(request, tokenPush);
+      expect(mensagem.to).toBe(tokenPush);
+      expect(mensagem.title).toBe('Sua denúncia foi atualizada');
+      expect(mensagem.body).toContain(`"${titulo}"`);
+      expect(mensagem.body).toContain('em análise');
+      expect(mensagem.data).toMatchObject({ denunciaId: idDemanda, status: 'EM_ANALISE' });
+
+      // ---------- Assert 2: o cidadão acompanha o novo status pela interface ----------
+      // Contexto novo, para não herdar a sessão do gestor guardada no navegador.
+      const contextoCidadao = await browser.newContext({ baseURL });
+      try {
+        const paginaCidadao = await contextoCidadao.newPage();
+        await paginaCidadao.goto('/login');
+        await paginaCidadao.getByPlaceholder('seu@email.com').fill(cidadao.email);
+        await paginaCidadao.getByPlaceholder('••••••••').fill(cidadao.senha);
+        await paginaCidadao.getByRole('button', { name: 'ENTRAR' }).click();
+        await expect(paginaCidadao).toHaveURL(/\/telaUsuario/);
+
+        const cardDoCidadao = paginaCidadao
+          .locator('div.border.border-gray-200.rounded-lg.p-4')
+          .filter({ hasText: titulo });
+        await expect(cardDoCidadao).toBeVisible();
+        await cardDoCidadao.getByRole('button', { name: 'Ver Detalhes' }).click();
+        // Timeout maior: na primeira visita a /demandas/[id] o modo dev compila a rota sob demanda.
+        await expect(paginaCidadao).toHaveURL(new RegExp(`/demandas/${idDemanda}$`), { timeout: 30_000 });
+
+        const statusParaOCidadao = paginaCidadao
+          .getByText('Status Atual', { exact: true })
+          .locator('xpath=../..');
+        await expect(statusParaOCidadao).toContainText('Em análise');
+      } finally {
+        await contextoCidadao.close();
+      }
+    } finally {
+      // Limpeza em qualquer desfecho. Cada passo é independente e não pode esconder a falha original do teste.
+      await limparMensagensDoMock(request, tokenPush).catch(() => undefined);
+      await removerAparelho(request, tokenCidadao, tokenPush).catch(() => undefined);
     }
   });
 });

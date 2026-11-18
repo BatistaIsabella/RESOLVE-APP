@@ -13,9 +13,15 @@
  *      NÃO autorizado) tenta a mesma coisa — o sistema tem que barrar por
  *      PAPEL, não só por "tem token ou não".
  *
- * Em ambos os casos o esperado é: redirecionamento para a tela de login do
- * gestor (/logingestor), nenhum dado do painel renderizado e nenhuma
- * chamada às rotas de gestor da API.
+ * O que se espera em cada caso:
+ *   a) Visitante sem sessão: redirecionamento para a tela de login do gestor
+ *      (/logingestor).
+ *   b) Cidadão autenticado: o AuthGuard o envia para a tela inicial do próprio
+ *      perfil (/telaUsuario). Esse é o comportamento definido no código
+ *      (frontend/src/components/Auth/AuthGuard.tsx): quem já tem sessão válida
+ *      não é mandado para uma tela de login.
+ *   Nos dois casos: nenhum dado do painel é renderizado e o navegador não faz
+ *   nenhuma chamada às rotas de gestor da API.
  *
  * Fluxo automatizado:
  *   1. (a) Em um contexto limpo (sem token no localStorage), navega direto
@@ -28,32 +34,30 @@
  *      gestor da API (/demands/gestor, /metrics) — ou seja, o bloqueio
  *      aconteceu ANTES de qualquer tentativa de buscar dados sigilosos.
  *   4. (b) Cria um cidadão via API, faz login real pela UI (/login) e, já
- *      autenticado, navega direto para /gestor/dashboard — confirma que
- *      também é barrado e mandado para /logingestor.
+ *      autenticado, navega direto para /gestor/dashboard — confirma que é
+ *      barrado e mandado para a própria tela inicial (/telaUsuario), sem ver
+ *      o painel e sem que o navegador chame rotas de gestor.
  *   5. Defesa em profundidade: confere que o back-end também barra, sem
  *      depender do front-end — GET /demands/gestor sem token responde 401
  *      e, com token de cidadão, responde 403.
  *
- * ⚠️ BUG ENCONTRADO AO ESCREVER ESTE TESTE (ver BUG-04 em docs/testes/RELATORIO_BUGS.md):
- * hoje o guard do painel roda ANTES de o Zustand reidratar o token do
- * localStorage, então QUALQUER carga direta de URL (digitar o endereço, dar
- * F5) derruba o usuário pro login — inclusive um gestor legítimo. Isso tem
- * duas consequências para esta suíte:
- *   - O comportamento que o Cenário 10 exige (bloquear + redirecionar)
- *     acontece, e os testes abaixo confirmam isso de fora, como o usuário vê.
- *   - Mas o teste do "cidadão autenticado" NÃO prova, sozinho, que a checagem
- *     de papel funciona: hoje ele passaria mesmo sem ela, porque a corrida de
- *     hidratação redireciona todo mundo. Por isso o último teste do arquivo
- *     fixa o outro lado da regra (gestor legítimo TEM que continuar no
- *     painel) e está marcado com `test.fail()` até o bug ser corrigido.
+ * BUG-04 (corrigido): ao escrever este cenário descobrimos que o guard antigo
+ * rodava ANTES de o Zustand reidratar o token do localStorage, então qualquer
+ * carga direta de URL (digitar o endereço, dar F5) derrubava o usuário pro
+ * login, inclusive um gestor legítimo (ver docs/testes/RELATORIO_BUGS.md). O
+ * AuthGuard central passou a esperar a reidratação antes de decidir, e o teste
+ * que fixa o outro lado da regra (gestor legítimo continua no painel após o F5)
+ * deixou de ser uma falha esperada. Com o bug corrigido, o teste do cidadão
+ * autenticado prova de fato a checagem de PAPEL, e não mais uma corrida de
+ * hidratação.
  *
  * Notas de implementação:
- * - O guard vive nos próprios componentes de página do Next
- *   (frontend/src/app/(gestor)/**): um useEffect checa
- *   `!token || role !== 'gestor'` e chama `router.push('/logingestor')`.
- *   Como o token é reidratado do localStorage pelo Zustand (persist), o
- *   teste espera pela URL final em vez de conferir a tela imediatamente
- *   após o goto.
+ * - O guard é o AuthGuard central (frontend/src/components/Auth/AuthGuard.tsx),
+ *   aplicado em frontend/src/app/(gestor)/layout.tsx com role="gestor" e
+ *   loginPath="/logingestor". Ele espera a reidratação do Zustand (persist) e só
+ *   então decide: sem sessão, vai para /logingestor; sessão de outro perfil, vai
+ *   para a tela inicial do próprio perfil (/telaUsuario). O teste espera pela URL
+ *   final em vez de conferir a tela imediatamente após o goto.
  * - A rota de detalhes usa um id qualquer (1): o guard roda antes do
  *   fetch, então o teste não depende de a demanda existir.
  */
@@ -62,6 +66,10 @@ import { test, expect, APIRequestContext, Page } from '@playwright/test';
 
 const API_BASE_URL = process.env.E2E_API_URL ?? 'http://localhost:8080';
 const SENHA_PADRAO = 'Senha@teste123';
+// Mesma versão de frontend/src/constants/termos.ts e da variável TERMOS_VERSAO do auth-service.
+const VERSAO_TERMOS = '1.0';
+// Código que o auth-service exige para cadastrar gestor (padrão do docker-compose; mesmo do cenário 9).
+const CODIGO_GESTOR = process.env.E2E_GESTOR_CODE ?? 'change-me-codigo-gestor';
 
 /** Rotas protegidas da área do gestor que um cidadão pode tentar digitar direto. */
 const ROTAS_DO_PAINEL = ['/gestor/dashboard', '/gestor', '/gestor/demandas/1'];
@@ -84,7 +92,14 @@ async function criarCidadao(request: APIRequestContext): Promise<UsuarioTeste> {
   };
 
   const resposta = await request.post(`${API_BASE_URL}/auth/register`, {
-    data: { nome: usuario.nome, email: usuario.email, senha: usuario.senha, papel: 'cidadao' },
+    data: {
+      nome: usuario.nome,
+      email: usuario.email,
+      senha: usuario.senha,
+      papel: 'cidadao',
+      aceiteTermos: true,
+      versaoTermos: VERSAO_TERMOS,
+    },
   });
 
   if (!resposta.ok()) {
@@ -128,6 +143,23 @@ async function esperarTelaDeLoginDoGestor(page: Page, rotaTentada: string) {
   await expect(page.locator('div.border.border-gray-200.rounded-lg.p-4')).toHaveCount(0);
 }
 
+/**
+ * Confirma que um cidadão autenticado que tentou a rota do painel do gestor foi
+ * enviado para a própria tela inicial (/telaUsuario) e que NADA do painel ficou
+ * visível.
+ */
+async function esperarHomeDoCidadao(page: Page, rotaTentada: string) {
+  await expect(
+    page,
+    `esperava o cidadão autenticado na própria tela inicial (/telaUsuario) ao acessar ${rotaTentada}`
+  ).toHaveURL(/\/telaUsuario$/);
+
+  // Nenhum conteúdo do painel do gestor vazou (nem título, nem indicadores).
+  await expect(page.getByRole('heading', { name: /Painel de Gest[ãa]o/i })).toHaveCount(0);
+  await expect(page.getByText('Demandas registradas')).toHaveCount(0);
+  await expect(page.getByText('Demandas por categoria')).toHaveCount(0);
+}
+
 test.describe('Cenário 10 — acesso não autorizado ao Painel do Gestor', () => {
   test('visitante sem login é bloqueado e redirecionado ao tentar as URLs do painel', async ({
     page,
@@ -168,7 +200,7 @@ test.describe('Cenário 10 — acesso não autorizado ao Painel do Gestor', () =
     ).toEqual([]);
   });
 
-  test('cidadão autenticado (papel errado) também é bloqueado ao tentar o painel', async ({
+  test('cidadão autenticado (papel errado) não vê o painel e é enviado à própria tela inicial', async ({
     page,
     request,
   }) => {
@@ -182,25 +214,34 @@ test.describe('Cenário 10 — acesso não autorizado ao Painel do Gestor', () =
 
     await expect(page).toHaveURL(/\/telaUsuario/);
 
+    // A partir daqui, registra qualquer chamada do navegador às rotas de gestor da API:
+    // se o bloqueio funciona, nenhuma delas deve acontecer.
+    const chamadasDeGestor: string[] = [];
+    page.on('request', (req) => {
+      const url = req.url();
+      if (url.includes('/demands/gestor') || url.includes('/metrics')) {
+        chamadasDeGestor.push(url);
+      }
+    });
+
     // ---------- Act: digita a URL do painel do gestor na barra de endereços ----------
     await page.goto('/gestor/dashboard');
 
-    // ---------- Assert: autenticado, mas não autorizado → volta pro login do gestor ----------
-    // ⚠️ Enquanto o BUG-04 existir, este assert passa por dois motivos ao mesmo
-    // tempo (checagem de papel + corrida de hidratação). Ele continua valendo
-    // como garantia do comportamento visível ao usuário; quem prova que a regra
-    // de papel é o motivo certo é o teste seguinte.
-    await esperarTelaDeLoginDoGestor(page, '/gestor/dashboard');
+    // ---------- Assert: autenticado, mas não autorizado → vai para a própria tela inicial ----------
+    // O AuthGuard decide por PAPEL (a sessão existe e é válida), então o cidadão não é mandado
+    // para uma tela de login: volta para /telaUsuario, sem ver o painel do gestor.
+    await esperarHomeDoCidadao(page, '/gestor/dashboard');
+
+    expect(
+      chamadasDeGestor,
+      `o navegador não deveria chamar rotas de gestor com sessão de cidadão: ${chamadasDeGestor.join(', ')}`
+    ).toEqual([]);
   });
 
-  // BUG-04: enquanto o guard não esperar a reidratação do Zustand, um gestor
-  // legítimo é expulso do próprio painel ao dar F5. Este teste descreve o
-  // comportamento correto e falha de propósito hoje ("expected fail"). Quando
-  // alguém corrigir o guard (ex.: só redirecionar depois de `_hasHydrated`),
-  // o Playwright avisa como "unexpected pass" — aí é só remover o test.fail().
+  // BUG-04 (corrigido): o guard antigo redirecionava antes de a sessão ser reidratada e expulsava
+  // um gestor legítimo do próprio painel ao dar F5. O AuthGuard central agora só decide depois da
+  // reidratação, e este teste (que fixa o comportamento correto) passou a valer como teste normal.
   test.describe('regra de papel (o outro lado do bloqueio)', () => {
-    test.fail();
-
     test('gestor legítimo continua no painel depois de recarregar a página', async ({
       page,
       request,
@@ -214,7 +255,13 @@ test.describe('Cenário 10 — acesso não autorizado ao Painel do Gestor', () =
       };
 
       const registro = await request.post(`${API_BASE_URL}/auth/register`, {
-        data: { ...gestor, papel: 'gestor' },
+        data: {
+          ...gestor,
+          papel: 'gestor',
+          codigoAcesso: CODIGO_GESTOR,
+          aceiteTermos: true,
+          versaoTermos: VERSAO_TERMOS,
+        },
       });
       if (!registro.ok()) {
         throw new Error(
@@ -229,19 +276,29 @@ test.describe('Cenário 10 — acesso não autorizado ao Painel do Gestor', () =
 
       await expect(page).toHaveURL(/\/gestor\/dashboard/);
 
+      // Registra toda navegação do frame principal a partir daqui: um redirecionamento tardio para o
+      // login (o que o BUG-04 causava) apareceria como uma navegação para /logingestor.
+      const navegacoes: string[] = [];
+      page.on('framenavigated', (frame) => {
+        if (frame === page.mainFrame()) navegacoes.push(frame.url());
+      });
+
       // ---------- Act: F5, do jeito que qualquer usuário faria ----------
       await page.reload();
 
       // ---------- Assert: a sessão SOBREVIVE e o usuário CONTINUA no painel ----------
-      // Aqui estamos afirmando que uma navegação NÃO vai acontecer, então não
-      // basta olhar a URL logo após o reload: hoje o painel chega a renderizar
-      // por um instante e só depois o guard chuta o usuário pro login. Por isso
-      // deixamos a página assentar antes de conferir onde ela parou.
-      await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(3_000);
-
-      await expect(page).toHaveURL(/\/gestor\/dashboard/);
+      // Estado observável em vez de espera fixa: o painel só renderiza depois que a sessão foi
+      // reidratada e o AuthGuard autorizou o gestor, e a rede ociosa indica que as chamadas iniciais
+      // terminaram (uma resposta 401 limparia a sessão e redirecionaria). Só então se confere que
+      // nenhuma navegação para o login aconteceu e onde a página parou.
       await expect(page.getByRole('heading', { name: /Painel de Gest[ãa]o/i })).toBeVisible();
+      await page.waitForLoadState('networkidle');
+
+      expect(
+        navegacoes.filter((url) => url.includes('/logingestor')),
+        `o gestor foi redirecionado para o login depois do F5: ${navegacoes.join(' -> ')}`
+      ).toEqual([]);
+      await expect(page).toHaveURL(/\/gestor\/dashboard/);
     });
   });
 

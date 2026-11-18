@@ -1,0 +1,77 @@
+name: Falha ou manutenção da TAS
+description: Registra uma falha do Quality Gate ou uma demanda de manutenção da automação de testes (ver docs/tas.md).
+title: "[TAS] "
+labels:
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use este modelo para falhas do Quality Gate e para manutenção da automação de testes (TAS).
+        Todo campo abaixo é obrigatório: **classe + prioridade + responsável + prazo + evidência + decisão/encaminhamento**.
+        Regras e prazos: [Política de Manutenção da TAS](https://github.com/BatistaIsabella/RESOLVE-APP/blob/main/docs/tas.md).
+
+        Depois da triagem, aplique os rótulos `classe:*` e `prio:*` correspondentes e retire `needs-triage`.
+        Se a falha for de teste instável, acrescente também o rótulo `flaky`.
+  - type: dropdown
+    id: classe
+    attributes:
+      label: Classe
+      description: Onde está a causa da falha. Em caso de dúvida, registre a mais provável e revise na triagem.
+      options:
+        - "SUT: defeito ou comportamento inadequado do sistema sob teste"
+        - "TAS: problema na automação, spec, seletor, payload, expectativa ou código de suporte"
+        - "Ambiente: CI, Docker, CORS, banco, Redis, configuração ou indisponibilidade externa"
+        - "Variação esperada: limitação conhecida e explicitamente acompanhada"
+    validations:
+      required: true
+  - type: dropdown
+    id: prioridade
+    attributes:
+      label: Prioridade
+      description: P1 = triagem em 1 dia útil e correção em até 3. P2 = triagem em até 3 dias úteis e correção em até 5. P3 = avaliação na revisão quinzenal.
+      options:
+        - "P1: Quality Gate bloqueado, regressão do SUT ou ambiente da TAS indisponível"
+        - "P2: teste instável, spec desatualizado ou teste em quarentena"
+        - "P3: duplicação, lentidão, refatoração ou melhoria"
+    validations:
+      required: true
+  - type: input
+    id: responsavel
+    attributes:
+      label: Responsável
+      description: Usuário do GitHub designado (responsável pelo cenário/TAS, pela funcionalidade/SUT ou pelo ambiente/CI). Designe-o também em Assignees.
+      placeholder: usuário do GitHub
+    validations:
+      required: true
+  - type: input
+    id: prazo
+    attributes:
+      label: Prazo
+      description: Data limite de correção no formato AAAA-MM-DD, contada em dias úteis a partir da abertura conforme a prioridade.
+      placeholder: AAAA-MM-DD
+    validations:
+      required: true
+  - type: textarea
+    id: evidencia
+    attributes:
+      label: Evidência
+      description: Link da execução do workflow, nome do artefato `evidencias-testes-<id>`, teste afetado (arquivo e título), mensagem de erro, trace, vídeo ou log relevante.
+    validations:
+      required: true
+  - type: textarea
+    id: decisao
+    attributes:
+      label: Decisão e encaminhamento
+      description: O que será feito (correção, ajuste do spec, correção do ambiente, quarentena com issue e prazo, aceite como variação esperada) e como será revalidado.
+    validations:
+      required: true
+  - type: checkboxes
+    id: conferencias
+    attributes:
+      label: Conferências
+      options:
+        - label: Nenhuma regra do SUT, de segurança ou de autenticação será enfraquecida para o teste passar.
+          required: true
+        - label: Nenhum test.fail, test.fixme ou test.skip será usado apenas para deixar o pipeline verde.
+          required: true

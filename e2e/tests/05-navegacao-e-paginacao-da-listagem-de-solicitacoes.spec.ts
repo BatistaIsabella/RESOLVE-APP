@@ -29,6 +29,8 @@ const API_BASE_URL =
   process.env.E2E_API_URL ?? 'http://localhost:8080';
 
 const SENHA_PADRAO = 'Senha@teste123';
+// Mesma versão de frontend/src/constants/termos.ts e da variável TERMOS_VERSAO do auth-service.
+const VERSAO_TERMOS = '1.0';
 
 interface UsuarioTeste {
   nome: string;
@@ -59,6 +61,8 @@ async function criarUsuario(
         email: usuario.email,
         senha: usuario.senha,
         papel: 'cidadao',
+        aceiteTermos: true,
+        versaoTermos: VERSAO_TERMOS,
       },
     }
   );
@@ -227,6 +231,9 @@ test.describe(
 
         await botaoProxima.click();
 
+        // EXCEÇÃO documentada (docs/tas.md, seção 3.6): espera fixa dentro de test.fixme(). O teste não
+        // executa porque a paginação não existe e não há estado observável para esperar. Ao implementar a
+        // funcionalidade, trocar por expect/expect.poll sobre a lista antes de remover o test.fixme().
         await page.waitForTimeout(500);
 
         // ASSERT 3 — A aplicação continua carregada
@@ -360,6 +367,9 @@ test.describe(
 
         await botaoProxima.click();
 
+        // EXCEÇÃO documentada (docs/tas.md, seção 3.6): espera fixa dentro de test.fixme(). O teste não
+        // executa porque a paginação não existe e não há estado observável para esperar. Ao implementar a
+        // funcionalidade, trocar por expect/expect.poll sobre a lista antes de remover o test.fixme().
         await page.waitForTimeout(1000);
 
         // ASSERT 2 — Usuário permanece na tela

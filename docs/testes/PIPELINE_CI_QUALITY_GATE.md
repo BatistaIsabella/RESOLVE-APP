@@ -28,6 +28,11 @@ falhou. Assim, a regressão diária produz evidências das demais suites sem
 deixar uma execução com falhas terminar como aprovada. Falhas de instalação
 ou de infraestrutura também reprovam o job.
 
+O Playwright não faz retentativa automática (`retries: 0`): uma falha
+permanece visível até ser classificada. A reexecução para investigar uma
+possível instabilidade é deliberada e registrada na issue. A justificativa e
+o processo estão na [Política de Manutenção da TAS](../tas.md), seção 3.
+
 ## Métricas e relatórios
 
 Em toda execução, inclusive quando testes falham, o workflow tenta gerar
@@ -64,8 +69,12 @@ de negócio consolida os resultados e a cobertura disponível, explicita suites
 não executadas e lista os riscos complementares. Issues são abertas somente
 quando uma etapa de testes reporta falha, com o rótulo `ci-failure`; se já
 existir uma issue aberta com esse rótulo, a falha é adicionada como comentário
-nela, evitando duplicatas; erros de instalação ou infraestrutura
-continuam reprovando o job, mas não são classificados como falha de teste. A
+nela, evitando duplicatas. A issue nova recebe também o rótulo
+`needs-triage` e um bloco de triagem (classe, prioridade, responsável, prazo,
+evidência e decisão), conforme a [Política de Manutenção da TAS](../tas.md).
+Erros de instalação ou infraestrutura continuam reprovando o job, mas não são
+classificados como falha de teste nem abrem issue automática: devem ser
+registrados manualmente com o modelo "Falha ou manutenção da TAS". A
 criação de issue pode ser restringida pelo GitHub em pull requests originados
 de forks, embora o check e a publicação dos relatórios continuem disponíveis.
 O repositório ou a organização também precisa permitir que o `GITHUB_TOKEN`
@@ -97,14 +106,16 @@ esperada:
 - C3: busca por palavra-chave (`test.fail()`).
 - C5: paginação ainda não disponível (`test.fixme()`).
 - C6: histórico da demanda ainda não disponível (`test.fail()`).
-- C9: indicadores por status pendentes (`test.fail()`); há também um teste
-  marcado `test.fixme()` por instabilidade do painel.
-- C10: recarga do painel por gestor marcada como falha esperada para o BUG-04.
+- C9: o painel ainda não tem um bloco de indicadores por status; o volume por
+  status é verificado pelo filtro de status (o spec 09 não usa mais
+  `test.fail()` nem `test.fixme()`).
 
 O Playwright reporta `test.fixme()` como ignorado e considera `test.fail()`
 uma falha esperada quando o teste realmente falha. Portanto, esses estados não
 reprovam o Quality Gate. Devem continuar visíveis no relatório e no backlog;
-não devem ser apresentados como funcionalidades aprovadas.
+não devem ser apresentados como funcionalidades aprovadas. A classe, o
+responsável e a revisão dessas exceções estão registrados na seção 7 da
+[Política de Manutenção da TAS](../tas.md).
 
 O plano de QA também prevê automação mobile nativa, mas não foi encontrado
 teste Appium/Detox no repositório. A regressão executa os testes unitários

@@ -28,7 +28,16 @@ funcionalidades ainda pendentes. Os objetivos do monitoramento são:
 | Cobertura de código (statements, branches, functions, linhas) | `coverage-summary.json` do Vitest (demand-service) | 3 | Mostra quanto do código instrumentado é exercitado. O relatório declara que o escopo é parcial. |
 | Execução por camada | Estado de cada suite: aprovada, com falhas, não executada ou sem resultado | 2 e 3 | Distingue "passou" de "nem rodou" (ex.: E2E não roda em push), evitando falso positivo. |
 | Veredito de qualidade (semáforo) | Regras abaixo, calculadas pelo script | 2 | Traduz as métricas técnicas em uma conclusão para stakeholders. |
-| Pendências conhecidas | Lista em `.github/quality-context.json` (C3, C5, C6, C9, C10) | 2 e 3 | Testes `test.fail()` e `test.fixme()` não reprovam o pipeline; sem esta lista pareceriam entregas concluídas. |
+
+## Informações complementares (não são métricas)
+
+Estas informações aparecem no relatório de negócio, mas **não são coletadas
+nem calculadas pelo pipeline**. São mantidas à mão em
+`.github/quality-context.json` e precisam ser atualizadas pela equipe.
+
+| Informação | Origem | Por que está no relatório |
+|---|---|---|
+| Riscos e lacunas | Lista manual (`risks`) | Explicam limites da automação, como a ausência de testes mobile nativos e a cobertura parcial. |
 
 ### Regras do veredito
 
@@ -50,7 +59,7 @@ de ponta a ponta não aconteceu.
 |---|---|---|
 | Densidade de defeitos (defeitos por KLOC) | Não há fonte de defeitos ligada ao tamanho do código; os bugs ficam em `RELATORIO_BUGS.md` sem vínculo com módulos ou commits. | Quando os bugs forem registrados como issues com rótulo de módulo. |
 | Cobertura global do sistema | Só o `demand-service` tem instrumentação. Um número "global" seria enganoso. | Ao instrumentar `auth-service`, front-end web e mobile. |
-| Taxa de testes instáveis (flakiness) | Exige várias execuções do mesmo commit e retentativas; o Playwright não repete testes no CI atual. | Se `retries` for habilitado ou o histórico de execuções for guardado. |
+| Taxa de testes instáveis (flakiness) | Exige várias execuções do mesmo commit. Pela [Política de Manutenção da TAS](../tas.md), o Playwright não faz retentativa automática (`retries: 0`) e a instabilidade é identificada por critério objetivo e investigação deliberada (seções 3.1 a 3.3), e não por métrica automática. | Se o histórico de execuções passar a ser guardado (ver "Tendência histórica"). |
 | Tendência histórica entre execuções | Os artefatos duram 14 dias e não há armazenamento do histórico. A equipe não tem um repositório de métricas. | Ao publicar `metrics.json` em uma branch dedicada ou GitHub Pages. |
 | Tempo médio para corrigir falha (MTTR) | Depende de histórico de issues abertas e fechadas, ainda sem volume suficiente. | Depois de várias issues `ci-failure` fechadas. |
 | Complexidade ciclomática e dívida técnica | Medem manutenibilidade do código, não o resultado dos testes, que é o foco deste pipeline. | Se a equipe adotar ferramenta de análise estática. |
@@ -67,5 +76,7 @@ os relatórios também são gerados quando há falhas. Os resultados ficam no ar
 
 - Cada relatório mostra apenas a execução atual, sem comparação com a anterior.
 - A cobertura vale só para os arquivos listados em `vitest.unit.config.ts`.
-- Pendências e riscos são mantidos à mão em `quality-context.json` e precisam ser
-  atualizados quando um cenário deixar de ser falha esperada.
+- Os riscos são mantidos à mão em `quality-context.json` e precisam ser atualizados
+  pela equipe.
+- A instabilidade de testes não é medida automaticamente: segue o processo da
+  [Política de Manutenção da TAS](../tas.md), com revisão quinzenal.
