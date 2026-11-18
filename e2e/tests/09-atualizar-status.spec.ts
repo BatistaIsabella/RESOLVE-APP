@@ -20,8 +20,9 @@
  *
  * Testes deste arquivo:
  *   1. Total, categoria e região: o gestor abre o painel, anota os números,
- *      o cidadão registra duas demandas pela API e, depois de recarregar o
- *      painel, os três números precisam ter subido.
+ *      o cidadão registra duas demandas pela API, o gestor força a renovação
+ *      dos KPIs (POST /metrics/refresh) e, depois de recarregar o painel, os
+ *      três números precisam ter subido.
  *   2. Volume por status: três demandas novas ficam, uma em cada status, e o
  *      filtro do painel precisa separar cada uma delas, com o contador
  *      batendo com a quantidade de cards exibidos.
@@ -46,9 +47,14 @@
  * o tanto que foi criado ainda pega o problema real, que é o painel não
  * refletir as demandas novas.
  *
- * As métricas passam por cache no Redis. O demand-service limpa esse cache
- * quando uma demanda é criada, mas o recálculo pode levar um instante, então
- * o teste 1 recarrega a página e tenta de novo até os números aparecerem.
+ * As métricas passam por cache no Redis (TTL de 5 minutos, populado na subida
+ * do metrics-service e renovado pelo cron de 5 em 5 minutos, por eventos de
+ * mudança de status e pela invalidação ao editar ou excluir uma demanda).
+ * Registrar uma demanda NÃO invalida esse cache, então o painel pode levar até
+ * 5 minutos para refletir demandas novas. Para o teste 1 não depender da fase do
+ * cron, o gestor força a renovação pelo endpoint do próprio sistema, sem espera
+ * fixa e sem aumentar timeout. A invalidação do cache na criação de uma demanda
+ * seria uma melhoria de produto, tratada à parte.
  *
  * Variáveis de ambiente (opcionais):
  *   E2E_API_URL      URL do api-gateway (padrão http://localhost:8080)
@@ -185,6 +191,20 @@ async function atualizarStatusViaApi(
     throw new Error(
       `Falha ao mudar o status da demanda ${idDemanda} para ${status}: ${resposta.status()} ${await resposta.text()}`
     );
+  }
+}
+
+/**
+ * Força o recálculo dos KPIs do gestor (POST /metrics/refresh, rota exclusiva de gestor).
+ * Evita depender do TTL de 5 minutos do cache e da fase do cron.
+ */
+async function renovarMetricasViaApi(request: APIRequestContext, tokenGestor: string): Promise<void> {
+  const resposta = await request.post(`${API_BASE_URL}/metrics/refresh`, {
+    headers: { Authorization: `Bearer ${tokenGestor}` },
+  });
+
+  if (!resposta.ok()) {
+    throw new Error(`Falha ao renovar as métricas: ${resposta.status()} ${await resposta.text()}`);
   }
 }
 
@@ -368,7 +388,13 @@ test.describe('Cenário 9 — Painel Administrativo do Gestor', () => {
       await criarDemandaDeTeste(request, tokenCidadao, `[E2E] Demanda painel ${Date.now()}-${i}`);
     }
 
-    // O recálculo das métricas pode demorar um pouco, então recarrega e confere de novo até aparecer.
+    // Registrar demanda não invalida o cache de KPIs: sem isso o painel continuaria com os números
+    // da subida até o próximo tick do cron. A renovação é forçada e confirmada antes de recarregar.
+    const tokenGestor = await logarViaApi(request, gestor);
+    await renovarMetricasViaApi(request, tokenGestor);
+
+    // Com o cache renovado, o painel já recebe os números novos ao recarregar. O toPass cobre apenas
+    // a carga da página (recarrega e confere de novo), sem alterar o limite de tempo original.
     await expect(async () => {
       await recarregarPainel(page);
 
