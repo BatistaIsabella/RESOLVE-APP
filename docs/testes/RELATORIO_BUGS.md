@@ -160,6 +160,11 @@ página, como sugeria o trecho acima.
   página" passou e o Playwright acusou "Expected to fail, but passed".
 - Check do PR #60 (run 44223341097): o Cenário 2, que carrega `/demandas/nova`
   direto depois do login, passou.
+- Regressão completa #82 (`workflow_dispatch`, commit `5a45653`): concluída com
+  sucesso.
+
+O ciclo completo deste bug é o caso demonstrativo da
+[Política de Manutenção da TAS](../tas.md), seção 8.
 
 ### Outro teste que era afetado
 `tests/02-validacao-campos-obrigatorios-nova-demanda.spec.ts` **falhava por causa

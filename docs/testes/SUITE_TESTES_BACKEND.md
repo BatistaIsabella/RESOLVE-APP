@@ -78,7 +78,7 @@
 - Página fora do range retorna data vazio
 - Paginação no feed geral
 - Paginação para gestor
-- Filtros por categoria, status, região, prioridade (marcados como skip — não implementados no backend)
+- Filtros por categoria, status, região, prioridade (antes marcados como `it.skip`; implementados e cobertos desde 2026-10-16, commit `7dfe8ba`)
 
 ### TS05 — Operações do gestor (**NOVO**)
 - Gestor lista todas as denúncias (200)
@@ -272,7 +272,14 @@ Os testes do arquivo `TS04_filtros_avancados.test.ts` utilizam rotas incorretas:
 
 Isso significa que os testes de paginação do TS04 estão testando rotas que retornam 404, e não as rotas reais. Os novos testes (TS08) cobrem as rotas corretas.
 
-#### Filtros não implementados no backend
+#### Filtros não implementados no backend (achado original, já superado)
+
+> **Atualização (2026-11-18):** os filtros por `categoria`, `status`, `regiao` e
+> `prioridade`, e a busca `q`, estão implementados (`buildListWhere` em
+> `demand-service/src/services/denunciaService.ts`) e cobertos no TS04, sem
+> `it.skip` desde o commit `7dfe8ba` (2026-10-16). O texto abaixo registra o
+> achado original.
+
 O TS04 já documenta (via `it.skip`) que os filtros por `categoria`, `status`, `regiao` e `prioridade` **não estão implementados** nos endpoints de listagem. Os parâmetros são ignorados silenciosamente — o backend retorna todos os registros sem filtrar.
 
 #### Inconsistência no JWT_SECRET padrão
