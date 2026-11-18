@@ -4,7 +4,10 @@ export default defineConfig({
   testDir: './tests',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  // Sem retentativa automática, no CI e localmente: uma falha deve permanecer visível até ser
+  // classificada (docs/tas.md, seção 3). Reexecutar para investigar instabilidade é deliberado e
+  // registrado na issue, nunca automático.
+  retries: 0,
   workers: 1,
   reporter: [
     ['html', { open: 'never' }],
@@ -17,7 +20,9 @@ export default defineConfig({
 
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:3000',
-    trace: 'on-first-retry',
+    // Com retries: 0 o trace 'on-first-retry' nunca seria gravado; a evidência da falha vem do trace
+    // da própria execução que falhou.
+    trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     navigationTimeout: 45_000,

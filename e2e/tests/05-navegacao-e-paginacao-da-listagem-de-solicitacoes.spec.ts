@@ -231,6 +231,9 @@ test.describe(
 
         await botaoProxima.click();
 
+        // EXCEÇÃO documentada (docs/tas.md, seção 3.6): espera fixa dentro de test.fixme(). O teste não
+        // executa porque a paginação não existe e não há estado observável para esperar. Ao implementar a
+        // funcionalidade, trocar por expect/expect.poll sobre a lista antes de remover o test.fixme().
         await page.waitForTimeout(500);
 
         // ASSERT 3 — A aplicação continua carregada
@@ -364,6 +367,9 @@ test.describe(
 
         await botaoProxima.click();
 
+        // EXCEÇÃO documentada (docs/tas.md, seção 3.6): espera fixa dentro de test.fixme(). O teste não
+        // executa porque a paginação não existe e não há estado observável para esperar. Ao implementar a
+        // funcionalidade, trocar por expect/expect.poll sobre a lista antes de remover o test.fixme().
         await page.waitForTimeout(1000);
 
         // ASSERT 2 — Usuário permanece na tela

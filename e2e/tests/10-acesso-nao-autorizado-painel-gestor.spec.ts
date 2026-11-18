@@ -276,19 +276,29 @@ test.describe('Cenário 10 — acesso não autorizado ao Painel do Gestor', () =
 
       await expect(page).toHaveURL(/\/gestor\/dashboard/);
 
+      // Registra toda navegação do frame principal a partir daqui: um redirecionamento tardio para o
+      // login (o que o BUG-04 causava) apareceria como uma navegação para /logingestor.
+      const navegacoes: string[] = [];
+      page.on('framenavigated', (frame) => {
+        if (frame === page.mainFrame()) navegacoes.push(frame.url());
+      });
+
       // ---------- Act: F5, do jeito que qualquer usuário faria ----------
       await page.reload();
 
       // ---------- Assert: a sessão SOBREVIVE e o usuário CONTINUA no painel ----------
-      // Aqui estamos afirmando que uma navegação NÃO vai acontecer, então não
-      // basta olhar a URL logo após o reload: um redirecionamento tardio só
-      // apareceria depois. Por isso deixamos a página assentar antes de conferir
-      // onde ela parou.
-      await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(3_000);
-
-      await expect(page).toHaveURL(/\/gestor\/dashboard/);
+      // Estado observável em vez de espera fixa: o painel só renderiza depois que a sessão foi
+      // reidratada e o AuthGuard autorizou o gestor, e a rede ociosa indica que as chamadas iniciais
+      // terminaram (uma resposta 401 limparia a sessão e redirecionaria). Só então se confere que
+      // nenhuma navegação para o login aconteceu e onde a página parou.
       await expect(page.getByRole('heading', { name: /Painel de Gest[ãa]o/i })).toBeVisible();
+      await page.waitForLoadState('networkidle');
+
+      expect(
+        navegacoes.filter((url) => url.includes('/logingestor')),
+        `o gestor foi redirecionado para o login depois do F5: ${navegacoes.join(' -> ')}`
+      ).toEqual([]);
+      await expect(page).toHaveURL(/\/gestor\/dashboard/);
     });
   });
 
