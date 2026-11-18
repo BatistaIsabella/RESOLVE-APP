@@ -99,7 +99,6 @@ esperada:
 - C6: histórico da demanda ainda não disponível (`test.fail()`).
 - C9: indicadores por status pendentes (`test.fail()`); há também um teste
   marcado `test.fixme()` por instabilidade do painel.
-- C10: recarga do painel por gestor marcada como falha esperada para o BUG-04.
 
 O Playwright reporta `test.fixme()` como ignorado e considera `test.fail()`
 uma falha esperada quando o teste realmente falha. Portanto, esses estados não

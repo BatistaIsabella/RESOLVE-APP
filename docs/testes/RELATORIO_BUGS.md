@@ -93,6 +93,8 @@ DEMAND_API_URL = 'http://localhost:3002/demandas'
 **Taxa de reprodução:** 100% (12/12 execuções)
 **Regressão:** Não
 **Encontrado por:** suíte E2E, ao escrever o Cenário 10 (acesso não autorizado ao painel)
+**Status:** Corrigido
+**Corrigido em:** commit `d80b181` (2026-11-06), com o `AuthGuard` central
 
 ### Descrição
 Qualquer carga direta de URL — digitar o endereço, apertar F5, abrir um link
@@ -101,13 +103,13 @@ sessão válida no `localStorage`. Um **gestor legítimo** que aperta F5 dentro 
 Painel de Gestão vê o painel renderizar por um instante e em seguida é jogado
 em `/logingestor`. O mesmo acontece com o cidadão em `/demandas/nova`.
 
-Efeito colateral na suíte de testes: o Cenário 10 (bloqueio de acesso não
-autorizado) **passa mesmo se a checagem de papel não existir**, porque a
-redireção acontece por este bug, e não pela regra de autorização. É por isso
-que `tests/10-acesso-nao-autorizado-painel-gestor.spec.ts` inclui um teste
+Efeito colateral que existia na suíte de testes: o Cenário 10 (bloqueio de
+acesso não autorizado) **passava mesmo se a checagem de papel não existisse**,
+porque a redireção acontecia por este bug, e não pela regra de autorização. Por
+isso `tests/10-acesso-nao-autorizado-painel-gestor.spec.ts` tinha um teste
 marcado com `test.fail()` fixando o comportamento correto (gestor continua no
-painel após o F5) — quando este bug for corrigido, o Playwright vai acusar
-"unexpected pass" e o `test.fail()` deve ser removido.
+painel após o F5). Com a correção, o Playwright acusou "unexpected pass" e o
+`test.fail()` foi removido.
 
 ### Causa
 O `useEffect` que faz o guard lê `token` antes de o `persist` do Zustand
@@ -143,15 +145,32 @@ useEffect(() => {
 > `frontend/src/app/(public)/telaUsuario/page.tsx` (`if (isMounted && _hasHydrated)`).
 > A correção é replicar esse mesmo cuidado nas páginas listadas acima.
 
-### Outro teste já afetado
-`tests/02-validacao-campos-obrigatorios-nova-demanda.spec.ts` **falha hoje por
-causa deste bug**: ele faz login e depois `page.goto('/demandas/nova')`; a carga
-direta dispara o guard antes da reidratação e a página cai em `/login`, então o
-assert `toHaveURL(/\/demandas\/nova$/)` nunca bate. O Cenário 1 passa porque
-chega no formulário clicando no botão (navegação client-side, sem recarregar a
-página) — o que confirma que o problema é a carga direta, não o formulário.
+### Correção
+O `AuthGuard` central (`frontend/src/components/Auth/AuthGuard.tsx`, aplicado nos
+layouts de `(gestor)`, `(public)/demandas` e `(public)/telaUsuario`) só decide o
+redirecionamento depois de `_hasHydrated` e, enquanto isso, mostra um indicador
+de carregamento. Ele entrou no commit `d80b181` (2026-11-06), "AuthGuard central
+protege as rotas de gestor e de cidadão". A correção centralizou a regra em um
+único componente, em vez de replicar o `if (isMounted && _hasHydrated)` página a
+página, como sugeria o trecho acima.
 
-### Como reproduzir
+**Evidência:**
+- Regressão E2E completa do workflow `Pipeline de Qualidade` (run 44223979692,
+  2026-11-18): o teste "gestor legítimo continua no painel depois de recarregar a
+  página" passou e o Playwright acusou "Expected to fail, but passed".
+- Check do PR #60 (run 44223341097): o Cenário 2, que carrega `/demandas/nova`
+  direto depois do login, passou.
+
+### Outro teste que era afetado
+`tests/02-validacao-campos-obrigatorios-nova-demanda.spec.ts` **falhava por causa
+deste bug**: ele faz login e depois `page.goto('/demandas/nova')`; a carga direta
+disparava o guard antes da reidratação e a página caía em `/login`, então o
+assert `toHaveURL(/\/demandas\/nova$/)` nunca batia. O Cenário 1 passava porque
+chegava no formulário clicando no botão (navegação client-side, sem recarregar a
+página) — o que confirmava que o problema era a carga direta, não o formulário.
+Depois da correção, o Cenário 2 passa.
+
+### Como reproduzir (antes da correção)
 1. Faça login como gestor em `/logingestor` (cai em `/gestor/dashboard`).
 2. Aperte F5.
 3. Observado: o painel aparece por um instante e a página vai para `/logingestor`.
@@ -166,4 +185,4 @@ página) — o que confirma que o problema é a carga direta, não o formulário
 | BUG-01 | Cadastro retornava 400 (`tipo` vs `papel`) | Alta | 100% | Não | Corrigido |
 | BUG-02 | Papel do usuário sempre `null` após login (`role` vs `papel`) | Alta | 100% | Não | Corrigido |
 | BUG-03 | Rotas do demand-service retornavam 404 (prefixo `/demandas` faltando) | Alta | 100% | Não | Corrigido |
-| BUG-04 | Usuário logado é expulso pro login ao dar F5 / abrir URL direta (guard roda antes da reidratação) | Alta | 100% | Não | **Aberto** |
+| BUG-04 | Usuário logado é expulso pro login ao dar F5 / abrir URL direta (guard roda antes da reidratação) | Alta | 100% | Não | Corrigido |
