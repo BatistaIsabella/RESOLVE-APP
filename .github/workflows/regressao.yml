@@ -303,16 +303,31 @@ jobs:
               ...(failedCases.length ? ['', 'Casos com falha:', ...failedCases] : []),
               '',
               'Consulte os relatórios técnicos e artefatos na execução do workflow. O Quality Gate permanece reprovado para esta execução.',
+              '',
+              '### Triagem (Política de Manutenção da TAS, ver docs/tas.md)',
+              'Classifique esta falha em até 3 dias úteis (P1: 1 dia útil). Não use test.fail, test.fixme ou test.skip apenas para deixar o pipeline verde.',
+              '',
+              '- [ ] **Classe:** SUT | TAS | Ambiente | Variação esperada',
+              '- [ ] **Prioridade:** P1 | P2 | P3',
+              '- [ ] **Responsável:** usuário do GitHub designado nesta issue',
+              '- [ ] **Prazo:** AAAA-MM-DD',
+              '- [ ] **Evidência:** link desta execução e do artefato `evidencias-testes-<id>`',
+              '- [ ] **Decisão/encaminhamento:** correção, quarentena (com issue e prazo) ou aceite como variação esperada',
+              '',
+              'Se a causa for diferente da de outras falhas já registradas nesta issue, abra uma issue separada com o modelo "Falha ou manutenção da TAS".',
             ].join('\n');
             const label = 'ci-failure';
             const title = `[CI] Falha em testes (${context.sha.slice(0, 7)})`;
-            try {
-              await github.rest.issues.createLabel({
-                ...context.repo, name: label, color: 'b60205',
-                description: 'Falha automática detectada pelo pipeline de qualidade',
-              });
-            } catch (error) {
-              // rótulo já existe
+            const rotulos = [
+              [label, 'b60205', 'Falha automática detectada pelo pipeline de qualidade'],
+              ['needs-triage', 'fbca04', 'Aguardando classificação conforme docs/tas.md'],
+            ];
+            for (const [name, color, description] of rotulos) {
+              try {
+                await github.rest.issues.createLabel({ ...context.repo, name, color, description });
+              } catch (error) {
+                // rótulo já existe
+              }
             }
             // Evita duplicatas: se já há issue aberta de falha de CI, comenta nela.
             const { data: open } = await github.rest.issues.listForRepo({
@@ -324,7 +339,7 @@ jobs:
                 body: 'Nova falha em `' + context.sha.slice(0, 7) + '`.\n\n' + body,
               });
             } else {
-              await github.rest.issues.create({ ...context.repo, title, body, labels: [label] });
+              await github.rest.issues.create({ ...context.repo, title, body, labels: [label, 'needs-triage'] });
             }
 
       - name: Coletar logs da stack E2E
