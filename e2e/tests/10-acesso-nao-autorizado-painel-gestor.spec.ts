@@ -62,6 +62,8 @@ import { test, expect, APIRequestContext, Page } from '@playwright/test';
 
 const API_BASE_URL = process.env.E2E_API_URL ?? 'http://localhost:8080';
 const SENHA_PADRAO = 'Senha@teste123';
+// Mesma versão de frontend/src/constants/termos.ts e da variável TERMOS_VERSAO do auth-service.
+const VERSAO_TERMOS = '1.0';
 // Código que o auth-service exige para cadastrar gestor (padrão do docker-compose; mesmo do cenário 9).
 const CODIGO_GESTOR = process.env.E2E_GESTOR_CODE ?? 'change-me-codigo-gestor';
 
@@ -86,7 +88,14 @@ async function criarCidadao(request: APIRequestContext): Promise<UsuarioTeste> {
   };
 
   const resposta = await request.post(`${API_BASE_URL}/auth/register`, {
-    data: { nome: usuario.nome, email: usuario.email, senha: usuario.senha, papel: 'cidadao' },
+    data: {
+      nome: usuario.nome,
+      email: usuario.email,
+      senha: usuario.senha,
+      papel: 'cidadao',
+      aceiteTermos: true,
+      versaoTermos: VERSAO_TERMOS,
+    },
   });
 
   if (!resposta.ok()) {
@@ -216,7 +225,13 @@ test.describe('Cenário 10 — acesso não autorizado ao Painel do Gestor', () =
       };
 
       const registro = await request.post(`${API_BASE_URL}/auth/register`, {
-        data: { ...gestor, papel: 'gestor', codigoAcesso: CODIGO_GESTOR },
+        data: {
+          ...gestor,
+          papel: 'gestor',
+          codigoAcesso: CODIGO_GESTOR,
+          aceiteTermos: true,
+          versaoTermos: VERSAO_TERMOS,
+        },
       });
       if (!registro.ok()) {
         throw new Error(

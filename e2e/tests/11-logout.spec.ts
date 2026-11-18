@@ -22,6 +22,8 @@ import { test, expect, APIRequestContext } from '@playwright/test';
 
 const API_BASE_URL = process.env.E2E_API_URL ?? 'http://localhost:8080';
 const SENHA_PADRAO = 'Senha@teste123';
+// Mesma versão de frontend/src/constants/termos.ts e da variável TERMOS_VERSAO do auth-service.
+const VERSAO_TERMOS = '1.0';
 
 interface UsuarioTeste {
   nome: string
@@ -49,6 +51,8 @@ async function criarUsuario(
       email: usuario.email,
       senha: usuario.senha,
       papel: usuario.papel,
+      aceiteTermos: true,
+      versaoTermos: VERSAO_TERMOS,
     },
   })
 
