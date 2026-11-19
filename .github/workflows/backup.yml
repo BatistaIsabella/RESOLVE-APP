@@ -22,8 +22,16 @@ name: Backup do banco
 #   BACKUP_PG_VERSION    versão principal do pg_dump (padrão 15). Igual ou maior que a do servidor.
 #   BACKUP_S3_PROVIDER   provider do rclone (padrão Other; ex.: Cloudflare, AWS, Minio, Wasabi).
 #   BACKUP_S3_REGION     região (padrão auto).
-# A retenção é uma regra de ciclo de vida no próprio bucket, não deste workflow: a chave usada
-# aqui não apaga nada, então quem a obtiver não consegue destruir os backups.
+#
+# Retenção (Entregável 5, item 5.6): cada execução grava em diario/; aos domingos também em
+# semanal/ e no dia 1 também em mensal/. A expiração é feita por regras de ciclo de vida no
+# próprio bucket, uma por prefixo:
+#   diario/   7 dias      semanal/   28 dias      mensal/   90 dias
+# Assim nenhuma cópia sobrevive mais de 3 meses, e a chave usada aqui não precisa apagar nada:
+# quem a obtiver não consegue destruir os backups.
+#
+# Falha: o job "alerta" abre uma issue com o rótulo backup-falhou (ou comenta na que estiver
+# aberta). A issue só tem a data e o link da execução, nenhum dado do banco.
 
 on:
   schedule:
@@ -111,8 +119,14 @@ jobs:
         if: steps.config.outputs.pronto == 'true'
         run: |
           mkdir -p saida
-          arquivo="resolve-$(date -u +%Y%m%dT%H%MZ).custom"
+          # Um único instante para o nome do arquivo e para a escolha dos prefixos de retenção.
+          agora="$(date -u +%s)"
+          arquivo="resolve-$(date -u -d "@$agora" +%Y%m%dT%H%MZ).custom"
+          prefixos="diario"
+          [ "$(date -u -d "@$agora" +%u)" = 7 ] && prefixos="$prefixos semanal"
+          [ "$(date -u -d "@$agora" +%d)" = 01 ] && prefixos="$prefixos mensal"
           echo "ARQUIVO=$arquivo" >> "$GITHUB_ENV"
+          echo "PREFIXOS=$prefixos" >> "$GITHUB_ENV"
           docker run --rm --user "$(id -u):$(id -g)" -e BACKUP_DATABASE_URL \
             -v "$PWD/saida:/saida" "$PG_IMAGE" \
             sh -c 'pg_dump "$BACKUP_DATABASE_URL" --format=custom --schema=auth --schema=demand -f "/saida/$1"' _ "$arquivo"
@@ -143,7 +157,8 @@ jobs:
       # copyto envia um arquivo por vez e falha se ele não existir (copy com filtro terminaria
       # "sem diferenças" sem enviar nada). Um objeto que já existe no bucket nunca é sobrescrito:
       # a checagem é explícita porque --immutable não impede isso no copyto (testado no 1.68.2).
-      # Depois, o tamanho no bucket é comparado com o local.
+      # Depois, o tamanho no bucket é comparado com o local. O mesmo arquivo vai para cada prefixo
+      # de retenção do dia (diario/, e semanal/ ou mensal/ quando for o caso).
       - name: Enviar ao bucket externo
         if: steps.config.outputs.pronto == 'true'
         run: |
@@ -155,29 +170,32 @@ jobs:
               -e RCLONE_CONFIG_DESTINO_NO_CHECK_BUCKET \
               "$RCLONE_IMAGE" "$@"
           }
-          for nome in "$ARQUIVO.gpg" "$ARQUIVO.gpg.sha256"; do
-            [ -s "saida/$nome" ] || { echo "::error::saida/$nome não existe ou está vazio."; exit 1; }
-            if [ -n "$(rclone lsf "destino:$BACKUP_S3_BUCKET/$nome")" ]; then
-              echo "::error::$nome já existe no bucket; nada foi sobrescrito."
-              exit 1
-            fi
-            rclone copyto "/saida/$nome" "destino:$BACKUP_S3_BUCKET/$nome" --retries 3
-            local_bytes="$(stat -c %s "saida/$nome")"
-            remoto_bytes="$(rclone lsf --format s "destino:$BACKUP_S3_BUCKET/$nome")"
-            if [ "$remoto_bytes" != "$local_bytes" ]; then
-              echo "::error::$nome no bucket tem '${remoto_bytes:-nada}' bytes; o local tem $local_bytes."
-              exit 1
-            fi
-            echo "$nome enviado ($local_bytes bytes)."
+          for prefixo in $PREFIXOS; do
+            for nome in "$ARQUIVO.gpg" "$ARQUIVO.gpg.sha256"; do
+              alvo="destino:$BACKUP_S3_BUCKET/$prefixo/$nome"
+              [ -s "saida/$nome" ] || { echo "::error::saida/$nome não existe ou está vazio."; exit 1; }
+              if [ -n "$(rclone lsf "$alvo")" ]; then
+                echo "::error::$prefixo/$nome já existe no bucket; nada foi sobrescrito."
+                exit 1
+              fi
+              rclone copyto "/saida/$nome" "$alvo" --retries 3
+              local_bytes="$(stat -c %s "saida/$nome")"
+              remoto_bytes="$(rclone lsf --format s "$alvo")"
+              if [ "$remoto_bytes" != "$local_bytes" ]; then
+                echo "::error::$prefixo/$nome no bucket tem '${remoto_bytes:-nada}' bytes; o local tem $local_bytes."
+                exit 1
+              fi
+              echo "$prefixo/$nome enviado ($local_bytes bytes)."
+            done
           done
 
           tamanho="$(du -h "saida/$ARQUIVO.gpg" | cut -f1)"
           {
             echo "### Backup do banco"
             echo
-            echo "| Arquivo | Tamanho | Tabelas com dados | Destino |"
+            echo "| Arquivo | Tamanho | Tabelas com dados | Prefixos de retenção |"
             echo "|---|---|---|---|"
-            echo "| \`$ARQUIVO.gpg\` | $tamanho | $TABELAS | bucket externo (S3) |"
+            echo "| \`$ARQUIVO.gpg\` | $tamanho | $TABELAS | ${PREFIXOS// /, } |"
             echo
             echo "SHA-256: \`$(cut -d' ' -f1 "saida/$ARQUIVO.gpg.sha256")\`"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -185,3 +203,56 @@ jobs:
       - name: Limpar o runner
         if: always()
         run: rm -rf saida
+
+  # O repositório é público: a issue leva só a data e o link da execução.
+  alerta:
+    name: Alerta de falha
+    needs: backup
+    if: failure()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: Abrir ou atualizar a issue de falha do backup
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const label = 'backup-falhou';
+            const execucao = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const quando = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+            const body = [
+              `O backup do banco falhou em ${quando} (${context.eventName}).`,
+              '',
+              `Execução: ${execucao}`,
+              '',
+              'Enquanto esta issue estiver aberta, considere que não há backup novo desde a última execução bem-sucedida.',
+              '',
+              'Causas comuns, pelo passo que falhou:',
+              '- **Conferir configuração:** falta algum secret (`BACKUP_PASSPHRASE` ou `BACKUP_S3_*`).',
+              '- **Conferir leitura em todas as tabelas:** tabela nova sem `GRANT SELECT` para `backup_svc`.',
+              '- **Gerar o dump:** banco fora do ar, senha trocada ou versão do `pg_dump` menor que a do servidor (`BACKUP_PG_VERSION`).',
+              '- **Enviar ao bucket externo:** credencial do bucket inválida ou objeto com o mesmo nome já existente.',
+              '',
+              'Feche esta issue depois de uma execução bem-sucedida.',
+            ].join('\n');
+
+            try {
+              await github.rest.issues.createLabel({
+                ...context.repo, name: label, color: 'b60205', description: 'Falha no workflow de backup do banco',
+              });
+            } catch (error) {
+              // rótulo já existe
+            }
+
+            // Evita duplicatas: se já há issue aberta de falha do backup, comenta nela.
+            const { data: abertas } = await github.rest.issues.listForRepo({
+              ...context.repo, state: 'open', labels: label, per_page: 1,
+            });
+            if (abertas.length) {
+              await github.rest.issues.createComment({ ...context.repo, issue_number: abertas[0].number, body });
+            } else {
+              await github.rest.issues.create({
+                ...context.repo, title: `[Backup] Falha no backup do banco (${quando})`, body, labels: [label],
+              });
+            }
