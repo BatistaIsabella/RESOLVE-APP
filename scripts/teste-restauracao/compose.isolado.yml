@@ -1,0 +1,33 @@
+# Sobreposição usada só pelos scripts de teste de restauração, junto com backend/docker-compose.yml.
+# Não altera o compose original; apenas, para o ambiente descartável:
+#   - troca os container_name fixos (smartcity_*) por nomes próprios, para não colidir com o
+#     ambiente de desenvolvimento que estiver rodando;
+#   - não publica nenhuma porta no computador (as verificações rodam dentro dos containers);
+#   - permite escolher a versão do Postgres (RESTORE_PG_IMAGE), que precisa ser igual ou mais nova
+#     que a do servidor de onde o dump saiu.
+# Os volumes ficam separados pelo nome de projeto (docker compose -p ...).
+services:
+  redis:
+    container_name: ${COMPOSE_PROJECT_NAME}-redis
+    ports: !reset []
+
+  postgres:
+    image: ${RESTORE_PG_IMAGE:-postgres:15-alpine}
+    container_name: ${COMPOSE_PROJECT_NAME}-postgres
+    ports: !reset []
+
+  auth-service:
+    container_name: ${COMPOSE_PROJECT_NAME}-auth
+    ports: !reset []
+
+  demand-service:
+    container_name: ${COMPOSE_PROJECT_NAME}-demand
+    ports: !reset []
+
+  metrics-service:
+    container_name: ${COMPOSE_PROJECT_NAME}-metrics
+    ports: !reset []
+
+  api-gateway:
+    container_name: ${COMPOSE_PROJECT_NAME}-gateway
+    ports: !reset []
