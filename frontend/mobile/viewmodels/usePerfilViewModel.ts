@@ -3,21 +3,18 @@ import { Alert, Share } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { useAuth } from '@/hooks/useAuth';
-import { ApiError } from '@/lib/api';
+import { getErrorMessage } from '@/lib/api';
 import { Conta, contaService } from '@/services/contaService';
 import { codigoMfaValido } from '@/utils/mfa';
 import { primeiroRequisitoPendente } from '@/utils/senha';
+import { isEmailValido, normalizarEmail } from '@/utils/email';
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function mensagemDe(err: unknown, padrao: string) {
-  return err instanceof ApiError ? err.message : padrao;
-}
 
 // Tela "Meus dados": consulta, correção, troca de senha, exportação e exclusão da conta.
 export function usePerfilViewModel() {
   const router = useRouter();
-  const { logout, atualizarSessao } = useAuth();
+  const { logout, signOut, atualizarSessao } = useAuth();
 
   const [conta, setConta] = useState<Conta | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -61,7 +58,7 @@ export function usePerfilViewModel() {
     contaService
       .obter()
       .then((dados) => ativo && aplicarConta(dados))
-      .catch((err) => ativo && setErroCarga(mensagemDe(err, 'Não foi possível carregar seus dados')))
+      .catch((err) => ativo && setErroCarga(getErrorMessage(err, 'Não foi possível carregar seus dados')))
       .finally(() => ativo && setCarregando(false));
     return () => {
       ativo = false;
@@ -73,9 +70,9 @@ export function usePerfilViewModel() {
     setMensagemDados('');
 
     const nomeLimpo = nome.trim();
-    const emailLimpo = email.trim().toLowerCase();
+    const emailLimpo = normalizarEmail(email);
     if (!nomeLimpo) return setErroDados('Informe o nome');
-    if (!EMAIL_REGEX.test(emailLimpo)) return setErroDados('Digite um e-mail válido');
+    if (!isEmailValido(emailLimpo)) return setErroDados('Digite um e-mail válido');
     if (conta && nomeLimpo === conta.nome && emailLimpo === conta.email) {
       return setErroDados('Nenhum dado foi alterado');
     }
@@ -87,7 +84,7 @@ export function usePerfilViewModel() {
       atualizarSessao({ token: resposta.token, userName: resposta.conta.nome, userEmail: resposta.conta.email });
       setMensagemDados('Dados atualizados');
     } catch (err) {
-      setErroDados(mensagemDe(err, 'Não foi possível atualizar os dados'));
+      setErroDados(getErrorMessage(err, 'Não foi possível atualizar os dados'));
     } finally {
       setSalvandoDados(false);
     }
@@ -111,7 +108,7 @@ export function usePerfilViewModel() {
       setConfirmarSenha('');
       setMensagemSenha('Senha alterada. Os outros aparelhos foram desconectados.');
     } catch (err) {
-      setErroSenha(mensagemDe(err, 'Não foi possível alterar a senha'));
+      setErroSenha(getErrorMessage(err, 'Não foi possível alterar a senha'));
     } finally {
       setSalvandoSenha(false);
     }
@@ -131,7 +128,7 @@ export function usePerfilViewModel() {
       logout();
       router.replace('/login');
     } catch (err) {
-      setErroMfa(mensagemDe(err, 'Não foi possível desativar a verificação em duas etapas'));
+      setErroMfa(getErrorMessage(err, 'Não foi possível desativar a verificação em duas etapas'));
     } finally {
       setSalvandoMfa(false);
     }
@@ -144,7 +141,7 @@ export function usePerfilViewModel() {
       const dados = await contaService.exportarDados();
       await Share.share({ title: 'Meus dados - RESOLVE', message: JSON.stringify(dados, null, 2) });
     } catch (err) {
-      setErroExportacao(mensagemDe(err, 'Não foi possível exportar os dados'));
+      setErroExportacao(getErrorMessage(err, 'Não foi possível exportar os dados'));
     } finally {
       setExportando(false);
     }
@@ -168,10 +165,9 @@ export function usePerfilViewModel() {
     try {
       setExcluindo(true);
       await contaService.excluir(senhaExclusao);
-      logout();
-      router.replace('/');
+      signOut();
     } catch (err) {
-      setErroExclusao(mensagemDe(err, 'Não foi possível excluir a conta'));
+      setErroExclusao(getErrorMessage(err, 'Não foi possível excluir a conta'));
     } finally {
       setExcluindo(false);
     }
@@ -231,10 +227,7 @@ export function usePerfilViewModel() {
       setErroExclusao('');
     },
     abrirPrivacidade: () => router.push('/privacidade'),
-    sair: () => {
-      logout();
-      router.replace('/');
-    },
+    sair: signOut,
     goBack: () => (router.canGoBack() ? router.back() : router.replace('/')),
   };
 }

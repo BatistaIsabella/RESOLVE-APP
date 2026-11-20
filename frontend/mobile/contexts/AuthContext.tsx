@@ -2,13 +2,15 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 
 import { AuthResponse, authService, exigeConfiguracaoMfa, exigeConfirmacaoEmail, exigeMfa } from '@/services/authService';
 import { contaService } from '@/services/contaService';
-import { ApiError } from '@/lib/api';
+import { getErrorMessage } from '@/lib/api';
 import { setAuthSnapshot, setUnauthorizedHandler } from '@/lib/authToken';
 import { clearSession, loadSession, saveSession, StoredSession } from '@/lib/secureStorage';
 import { desregistrarDispositivo } from '@/lib/pushRegistration';
 import { VERSAO_TERMOS } from '@/constants/termos';
+import { UserRole } from '@/types/auth';
+import { normalizarEmail } from '@/utils/email';
 
-type Papel = 'cidadao' | 'gestor';
+type Papel = UserRole;
 
 interface CadastroDados {
   nome: string;
@@ -122,7 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const autenticar = useCallback(
     async (email: string, senha: string): Promise<ResultadoLogin> => {
-      const resposta = await authService.login(email.trim().toLowerCase(), senha);
+      const resposta = await authService.login(normalizarEmail(email), senha);
 
       if (exigeMfa(resposta)) return { tipo: 'mfa', desafio: resposta.desafio };
       if (exigeConfiguracaoMfa(resposta)) return { tipo: 'mfa-configuracao', desafio: resposta.desafio };
@@ -145,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         return await autenticar(email, senha);
       } catch (err) {
-        setError(err instanceof ApiError ? err.message : 'Erro ao fazer login');
+        setError(getErrorMessage(err, 'Erro ao fazer login'));
         throw err;
       } finally {
         setIsLoading(false);
@@ -164,7 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (exigeConfirmacaoEmail(resposta)) return { tipo: 'confirmar-email' as const };
         return await autenticar(dados.email, dados.senha);
       } catch (err) {
-        setError(err instanceof ApiError ? err.message : 'Erro ao criar conta');
+        setError(getErrorMessage(err, 'Erro ao criar conta'));
         throw err;
       } finally {
         setIsLoading(false);

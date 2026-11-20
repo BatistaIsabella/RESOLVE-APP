@@ -3,7 +3,7 @@ import { Alert, Platform } from 'react-native';
 import { Href, useRouter } from 'expo-router';
 
 import { useDemandContext } from '@/contexts/DemandContext';
-import { ApiError } from '@/lib/api';
+import { getErrorMessage } from '@/lib/api';
 
 export function useExcluirDenuncia(id: string | undefined, voltarPara: Href) {
   const router = useRouter();
@@ -22,7 +22,7 @@ export function useExcluirDenuncia(id: string | undefined, voltarPara: Href) {
       if (router.canGoBack()) router.back();
       else router.replace(voltarPara);
     } catch (err) {
-      setErroExclusao(err instanceof ApiError ? err.message : 'Erro ao excluir a denúncia.');
+      setErroExclusao(getErrorMessage(err, 'Erro ao excluir a denúncia.'));
     } finally {
       setExcluindo(false);
     }

@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-import { ApiError } from '@/lib/api';
+import { getErrorMessage } from '@/lib/api';
 import { authService } from '@/services/authService';
+import { isEmailValido, normalizarEmail } from '@/utils/email';
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Tela "Confirmar e-mail": o código chega por e-mail, ou já vem preenchido pelo link (resolve://confirmar-email?token=...).
 // O e-mail chega pelos parâmetros quando a pessoa vem do cadastro ou do login; sem ele, a tela o pede para o reenvio.
@@ -34,7 +34,7 @@ export function useConfirmarEmailViewModel() {
       await authService.confirmEmail(codigo.trim());
       setConcluido(true);
     } catch (err) {
-      setErro(err instanceof ApiError ? err.message : 'Não foi possível confirmar agora');
+      setErro(getErrorMessage(err, 'Não foi possível confirmar agora'));
     } finally {
       setEnviando(false);
     }
@@ -43,9 +43,9 @@ export function useConfirmarEmailViewModel() {
   const reenviar = async () => {
     setErro('');
     setAviso('');
-    const emailLimpo = email.trim().toLowerCase();
+    const emailLimpo = normalizarEmail(email);
 
-    if (!EMAIL_REGEX.test(emailLimpo)) {
+    if (!isEmailValido(emailLimpo)) {
       setErro('Informe o e-mail do cadastro para reenviar o código');
       return;
     }
@@ -54,7 +54,7 @@ export function useConfirmarEmailViewModel() {
       setReenviando(true);
       setAviso(await authService.resendConfirmation(emailLimpo));
     } catch (err) {
-      setErro(err instanceof ApiError ? err.message : 'Não foi possível reenviar agora');
+      setErro(getErrorMessage(err, 'Não foi possível reenviar agora'));
     } finally {
       setReenviando(false);
     }

@@ -1,8 +1,9 @@
 import * as SecureStore from 'expo-secure-store';
+import type { UserRole } from '@/types/auth';
 
 export interface StoredSession {
   token: string;
-  role: 'cidadao' | 'gestor';
+  role: UserRole;
   userName: string | null;
   userEmail: string | null;
   orgao: string | null;

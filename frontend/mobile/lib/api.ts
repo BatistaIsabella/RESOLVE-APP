@@ -28,6 +28,11 @@ export class ApiError extends Error {
   }
 }
 
+// Mensagem pronta para a tela: a da API, se houver, senão o texto padrão da ação.
+export function getErrorMessage(err: unknown, padrao: string): string {
+  return err instanceof ApiError ? err.message : padrao;
+}
+
 export const api = axios.create({
   baseURL: API_GATEWAY_URL,
   headers: { 'Content-Type': 'application/json' },

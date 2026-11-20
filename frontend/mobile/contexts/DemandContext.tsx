@@ -7,22 +7,13 @@ import {
   DemandStatus,
   DemandUpdateInput,
   MetricsKpis,
+  NovaDemandaInput,
 } from '@/types/demand';
 import { demandService } from '@/services/demandService';
 import { metricsService } from '@/services/metricsService';
 import { ApiError } from '@/lib/api';
 import { getAuthSnapshot } from '@/lib/authToken';
 import { useAuthContext } from '@/contexts/AuthContext';
-
-export interface NovaDemandaInput {
-  titulo: string;
-  categoria: Demand['category'];
-  regiao: Demand['region'];
-  descricao: string;
-  endereco: string;
-  prioridade?: DemandPriority;
-  imagemUri?: string | null;
-}
 
 interface DemandContextValue {
   demands: Demand[];

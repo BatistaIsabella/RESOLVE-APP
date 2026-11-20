@@ -4,11 +4,10 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useDemandContext } from '@/contexts/DemandContext';
 import { filterDemands } from '@/utils/demandFilters';
-import { DemandFilters } from '@/types/demand';
 
 export function useMinhasDenunciasViewModel() {
   const router = useRouter();
-  const { userName, logout } = useAuth();
+  const { userName, signOut: handleLogout } = useAuth();
   const filters = useDemandContext((s) => s.filters);
   const demands = useDemandContext((s) => s.demands);
   const isLoading = useDemandContext((s) => s.isLoading);
@@ -17,7 +16,6 @@ export function useMinhasDenunciasViewModel() {
   const setFilters = useDemandContext((s) => s.setFilters);
 
   const [refreshing, setRefreshing] = useState(false);
-  const [appliedFilters, setAppliedFilters] = useState<DemandFilters>(filters);
 
   const load = useCallback(async () => {
     await fetchDemands();
@@ -36,17 +34,9 @@ export function useMinhasDenunciasViewModel() {
     }
   };
 
-  const applyFilters = (next: DemandFilters) => {
-    setAppliedFilters(next);
-    setFilters(next);
-  };
 
   const visibleDemands = useMemo(() => filterDemands(demands, filters), [demands, filters]);
 
-  const handleLogout = () => {
-    logout();
-    router.replace('/');
-  };
 
   return {
     userName,
@@ -57,8 +47,8 @@ export function useMinhasDenunciasViewModel() {
     refreshing,
     onRefresh,
 
-    appliedFilters,
-    applyFilters,
+    filters,
+    applyFilters: setFilters,
 
     openDemand: (id: string) => router.push(`/denuncias/${id}`),
     novaDenuncia: () => router.push('/denuncias/nova'),

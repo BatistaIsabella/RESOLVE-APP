@@ -1,6 +1,8 @@
+import type { UserRole } from '@/types/auth';
+
 export interface AuthSnapshot {
   token: string | null;
-  role: 'cidadao' | 'gestor' | null;
+  role: UserRole | null;
   userEmail: string | null;
 }
 

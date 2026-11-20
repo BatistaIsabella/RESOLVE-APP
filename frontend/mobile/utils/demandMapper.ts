@@ -144,6 +144,11 @@ export function buildListParams(filters: Partial<DemandFilters> = {}) {
   };
 }
 
+// Inverso de formatPriorityLabel: do rótulo exibido no select ("Média") para o valor de domínio.
+export function parsePriorityLabel(label: string): DemandPriority {
+  return (label === 'Média' ? 'Media' : label) as DemandPriority;
+}
+
 export function formatPriorityLabel(priority: DemandPriority): string {
   return priority === 'Media' ? 'Média' : priority;
 }

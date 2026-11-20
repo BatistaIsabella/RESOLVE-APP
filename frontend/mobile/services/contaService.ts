@@ -1,11 +1,12 @@
 import { api, toApiError } from '@/lib/api';
 import { AuthResponse } from '@/services/authService';
+import { UserRole } from '@/types/auth';
 
 export interface Conta {
   id: number;
   nome: string;
   email: string;
-  papel: 'cidadao' | 'gestor';
+  papel: UserRole;
   orgao?: string;
   aceiteTermosEm: string | null;
   versaoTermos: string | null;

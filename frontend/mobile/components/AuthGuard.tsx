@@ -2,9 +2,10 @@ import React, { useEffect, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { UserRole } from '@/types/auth';
 
 interface AuthGuardProps {
-  requiredRole?: 'cidadao' | 'gestor';
+  requiredRole?: UserRole;
   children: React.ReactNode;
 }
 

@@ -3,12 +3,13 @@ import { useRouter } from 'expo-router';
 
 import { getPostLoginRoute, useAuthContext } from '@/contexts/AuthContext';
 import { setRemembered } from '@/lib/secureStorage';
-import { ApiError } from '@/lib/api';
+import { getErrorMessage } from '@/lib/api';
 import { primeiroRequisitoPendente } from '@/utils/senha';
+import { isEmailValido, normalizarEmail } from '@/utils/email';
+import { UserRole } from '@/types/auth';
 
-export type Papel = 'cidadao' | 'gestor';
+export type Papel = UserRole;
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function useCadastroViewModel() {
   const router = useRouter();
@@ -33,14 +34,14 @@ export function useCadastroViewModel() {
     setErro('');
 
     const nomeLimpo = nome.trim();
-    const emailLimpo = email.trim().toLowerCase();
+    const emailLimpo = normalizarEmail(email);
 
     if (!nomeLimpo || !emailLimpo || !senha || !confirmarSenha) {
       setErro('Preencha todos os campos obrigatórios');
       return;
     }
 
-    if (!EMAIL_REGEX.test(emailLimpo)) {
+    if (!isEmailValido(emailLimpo)) {
       setErro('Digite um e-mail válido');
       return;
     }
@@ -85,7 +86,7 @@ export function useCadastroViewModel() {
         router.replace(getPostLoginRoute(resultado.role));
       }
     } catch (err) {
-      setErro(err instanceof ApiError ? err.message : 'Erro ao criar conta');
+      setErro(getErrorMessage(err, 'Erro ao criar conta'));
     }
   };
 

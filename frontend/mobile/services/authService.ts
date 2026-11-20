@@ -1,8 +1,9 @@
 import { api, toApiError } from '@/lib/api';
+import { UserRole } from '@/types/auth';
 
 export interface AuthResponse {
   token: string;
-  papel: 'cidadao' | 'gestor';
+  papel: UserRole;
   userId: number;
   nome: string;
   email: string;
@@ -36,7 +37,7 @@ export interface RegisterResponse {
   id: number;
   nome: string;
   email: string;
-  papel: 'cidadao' | 'gestor';
+  papel: UserRole;
   orgao?: string;
 }
 
@@ -55,7 +56,7 @@ export interface CadastroInput {
   nome: string;
   email: string;
   senha: string;
-  papel: 'cidadao' | 'gestor';
+  papel: UserRole;
   codigoAcesso?: string;
   versaoTermos: string;
 }

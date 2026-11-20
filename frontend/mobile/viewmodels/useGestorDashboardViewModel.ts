@@ -12,7 +12,7 @@ import { ChartPalette, ChartStatusColors } from '@/constants/colors';
 
 export function useGestorDashboardViewModel() {
   const router = useRouter();
-  const { userName, logout } = useAuth();
+  const { userName, signOut: handleLogout } = useAuth();
 
   const filters = useDemandContext((s) => s.filters);
   const metrics = useDemandContext((s) => s.metrics);
@@ -102,10 +102,6 @@ export function useGestorDashboardViewModel() {
   const goHome = () => router.replace('/');
   const goToPerfil = () => router.push('/perfil');
 
-  const handleLogout = () => {
-    logout();
-    router.replace('/');
-  };
 
   return {
     userName,

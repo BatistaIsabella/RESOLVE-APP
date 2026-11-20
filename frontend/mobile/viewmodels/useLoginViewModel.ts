@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 
 import { getPostLoginRoute, ResultadoLogin, useAuthContext } from '@/contexts/AuthContext';
 import { setRemembered } from '@/lib/secureStorage';
-import { ApiError } from '@/lib/api';
+import { ApiError, getErrorMessage } from '@/lib/api';
 
 export function useLoginViewModel() {
   const router = useRouter();
@@ -54,7 +54,7 @@ export function useLoginViewModel() {
         router.push({ pathname: '/confirmar-email', params: { email: emailNormalizado } });
         return;
       }
-      setErro(err instanceof ApiError ? err.message : 'Erro ao fazer login');
+      setErro(getErrorMessage(err, 'Erro ao fazer login'));
     }
   };
 

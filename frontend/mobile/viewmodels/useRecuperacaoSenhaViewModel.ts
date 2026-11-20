@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-import { ApiError } from '@/lib/api';
+import { getErrorMessage } from '@/lib/api';
 import { authService } from '@/services/authService';
 import { primeiroRequisitoPendente } from '@/utils/senha';
+import { isEmailValido, normalizarEmail } from '@/utils/email';
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Tela "Esqueci minha senha": pede o e-mail e dispara o envio do código.
 export function useEsqueciSenhaViewModel() {
@@ -17,9 +17,9 @@ export function useEsqueciSenhaViewModel() {
 
   const enviar = async () => {
     setErro('');
-    const emailLimpo = email.trim().toLowerCase();
+    const emailLimpo = normalizarEmail(email);
 
-    if (!EMAIL_REGEX.test(emailLimpo)) {
+    if (!isEmailValido(emailLimpo)) {
       setErro('Digite um e-mail válido');
       return;
     }
@@ -28,7 +28,7 @@ export function useEsqueciSenhaViewModel() {
       setEnviando(true);
       setMensagem(await authService.forgotPassword(emailLimpo));
     } catch (err) {
-      setErro(err instanceof ApiError ? err.message : 'Não foi possível enviar agora');
+      setErro(getErrorMessage(err, 'Não foi possível enviar agora'));
     } finally {
       setEnviando(false);
     }
@@ -80,7 +80,7 @@ export function useRedefinirSenhaViewModel() {
       await authService.resetPassword(codigo.trim(), novaSenha);
       setConcluido(true);
     } catch (err) {
-      setErro(err instanceof ApiError ? err.message : 'Não foi possível redefinir a senha');
+      setErro(getErrorMessage(err, 'Não foi possível redefinir a senha'));
     } finally {
       setEnviando(false);
     }

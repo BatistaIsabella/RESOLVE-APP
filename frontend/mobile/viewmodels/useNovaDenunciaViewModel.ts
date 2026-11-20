@@ -38,7 +38,7 @@ function formatarEndereco(
 
 export function useNovaDenunciaViewModel() {
   const router = useRouter();
-  const { userName, logout } = useAuth();
+  const { userName, signOut: handleLogout } = useAuth();
   const createDemand = useDemandContext((s) => s.createDemand);
   const isLoading = useDemandContext((s) => s.isLoading);
 
@@ -255,10 +255,6 @@ export function useNovaDenunciaViewModel() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    router.replace('/');
-  };
 
   return {
     userName,

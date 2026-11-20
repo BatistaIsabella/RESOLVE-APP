@@ -7,7 +7,7 @@ import { useExcluirDenuncia } from '@/viewmodels/useExcluirDenuncia';
 
 export function useDenunciaDetalheViewModel(id: string | undefined) {
   const router = useRouter();
-  const { userName, logout } = useAuth();
+  const { userName, signOut: handleLogout } = useAuth();
   const fetchDemandById = useDemandContext((s) => s.fetchDemandById);
   const isLoading = useDemandContext((s) => s.loadingDetail);
   const error = useDemandContext((s) => s.detailError);
@@ -24,10 +24,6 @@ export function useDenunciaDetalheViewModel(id: string | undefined) {
     }
   }, [id, fetchDemandById]);
 
-  const handleLogout = () => {
-    logout();
-    router.replace('/');
-  };
 
   const editar = () => {
     if (demand) router.push(`/denuncias/editar/${demand.id}`);

@@ -36,6 +36,18 @@ export interface Demand {
   dataRegistroISO: string;
 }
 
+// O que a tela de nova denúncia entrega ao contexto e ao serviço.
+export interface NovaDemandaInput {
+  titulo: string;
+  categoria: DemandCategory;
+  regiao: DemandRegion;
+  descricao: string;
+  endereco: string;
+  prioridade?: DemandPriority;
+  /** URI local da foto. A conversão para base64 acontece no serviço, não na tela. */
+  imagemUri?: string | null;
+}
+
 export interface DemandFilters {
   status: DemandStatus | '';
   category: DemandCategory | '';

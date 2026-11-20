@@ -4,13 +4,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { getPostLoginRoute } from '@/contexts/AuthContext';
 import { useAuth } from '@/hooks/useAuth';
-import { ApiError } from '@/lib/api';
+import { getErrorMessage } from '@/lib/api';
 import { ConfiguracaoMfa, contaService } from '@/services/contaService';
 import { codigoDoAppValido, codigoMfaValido } from '@/utils/mfa';
 
-function mensagemDe(err: unknown, padrao: string) {
-  return err instanceof ApiError ? err.message : padrao;
-}
 
 function parametroTexto(valor: string | string[] | undefined): string {
   return typeof valor === 'string' ? valor : '';
@@ -38,7 +35,7 @@ export function useMfaLoginViewModel() {
       const role = await concluirLoginMfa(desafio, codigo.trim());
       router.replace(getPostLoginRoute(role));
     } catch (err) {
-      setErro(mensagemDe(err, 'Não foi possível confirmar o código'));
+      setErro(getErrorMessage(err, 'Não foi possível confirmar o código'));
     } finally {
       setEnviando(false);
     }
@@ -78,7 +75,7 @@ export function useMfaConfigurarViewModel() {
       setCarregando(true);
       setConfiguracao(await contaService.mfaConfigurar(desafio));
     } catch (err) {
-      setErro(mensagemDe(err, 'Não foi possível iniciar a configuração'));
+      setErro(getErrorMessage(err, 'Não foi possível iniciar a configuração'));
     } finally {
       setCarregando(false);
     }
@@ -108,7 +105,7 @@ export function useMfaConfigurarViewModel() {
       setRespostaLogin(resposta.login);
       setEtapa('recuperacao');
     } catch (err) {
-      setErro(mensagemDe(err, 'Não foi possível confirmar o código'));
+      setErro(getErrorMessage(err, 'Não foi possível confirmar o código'));
     } finally {
       setCarregando(false);
     }

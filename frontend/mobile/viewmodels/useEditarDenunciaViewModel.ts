@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useDemandContext } from '@/contexts/DemandContext';
 import { Demand, DemandCategory, DemandRegion, DemandUpdateInput } from '@/types/demand';
-import { ApiError } from '@/lib/api';
+import { getErrorMessage } from '@/lib/api';
 
 export const TITULO_MAX = 50;
 
@@ -38,7 +38,7 @@ function validar(valores: Record<CampoEditavel, string>): ErrosEdicao {
 
 export function useEditarDenunciaViewModel(id: string | undefined) {
   const router = useRouter();
-  const { userName, logout } = useAuth();
+  const { userName, signOut: sair } = useAuth();
   const fetchDemandById = useDemandContext((s) => s.fetchDemandById);
   const updateDemand = useDemandContext((s) => s.updateDemand);
   const isLoading = useDemandContext((s) => s.loadingDetail);
@@ -107,16 +107,12 @@ export function useEditarDenunciaViewModel(id: string | undefined) {
         { text: 'OK', onPress: voltar },
       ]);
     } catch (err) {
-      setErroEnvio(err instanceof ApiError ? err.message : 'Erro ao salvar as alterações.');
+      setErroEnvio(getErrorMessage(err, 'Erro ao salvar as alterações.'));
     } finally {
       setSalvando(false);
     }
   };
 
-  const sair = () => {
-    logout();
-    router.replace('/');
-  };
 
   return {
     userName,

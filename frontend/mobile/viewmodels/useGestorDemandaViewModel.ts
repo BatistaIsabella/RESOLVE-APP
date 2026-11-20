@@ -3,14 +3,14 @@ import { useRouter } from 'expo-router';
 
 import { useAuth } from '@/hooks/useAuth';
 import { useDemandContext } from '@/contexts/DemandContext';
-import { DemandPriority, DemandStatus } from '@/types/demand';
-import { formatPriorityLabel } from '@/utils/demandMapper';
-import { ApiError } from '@/lib/api';
+import { DemandStatus } from '@/types/demand';
+import { formatPriorityLabel, parsePriorityLabel } from '@/utils/demandMapper';
+import { getErrorMessage } from '@/lib/api';
 import { useExcluirDenuncia } from '@/viewmodels/useExcluirDenuncia';
 
 export function useGestorDemandaViewModel(id: string | undefined) {
   const router = useRouter();
-  const { userName, logout } = useAuth();
+  const { userName, signOut: handleLogout } = useAuth();
 
   const fetchDemandById = useDemandContext((s) => s.fetchDemandById);
   const updateDemandStatus = useDemandContext((s) => s.updateDemandStatus);
@@ -37,26 +37,22 @@ export function useGestorDemandaViewModel(id: string | undefined) {
     try {
       await updateDemandStatus(id, value as DemandStatus);
     } catch (err) {
-      setErro(err instanceof ApiError ? err.message : 'Erro ao atualizar status');
+      setErro(getErrorMessage(err, 'Erro ao atualizar status'));
     }
   };
 
   const changePriority = async (value: string) => {
     if (!id || !demand) return;
-    const priority = (value === 'Média' ? 'Media' : value) as DemandPriority;
+    const priority = parsePriorityLabel(value);
     if (priority === demand.priority) return;
     setErro('');
     try {
       await updateDemandPriority(id, priority);
     } catch (err) {
-      setErro(err instanceof ApiError ? err.message : 'Erro ao atualizar prioridade');
+      setErro(getErrorMessage(err, 'Erro ao atualizar prioridade'));
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    router.replace('/');
-  };
 
   return {
     userName,

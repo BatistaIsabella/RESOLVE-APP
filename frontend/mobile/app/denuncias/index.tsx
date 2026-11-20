@@ -38,7 +38,7 @@ export default function DenunciasScreen() {
           style={styles.createBtn}
         />
 
-        <DemandFiltersPanel filters={vm.appliedFilters} onApply={vm.applyFilters} />
+        <DemandFiltersPanel filters={vm.filters} onApply={vm.applyFilters} />
 
         {vm.error ? <Text style={styles.error}>{vm.error}</Text> : null}
 

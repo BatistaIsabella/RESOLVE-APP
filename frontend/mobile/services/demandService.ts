@@ -11,12 +11,11 @@ import {
 } from '@/utils/demandMapper';
 import {
   Demand,
-  DemandCategory,
   DemandFilters,
   DemandPriority,
-  DemandRegion,
   DemandStatus,
   DemandUpdateInput,
+  NovaDemandaInput,
 } from '@/types/demand';
 import { uriToBase64 } from '@/utils/imageUtils';
 
@@ -54,16 +53,11 @@ export const demandService = {
     return mapDenunciaFromApi(data);
   },
 
-  async create(input: {
-    titulo: string;
-    categoria: DemandCategory;
-    regiao: DemandRegion;
-    descricao: string;
-    endereco: string;
-    prioridade?: DemandPriority;
-    /** URI local da foto. A conversão para base64 acontece aqui, não na tela. */
-    imagemUri?: string | null;
-  }, solicitante = '', onProgress?: (fracao: number) => void): Promise<Demand> {
+  async create(
+    input: NovaDemandaInput,
+    solicitante = '',
+    onProgress?: (fracao: number) => void
+  ): Promise<Demand> {
     const imagens = input.imagemUri ? [await uriToBase64(input.imagemUri)] : undefined;
     const payload = buildCreatePayload({ ...input, imagens });
     const { data } = await api.post<ApiDenuncia>('/demands', payload, {

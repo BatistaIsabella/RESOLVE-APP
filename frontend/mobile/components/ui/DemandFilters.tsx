@@ -5,6 +5,7 @@ import { CATEGORIAS, PRIORIDADES, REGIOES, STATUS } from '@/constants/demanda';
 import { SelectField } from '@/components/ui/SelectField';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { AppColors } from '@/constants/colors';
+import { formatPriorityLabel, parsePriorityLabel } from '@/utils/demandMapper';
 
 interface DemandFiltersProps {
   filters: Filters;
@@ -78,13 +79,13 @@ export function DemandFiltersPanel({ filters, onApply }: DemandFiltersProps) {
         <View style={styles.gridItem}>
           <SelectField
             label="Prioridade"
-            value={temp.priority === 'Media' ? 'Média' : temp.priority}
+            value={temp.priority ? formatPriorityLabel(temp.priority) : ''}
             options={['', ...PRIORIDADES]}
             placeholder="Prioridade"
             onChange={(v) =>
               setTemp((p) => ({
                 ...p,
-                priority: (v === 'Média' ? 'Media' : v) as Filters['priority'],
+                priority: v ? parsePriorityLabel(v) : '',
               }))
             }
           />

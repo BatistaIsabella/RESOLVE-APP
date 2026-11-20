@@ -5,14 +5,14 @@ import { useRouter } from 'expo-router';
 import { AuthCard, authStyles as s } from '@/components/ui/AuthCard';
 import { getPostLoginRoute } from '@/contexts/AuthContext';
 import { VERSAO_TERMOS } from '@/constants/termos';
-import { ApiError } from '@/lib/api';
+import { getErrorMessage } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 
 // Aparece para quem ainda não aceitou a versão vigente da política e dos termos
 // (contas criadas antes do aceite existir, ou depois de uma nova versão).
 export default function AceiteTermosScreen() {
   const router = useRouter();
-  const { role, termosPendentes, hasHydrated, aceitarTermos, logout } = useAuth();
+  const { role, termosPendentes, hasHydrated, aceitarTermos, signOut: recusar } = useAuth();
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
 
@@ -32,16 +32,12 @@ export default function AceiteTermosScreen() {
       await aceitarTermos();
       router.replace(role ? getPostLoginRoute(role) : '/');
     } catch (err) {
-      setErro(err instanceof ApiError ? err.message : 'Não foi possível registrar o aceite');
+      setErro(getErrorMessage(err, 'Não foi possível registrar o aceite'));
     } finally {
       setEnviando(false);
     }
   };
 
-  const recusar = () => {
-    logout();
-    router.replace('/');
-  };
 
   return (
     <AuthCard title="Privacidade e termos" onBack={recusar}>
