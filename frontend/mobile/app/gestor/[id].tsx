@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { GradientHeader } from '@/components/ui/GradientHeader';
+import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { DemandCard } from '@/components/ui/DemandCard';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { SelectField } from '@/components/ui/SelectField';
@@ -91,6 +92,7 @@ export default function GestorDemandaScreen() {
         onBack={() => router.back()}
         onLogout={handleLogout}
       />
+      <OfflineBanner />
 
       <ScrollView contentContainerStyle={styles.content}>
         <DemandCard demand={demand} onViewDetails={() => {}} showImage />

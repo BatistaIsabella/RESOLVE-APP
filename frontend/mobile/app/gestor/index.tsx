@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { GradientHeader } from '@/components/ui/GradientHeader';
+import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { DemandCard } from '@/components/ui/DemandCard';
 import { DemandFiltersPanel } from '@/components/ui/DemandFilters';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
@@ -159,6 +160,7 @@ export default function GestorScreen() {
         onBack={() => router.replace('/')}
         onLogout={handleLogout}
       />
+      <OfflineBanner />
 
       <FlatList
         data={filteredDemands}

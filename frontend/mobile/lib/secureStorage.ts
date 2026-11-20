@@ -11,6 +11,11 @@ export function setRemembered(value: boolean) {
   remembered = value;
 }
 
+/** Lido também pelo cache de demandas, que segue a mesma regra da sessão. */
+export function isRemembered() {
+  return remembered;
+}
+
 /**
  * Storage do Zustand que guarda o token no Keychain/Keystore (via
  * expo-secure-store) em vez de AsyncStorage puro, por ser um JWT de sessão.

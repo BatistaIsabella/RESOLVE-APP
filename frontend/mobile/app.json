@@ -3,6 +3,14 @@
     "name": "mobile",
     "slug": "mobile",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mobile",
@@ -43,7 +51,8 @@
       "expo-image",
       "expo-status-bar",
       "expo-web-browser",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-updates"
     ],
     "experiments": {
       "typedRoutes": true,
