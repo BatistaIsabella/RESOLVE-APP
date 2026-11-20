@@ -5,10 +5,16 @@ import 'react-native-reanimated';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { DemandProvider } from '@/contexts/DemandContext';
 import { useNotificacoes } from '@/hooks/useNotificacoes';
+import { useOtaUpdate } from '@/hooks/useOtaUpdate';
 
 // Precisa ficar dentro dos providers: usa a sessão e o roteador.
 function Notificacoes() {
   useNotificacoes();
+  return null;
+}
+
+function AtualizacaoOta() {
+  useOtaUpdate();
   return null;
 }
 
@@ -17,6 +23,7 @@ export default function RootLayout() {
     <AuthProvider>
       <DemandProvider>
         <Notificacoes />
+        <AtualizacaoOta />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
           <Stack.Screen name="login" />
