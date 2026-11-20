@@ -4,6 +4,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { GradientHeader } from '@/components/ui/GradientHeader';
 import { DemandCard } from '@/components/ui/DemandCard';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { SelectField } from '@/components/ui/SelectField';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { PRIORIDADES, STATUS } from '@/constants/demanda';
@@ -18,6 +19,9 @@ export default function GestorDemandaScreen() {
     priorityLabel,
     showLoadingScreen,
     notFoundMessage,
+    loadError,
+    retry,
+    retrying,
     erro,
     changeStatus,
     changePriority,
@@ -48,7 +52,11 @@ export default function GestorDemandaScreen() {
           onLogout={handleLogout}
         />
         <View style={styles.center}>
-          <Text style={styles.notFound}>{notFoundMessage}</Text>
+          {loadError ? (
+            <ErrorState message={loadError} onRetry={retry} retrying={retrying} />
+          ) : (
+            <Text style={styles.notFound}>{notFoundMessage}</Text>
+          )}
         </View>
       </View>
     );

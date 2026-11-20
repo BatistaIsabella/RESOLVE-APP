@@ -18,6 +18,7 @@ export function useGestorDashboardViewModel() {
   const metrics = useDemandContext((s) => s.metrics);
   const isLoading = useDemandContext((s) => s.isLoading);
   const error = useDemandContext((s) => s.error);
+  const listError = useDemandContext((s) => s.listError);
   const fetchDemands = useDemandContext((s) => s.fetchDemands);
   const fetchMetrics = useDemandContext((s) => s.fetchMetrics);
   const setFilters = useDemandContext((s) => s.setFilters);
@@ -106,7 +107,12 @@ export function useGestorDashboardViewModel() {
   return {
     userName,
     showLoadingScreen: carregando && demands.length === 0 && !metrics && !refreshing,
-    showEmptyState: !carregando && !isLoading,
+    // A lista falhou e não há nada para mostrar: o erro ocupa o lugar dela, com "Tentar novamente".
+    showErrorState: !!listError && filteredDemands.length === 0,
+    listError,
+    showEmptyState: !carregando && !isLoading && !listError,
+    retry: load,
+    retrying: isLoading,
     refreshing,
     onRefresh,
     error,

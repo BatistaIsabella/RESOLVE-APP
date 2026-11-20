@@ -79,9 +79,13 @@ api.interceptors.response.use(
       403: message ?? 'Você não tem permissão para esta ação.',
       404: message ?? 'Recurso não encontrado.',
       409: message ?? 'Conflito ao processar a solicitação.',
+      413: 'A foto é grande demais. Escolha uma imagem menor.',
       429: message ?? 'Muitas tentativas. Aguarde alguns minutos e tente de novo.',
       502: message ?? 'Não foi possível concluir agora. Tente novamente em instantes.',
       500: 'Erro interno do servidor. Tente mais tarde.',
+      // Os serviços dormem quando ficam ociosos: a primeira chamada pode pegar o servidor acordando.
+      503: 'Servidor indisponível no momento. Tente novamente em instantes.',
+      504: 'O servidor demorou para responder. Tente novamente.',
     };
 
     throw new ApiError(friendlyMessages[status] ?? message ?? 'Erro na requisição', status);

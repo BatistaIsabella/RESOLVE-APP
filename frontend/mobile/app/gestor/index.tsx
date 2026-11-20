@@ -11,6 +11,7 @@ import { GradientHeader } from '@/components/ui/GradientHeader';
 import { DemandCard } from '@/components/ui/DemandCard';
 import { DemandFiltersPanel } from '@/components/ui/DemandFilters';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { ChartCard } from '@/components/ui/charts/ChartCard';
 import { PieChart } from '@/components/ui/charts/PieChart';
 import { BarChart } from '@/components/ui/charts/BarChart';
@@ -60,7 +61,7 @@ export default function GestorScreen() {
 
       <DemandFiltersPanel filters={vm.filters} onApply={vm.applyFilters} />
 
-      {vm.error ? <Text style={styles.error}>{vm.error}</Text> : null}
+      {vm.error && !vm.showErrorState ? <Text style={styles.error}>{vm.error}</Text> : null}
 
       <Text style={styles.listHeading}>Denúncias</Text>
     </View>
@@ -92,7 +93,9 @@ export default function GestorScreen() {
           <DemandCard demand={item} onViewDetails={vm.openDemand} />
         )}
         ListEmptyComponent={
-          vm.showEmptyState ? (
+          vm.showErrorState && vm.listError ? (
+            <ErrorState message={vm.listError} onRetry={vm.retry} retrying={vm.retrying} />
+          ) : vm.showEmptyState ? (
             <View style={styles.empty}>
               <Text style={styles.emptyText}>Nenhuma denúncia encontrada.</Text>
             </View>

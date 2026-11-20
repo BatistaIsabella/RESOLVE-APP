@@ -4,6 +4,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { GradientHeader } from '@/components/ui/GradientHeader';
 import { DemandCard } from '@/components/ui/DemandCard';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { AppColors } from '@/constants/colors';
 import { useDenunciaDetalheViewModel } from '@/viewmodels/useDenunciaDetalheViewModel';
@@ -15,6 +16,8 @@ export default function DenunciaDetalhesScreen() {
     demand,
     error,
     showLoadingScreen,
+    retry,
+    retrying,
     podeAlterar,
     excluida,
     excluindo,
@@ -43,7 +46,11 @@ export default function DenunciaDetalhesScreen() {
           onLogout={handleLogout}
         />
         <View style={styles.center}>
-          <Text style={styles.notFound}>{error ?? 'Denúncia não encontrada.'}</Text>
+          {error ? (
+            <ErrorState message={error} onRetry={retry} retrying={retrying} />
+          ) : (
+            <Text style={styles.notFound}>Denúncia não encontrada.</Text>
+          )}
         </View>
       </View>
     );

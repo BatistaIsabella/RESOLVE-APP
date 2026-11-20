@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -18,11 +18,13 @@ export function useDenunciaDetalheViewModel(id: string | undefined) {
     '/denuncias'
   );
 
-  useEffect(() => {
-    if (id) {
-      fetchDemandById(id);
-    }
+  const retry = useCallback(() => {
+    if (id) fetchDemandById(id);
   }, [id, fetchDemandById]);
+
+  useEffect(() => {
+    retry();
+  }, [retry]);
 
 
   const editar = () => {
@@ -34,6 +36,8 @@ export function useDenunciaDetalheViewModel(id: string | undefined) {
     demand,
     error,
     showLoadingScreen: isLoading && !demand,
+    retry,
+    retrying: isLoading,
     podeAlterar: demand?.status === 'Aberta',
 
     excluida,

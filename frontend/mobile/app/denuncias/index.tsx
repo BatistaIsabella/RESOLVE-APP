@@ -11,6 +11,7 @@ import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { DemandCard } from '@/components/ui/DemandCard';
 import { DemandFiltersPanel } from '@/components/ui/DemandFilters';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { AppColors } from '@/constants/colors';
 import { useMinhasDenunciasViewModel } from '@/viewmodels/useMinhasDenunciasViewModel';
 
@@ -40,7 +41,7 @@ export default function DenunciasScreen() {
 
         <DemandFiltersPanel filters={vm.filters} onApply={vm.applyFilters} />
 
-        {vm.error ? <Text style={styles.error}>{vm.error}</Text> : null}
+        {vm.error && !vm.showErrorState ? <Text style={styles.error}>{vm.error}</Text> : null}
 
         <FlatList
           data={vm.visibleDemands}
@@ -52,7 +53,9 @@ export default function DenunciasScreen() {
             <DemandCard demand={item} onViewDetails={vm.openDemand} />
           )}
           ListEmptyComponent={
-            vm.showEmptyState ? (
+            vm.showErrorState && vm.error ? (
+              <ErrorState message={vm.error} onRetry={vm.retry} retrying={vm.retrying} />
+            ) : vm.showEmptyState ? (
               <View style={styles.empty}>
                 <Text style={styles.emptyText}>Nenhuma denúncia encontrada.</Text>
               </View>

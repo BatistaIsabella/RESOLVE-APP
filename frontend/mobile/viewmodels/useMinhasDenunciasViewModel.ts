@@ -43,7 +43,11 @@ export function useMinhasDenunciasViewModel() {
     visibleDemands,
     error,
     showLoadingScreen: isLoading && visibleDemands.length === 0 && !refreshing,
-    showEmptyState: !isLoading,
+    // Falhou e não há nada para mostrar: o erro ocupa o lugar da lista, com "Tentar novamente".
+    showErrorState: !!error && visibleDemands.length === 0,
+    showEmptyState: !isLoading && !error,
+    retry: fetchDemands,
+    retrying: isLoading,
     refreshing,
     onRefresh,
 

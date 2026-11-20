@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -25,11 +25,13 @@ export function useGestorDemandaViewModel(id: string | undefined) {
     '/gestor'
   );
 
-  useEffect(() => {
-    if (id) {
-      fetchDemandById(id);
-    }
+  const retry = useCallback(() => {
+    if (id) fetchDemandById(id);
   }, [id, fetchDemandById]);
+
+  useEffect(() => {
+    retry();
+  }, [retry]);
 
   const changeStatus = async (value: string) => {
     if (!id || !demand || value === demand.status) return;
@@ -60,6 +62,9 @@ export function useGestorDemandaViewModel(id: string | undefined) {
     priorityLabel: demand ? formatPriorityLabel(demand.priority) : '',
     showLoadingScreen: isLoading && !demand,
     notFoundMessage: storeError ?? 'Demanda não encontrada.',
+    loadError: storeError,
+    retry,
+    retrying: isLoading,
     erro,
     changeStatus,
     changePriority,
