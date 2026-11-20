@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Demand } from '@/types/demand';
 import { extractBairro, formatPriorityLabel } from '@/utils/demandMapper';
@@ -48,8 +48,8 @@ export function DemandCard({ demand, onViewDetails, showImage = false }: DemandC
         />
       </View>
 
-      {showImage && demand.fotoUrl ? (
-        <Image source={{ uri: demand.fotoUrl }} style={styles.image} contentFit="cover" />
+      {showImage && demand.imagens[0] ? (
+        <Image source={{ uri: demand.imagens[0] }} style={styles.image} contentFit="cover" />
       ) : null}
 
       {showImage ? (

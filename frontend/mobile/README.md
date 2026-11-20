@@ -1,50 +1,58 @@
-# Welcome to your Expo app 👋
+# Smart City — app mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
-
-## Get started
-
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+App Expo (React Native + expo-router) do cidadão e do gestor.
 
 ```bash
-npm run reset-project
+npm install
+npx expo start          # Expo Go / emulador
+npm run lint
+npx tsc --noEmit        # checagem de tipos
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+A API usada é a de `EXPO_PUBLIC_API_GATEWAY_URL` (padrão: o gateway publicado).
 
-## Learn more
+## Organização (MVVM)
 
-To learn more about developing your project with Expo, look at the following resources:
+| Camada | Pasta | O que mora lá |
+| --- | --- | --- |
+| **View** | `app/` | Rotas (file-based routing). Cada arquivo é uma tela: lê o ViewModel e desenha. Não transforma dado nem guarda cópia do estado do store. |
+| | `components/ui/` | Componentes visuais reutilizáveis (`FormField`, `SelectField`, `ErrorState`, `OfflineBanner`, `AuthLayout`, gráficos…). |
+| **ViewModel** | `stores/` | Estado global em Zustand: dados, carregamento e erro **por operação**, otimismo/rollback, cache offline. |
+| | `hooks/` | Hooks que as telas usam para falar com os stores (`useAuth`, `useDemandDetail`) e o `useOtaUpdate`. |
+| **Model** | `services/` | Chamadas HTTP. Só buscam e devolvem o tipo de domínio. |
+| | `lib/` | Infra: cliente axios e tratamento de erro (`api.ts`), storages do Zustand (`secureStorage`, `cacheStorage`). |
+| | `utils/` | Funções puras: mappers API ⇄ domínio, filtros, agregações dos gráficos, **validação de formulários**. |
+| | `types/` | Tipos de domínio (`Demand`, `UserRole`…). Categoria, região e status são derivados das listas de `constants/demanda.ts`. |
+| | `constants/` | Listas de domínio (categorias, regiões…) e cores. |
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Regras que valem para código novo:
 
-## Join the community
+- **Erros da API** saem sempre como `ApiError` (`lib/api.ts`); a tela usa `getErrorMessage(err, fallback)`. `status === 0` significa sem rede/timeout.
+- **Validação** fica em `utils/validation.ts` (puro); a tela só mostra a mensagem no campo. Os limites espelham o banco (ex.: e-mail ≤ 35).
+- **Loading:** só a primeira carga ocupa a tela (`LoadingScreen`); com dados na tela, a atualização acontece por trás. Erro sem dados → `ErrorState` com "Tentar novamente".
+- **Seletor por campo** no store: `useDemandStore((s) => s.x)`, nunca o store inteiro.
 
-Join our community of developers creating universal apps.
+## Sessão e modo offline
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- **Sessão** (token JWT): Zustand `persist` sobre `expo-secure-store` (Keychain/Keystore). Só é gravada com "Mantenha-me conectado".
+- **Cache de demandas e métricas:** Zustand `persist` sobre AsyncStorage. Sem rede, as telas mostram o cache com o aviso "Sem conexão — exibindo dados salvos em…". O cache é apagado no logout ou na sessão expirada, e segue a mesma regra do "Mantenha-me conectado".
+
+## Atualizações OTA (expo-updates)
+
+Configurado em `app.json` (`runtimeVersion: fingerprint`) e `eas.json` (canais `development`, `preview`, `production`). Na abertura o app baixa atualizações em segundo plano e pergunta antes de reiniciar.
+
+Primeira vez (com login na conta Expo do time):
+
+```bash
+npx eas-cli init               # grava o projectId no app.json
+npx eas-cli update:configure   # grava a URL de updates
+npx eas-cli build --profile preview --platform android
+```
+
+Depois, para publicar uma atualização só de JavaScript:
+
+```bash
+npm run update:preview      # ou update:production
+```
+
+O OTA não funciona no Expo Go nem no `expo start`, só em builds do EAS.

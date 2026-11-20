@@ -1,40 +1,49 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Demand, DemandFilters, DemandPriority, DemandStatus, MetricsKpis } from '@/types/demand';
+import {
+  Demand,
+  DemandFilters,
+  DemandPriority,
+  DemandStatus,
+  MetricsKpis,
+  NewDemandInput,
+} from '@/types/demand';
 import { demandService } from '@/services/demandService';
 import { metricsService } from '@/services/metricsService';
-import { ApiError } from '@/lib/api';
+import { ApiError, getErrorMessage } from '@/lib/api';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { filterDemands } from '@/utils/demandFilters';
 import { cacheStorage } from '@/lib/cacheStorage';
 
 interface DemandStore {
   demands: Demand[];
   filters: DemandFilters;
   metrics: MetricsKpis | null;
-  isLoading: boolean;
-  error: string | null;
+
+  // Um estado de carregamento e de erro por operação. Com um só, a busca que
+  // terminava primeiro desligava o loading da outra (o painel do gestor busca
+  // lista e métricas em paralelo) e o erro do detalhe aparecia na lista.
+  isLoadingDemands: boolean;
+  demandsError: string | null;
+  isLoadingMetrics: boolean;
+  metricsError: string | null;
+  isLoadingDemand: boolean;
+  demandError: string | null;
+  /** Criação ou alteração em andamento. O erro dessas ações é lançado para a tela. */
+  isSaving: boolean;
+
   /** Última vez que a API respondeu com dados (ISO). Persistido com o cache. */
   lastSyncedAt: string | null;
   /** A última busca falhou por falta de rede e a tela está mostrando o cache. */
   isOffline: boolean;
+
   fetchDemands: () => Promise<void>;
   fetchMetrics: () => Promise<void>;
   fetchDemandById: (id: string) => Promise<Demand | null>;
-  createDemand: (input: {
-    titulo: string;
-    categoria: Demand['category'];
-    regiao: Demand['region'];
-    descricao: string;
-    endereco: string;
-    prioridade?: DemandPriority;
-    imagemUri?: string | null;
-  }) => Promise<Demand>;
+  createDemand: (input: NewDemandInput) => Promise<Demand>;
   updateDemandStatus: (id: string, status: DemandStatus) => Promise<void>;
   updateDemandPriority: (id: string, priority: DemandPriority) => Promise<void>;
   setFilters: (filters: Partial<DemandFilters>) => void;
   resetFilters: () => void;
-  getFilteredDemands: () => Demand[];
   clearCache: () => void;
 }
 
@@ -58,150 +67,149 @@ const defaultFilters: DemandFilters = {
   priority: '',
 };
 
+const initialRequestState = {
+  isLoadingDemands: false,
+  demandsError: null,
+  isLoadingMetrics: false,
+  metricsError: null,
+  isLoadingDemand: false,
+  demandError: null,
+  isSaving: false,
+  isOffline: false,
+};
+
 export const useDemandStore = create<DemandStore>()(
   persist(
-    (set, get) => ({
-      demands: [],
-      filters: defaultFilters,
-      metrics: null,
-      isLoading: false,
-      error: null,
-      lastSyncedAt: null,
-      isOffline: false,
-
-      fetchDemands: async () => {
-        const { role, userEmail } = useAuthStore.getState();
-        set({ isLoading: true, error: null });
-        try {
-          const demands =
-            role === 'gestor'
-              ? await demandService.getAllForGestor()
-              : await demandService.getMyDemands(userEmail ?? '');
-          set({ demands, isLoading: false, isOffline: false, lastSyncedAt: new Date().toISOString() });
-        } catch (err) {
-          // Sem rede, mas com cache: a lista continua na tela e a View avisa que
-          // é a cópia salva, em vez de mostrar erro.
-          if (isNetworkError(err) && get().demands.length > 0) {
-            set({ isLoading: false, isOffline: true });
-            return;
-          }
-          const message = err instanceof ApiError ? err.message : 'Erro ao carregar demandas';
-          set({ isLoading: false, error: message });
-        }
-      },
-
-      fetchMetrics: async () => {
-        set({ isLoading: true, error: null });
-        try {
-          const metrics = await metricsService.getKpis();
-          set({ metrics, isLoading: false, isOffline: false, lastSyncedAt: new Date().toISOString() });
-        } catch (err) {
-          if (isNetworkError(err) && get().metrics) {
-            set({ isLoading: false, isOffline: true });
-            return;
-          }
-          const message = err instanceof ApiError ? err.message : 'Erro ao carregar métricas';
-          set({ isLoading: false, error: message });
-        }
-      },
-
-      fetchDemandById: async (id: string) => {
-        const { role, userEmail } = useAuthStore.getState();
-        set({ isLoading: true, error: null });
-        try {
-          const demand =
-            role === 'gestor'
-              ? await demandService.getByIdForGestor(id)
-              : await demandService.getById(id, userEmail ?? '');
-          set((state) => ({ demands: upsert(state.demands, demand), isLoading: false, isOffline: false }));
-          return demand;
-        } catch (err) {
-          const cached = get().demands.find((d) => d.id === id) ?? null;
-          if (isNetworkError(err) && cached) {
-            set({ isLoading: false, isOffline: true });
-            return cached;
-          }
-          const message = err instanceof ApiError ? err.message : 'Erro ao carregar demanda';
-          set({ isLoading: false, error: message });
-          return null;
-        }
-      },
-
-      createDemand: async (input) => {
-        const { userEmail } = useAuthStore.getState();
-        set({ isLoading: true, error: null });
-        try {
-          const demand = await demandService.create(input, userEmail ?? '');
-          set((state) => ({ demands: [demand, ...state.demands], isLoading: false }));
-          return demand;
-        } catch (err) {
-          const message = err instanceof ApiError ? err.message : 'Erro ao criar demanda';
-          set({ isLoading: false, error: message });
-          throw err;
-        }
-      },
-
-      updateDemandStatus: async (id, status) => {
-        const anterior = get().demands.find((d) => d.id === id) ?? null;
-        // Pinta na hora e desfaz se a API recusar: a tela le a lista e nao precisa
-        // manter copia propria para fazer rollback.
-        set((state) => ({
-          demands: state.demands.map((d) => (d.id === id ? { ...d, status } : d)),
-          error: null,
-        }));
-        try {
-          const updated = await demandService.updateStatus(id, status);
-          set((state) => ({ demands: upsert(state.demands, updated) }));
-        } catch (err) {
-          const message = err instanceof ApiError ? err.message : 'Erro ao atualizar status';
-          set((state) => ({
-            demands: anterior ? upsert(state.demands, anterior) : state.demands,
-            error: message,
-          }));
-          throw err;
-        }
-      },
-
-      updateDemandPriority: async (id, priority) => {
+    (set, get) => {
+      /**
+       * Alteração otimista: pinta na hora e desfaz se a API recusar. A tela lê
+       * a lista e não precisa manter cópia própria para o rollback.
+       */
+      async function updateOptimistically(
+        id: string,
+        patch: Partial<Demand>,
+        request: () => Promise<Demand>
+      ) {
         const anterior = get().demands.find((d) => d.id === id) ?? null;
         set((state) => ({
-          demands: state.demands.map((d) => (d.id === id ? { ...d, priority } : d)),
-          error: null,
+          demands: state.demands.map((d) => (d.id === id ? { ...d, ...patch } : d)),
+          isSaving: true,
         }));
         try {
-          const updated = await demandService.updatePriority(id, priority);
+          const updated = await request();
           set((state) => ({ demands: upsert(state.demands, updated) }));
         } catch (err) {
-          const message = err instanceof ApiError ? err.message : 'Erro ao atualizar prioridade';
           set((state) => ({
             demands: anterior ? upsert(state.demands, anterior) : state.demands,
-            error: message,
           }));
           throw err;
+        } finally {
+          set({ isSaving: false });
         }
-      },
+      }
 
-      setFilters: (filters) => set((state) => ({ filters: { ...state.filters, ...filters } })),
+      return {
+        demands: [],
+        filters: defaultFilters,
+        metrics: null,
+        ...initialRequestState,
+        lastSyncedAt: null,
 
-      resetFilters: () => set({ filters: defaultFilters }),
+        fetchDemands: async () => {
+          const { role, userEmail } = useAuthStore.getState();
+          set({ isLoadingDemands: true, demandsError: null });
+          try {
+            const demands =
+              role === 'gestor'
+                ? await demandService.getAllForGestor()
+                : await demandService.getMyDemands(userEmail ?? '');
+            set({ demands, isOffline: false, lastSyncedAt: new Date().toISOString() });
+          } catch (err) {
+            // Sem rede, mas com cache: a lista continua na tela e a View avisa
+            // que é a cópia salva, em vez de mostrar erro.
+            if (isNetworkError(err) && get().demands.length > 0) {
+              set({ isOffline: true });
+            } else {
+              set({ demandsError: getErrorMessage(err, 'Erro ao carregar demandas.') });
+            }
+          } finally {
+            set({ isLoadingDemands: false });
+          }
+        },
 
-      getFilteredDemands: () => {
-        const { demands, filters } = get();
-        return filterDemands(demands, filters);
-      },
+        fetchMetrics: async () => {
+          set({ isLoadingMetrics: true, metricsError: null });
+          try {
+            const metrics = await metricsService.getKpis();
+            set({ metrics, isOffline: false, lastSyncedAt: new Date().toISOString() });
+          } catch (err) {
+            if (isNetworkError(err) && get().metrics) {
+              set({ isOffline: true });
+            } else {
+              set({ metricsError: getErrorMessage(err, 'Erro ao carregar métricas.') });
+            }
+          } finally {
+            set({ isLoadingMetrics: false });
+          }
+        },
 
-      clearCache: () => {
-        set({
-          demands: [],
-          metrics: null,
-          filters: defaultFilters,
-          lastSyncedAt: null,
-          isOffline: false,
-          error: null,
-        });
-        useDemandStore.persist.clearStorage();
-      },
-    }),
+        fetchDemandById: async (id: string) => {
+          const { role, userEmail } = useAuthStore.getState();
+          set({ isLoadingDemand: true, demandError: null });
+          try {
+            const demand =
+              role === 'gestor'
+                ? await demandService.getByIdForGestor(id)
+                : await demandService.getById(id, userEmail ?? '');
+            set((state) => ({ demands: upsert(state.demands, demand), isOffline: false }));
+            return demand;
+          } catch (err) {
+            const cached = get().demands.find((d) => d.id === id) ?? null;
+            if (isNetworkError(err) && cached) {
+              set({ isOffline: true });
+              return cached;
+            }
+            set({ demandError: getErrorMessage(err, 'Erro ao carregar demanda.') });
+            return null;
+          } finally {
+            set({ isLoadingDemand: false });
+          }
+        },
+
+        createDemand: async (input) => {
+          const { userEmail } = useAuthStore.getState();
+          set({ isSaving: true });
+          try {
+            const demand = await demandService.create(input, userEmail ?? '');
+            set((state) => ({ demands: [demand, ...state.demands] }));
+            return demand;
+          } finally {
+            set({ isSaving: false });
+          }
+        },
+
+        updateDemandStatus: (id, status) =>
+          updateOptimistically(id, { status }, () => demandService.updateStatus(id, status)),
+
+        updateDemandPriority: (id, priority) =>
+          updateOptimistically(id, { priority }, () => demandService.updatePriority(id, priority)),
+
+        setFilters: (filters) => set((state) => ({ filters: { ...state.filters, ...filters } })),
+
+        resetFilters: () => set({ filters: defaultFilters }),
+
+        clearCache: () => {
+          set({
+            demands: [],
+            metrics: null,
+            filters: defaultFilters,
+            lastSyncedAt: null,
+            ...initialRequestState,
+          });
+          useDemandStore.persist.clearStorage();
+        },
+      };
+    },
     {
       name: 'resolve-mobile-demands',
       version: 1,

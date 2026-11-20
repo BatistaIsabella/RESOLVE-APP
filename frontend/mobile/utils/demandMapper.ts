@@ -4,7 +4,13 @@ import {
   DemandPriority,
   DemandRegion,
   DemandStatus,
+  NewDemandInput,
 } from '@/types/demand';
+
+export interface ApiPaginated<T> {
+  data: T[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}
 
 export interface ApiDenuncia {
   id_denuncia: number;
@@ -79,14 +85,11 @@ export function mapDenunciaFromApi(denuncia: ApiDenuncia, solicitante = ''): Dem
   return {
     id: String(denuncia.id_denuncia),
     titulo: denuncia.titulo,
-    location: denuncia.endereco,
     category: mapCategoryFromApi(denuncia.categoria),
     region: mapRegionFromApi(denuncia.regiao),
     status: mapStatusFromApi(denuncia.status),
     priority: PRIORIDADE_FROM_API[denuncia.prioridade] ?? 'Media',
     description: denuncia.descricao,
-    createdAt: formatDataRegistro(denuncia.data_registro),
-    fotoUrl: denuncia.imagens?.[0]?.caminho_file ?? '',
     imagens: denuncia.imagens?.map((img) => img.caminho_file).filter(Boolean) ?? [],
     endereco: denuncia.endereco,
     solicitante: denuncia.email_solicitante ?? solicitante,
@@ -131,15 +134,14 @@ export function formatPriorityLabel(priority: DemandPriority): string {
   return priority === 'Media' ? 'Média' : priority;
 }
 
-export function buildCreatePayload(input: {
-  titulo: string;
-  categoria: DemandCategory;
-  regiao: DemandRegion;
-  descricao: string;
-  endereco: string;
-  prioridade?: DemandPriority;
-  imagens?: string[];
-}) {
+/** Inverso de formatPriorityLabel: do rótulo do select para o valor de domínio. */
+export function parsePriorityLabel(label: string): DemandPriority {
+  return (label === 'Média' ? 'Media' : label) as DemandPriority;
+}
+
+export function buildCreatePayload(
+  input: Omit<NewDemandInput, 'imagemUri'> & { imagens?: string[] }
+) {
   return {
     titulo: input.titulo.slice(0, 50),
     categoria: mapCategoryToApi(input.categoria),

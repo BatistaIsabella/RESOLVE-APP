@@ -15,6 +15,8 @@ export const AppColors = {
   dotRed: '#EF4444',
   dotYellow: '#F59E0B',
   dotGreen: '#22C55E',
+  danger: '#DC2626',
+  background: '#F9FAFB',
 };
 
 // Superfície dos cards de gráfico do painel do gestor. As cores abaixo foram

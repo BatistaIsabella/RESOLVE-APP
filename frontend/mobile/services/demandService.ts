@@ -1,28 +1,24 @@
 import { api } from '@/lib/api';
 import {
   ApiDenuncia,
+  ApiPaginated,
   buildCreatePayload,
   mapDenunciaFromApi,
   mapDenunciasFromApi,
   mapPriorityToApi,
   mapStatusToApi,
 } from '@/utils/demandMapper';
-import { Demand, DemandCategory, DemandPriority, DemandRegion, DemandStatus } from '@/types/demand';
+import { Demand, DemandPriority, DemandStatus, NewDemandInput } from '@/types/demand';
 import { uriToBase64 } from '@/utils/imageUtils';
-
-interface PaginatedResponse<T> {
-  data: T[];
-  pagination: { page: number; limit: number; total: number; totalPages: number };
-}
 
 export const demandService = {
   async getMyDemands(solicitante = ''): Promise<Demand[]> {
-    const { data } = await api.get<PaginatedResponse<ApiDenuncia>>('/demands/my-demands?page=1&limit=100');
+    const { data } = await api.get<ApiPaginated<ApiDenuncia>>('/demands/my-demands?page=1&limit=100');
     return mapDenunciasFromApi(data.data, solicitante);
   },
 
   async getAllForGestor(): Promise<Demand[]> {
-    const { data } = await api.get<PaginatedResponse<ApiDenuncia>>('/demands/gestor?page=1&limit=100');
+    const { data } = await api.get<ApiPaginated<ApiDenuncia>>('/demands/gestor?page=1&limit=100');
     return mapDenunciasFromApi(data.data);
   },
 
@@ -36,16 +32,7 @@ export const demandService = {
     return mapDenunciaFromApi(data);
   },
 
-  async create(input: {
-    titulo: string;
-    categoria: DemandCategory;
-    regiao: DemandRegion;
-    descricao: string;
-    endereco: string;
-    prioridade?: DemandPriority;
-    /** URI local da foto. A conversão para base64 acontece aqui, não na tela. */
-    imagemUri?: string | null;
-  }, solicitante = ''): Promise<Demand> {
+  async create(input: NewDemandInput, solicitante = ''): Promise<Demand> {
     const imagens = input.imagemUri ? [await uriToBase64(input.imagemUri)] : undefined;
     const payload = buildCreatePayload({ ...input, imagens });
     const { data } = await api.post<ApiDenuncia>('/demands', payload);

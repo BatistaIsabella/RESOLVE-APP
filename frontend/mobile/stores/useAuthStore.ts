@@ -1,26 +1,26 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { authService } from '@/services/authService';
-import { ApiError } from '@/lib/api';
 import { secureStorage } from '@/lib/secureStorage';
+import { UserRole } from '@/types/auth';
 
 interface AuthState {
   token: string | null;
-  role: 'cidadao' | 'gestor' | null;
+  role: UserRole | null;
   userName: string | null;
   userEmail: string | null;
+  /** Login ou cadastro em andamento. Erros são lançados para a tela exibir. */
   isLoading: boolean;
-  error: string | null;
   _hasHydrated: boolean;
   setHasHydrated: (value: boolean) => void;
-  login: (email: string, senha: string) => Promise<'cidadao' | 'gestor'>;
+  login: (email: string, senha: string) => Promise<UserRole>;
   register: (
     nome: string,
     email: string,
     senha: string,
-    papel: 'cidadao' | 'gestor',
+    papel: UserRole,
     codigoAcesso?: string
-  ) => Promise<'cidadao' | 'gestor'>;
+  ) => Promise<UserRole>;
   logout: () => void;
 }
 
@@ -32,55 +32,38 @@ export const useAuthStore = create<AuthState>()(
       userName: null,
       userEmail: null,
       isLoading: false,
-      error: null,
       _hasHydrated: false,
 
       setHasHydrated: (value) => set({ _hasHydrated: value }),
 
       login: async (email, senha) => {
-        set({ isLoading: true, error: null });
+        set({ isLoading: true });
         try {
           const result = await authService.login(email, senha);
-          set({
-            token: result.token,
-            role: result.papel,
-            userName: result.nome,
-            userEmail: email,
-            isLoading: false,
-          });
+          set({ token: result.token, role: result.papel, userName: result.nome, userEmail: email });
           return result.papel;
-        } catch (err) {
-          const message = err instanceof ApiError ? err.message : 'Erro ao fazer login';
-          set({ isLoading: false, error: message });
-          throw err;
+        } finally {
+          set({ isLoading: false });
         }
       },
 
       register: async (nome, email, senha, papel, codigoAcesso) => {
-        set({ isLoading: true, error: null });
+        set({ isLoading: true });
         try {
           // /auth/register não devolve token (apenas id/nome/email/papel),
           // então após criar a conta reaproveitamos o login para autenticar
           // a sessão, igual ao fluxo já existente na tela de login.
           await authService.register(nome, email, senha, papel, codigoAcesso);
           const result = await authService.login(email, senha);
-          set({
-            token: result.token,
-            role: result.papel,
-            userName: result.nome,
-            userEmail: email,
-            isLoading: false,
-          });
+          set({ token: result.token, role: result.papel, userName: result.nome, userEmail: email });
           return result.papel;
-        } catch (err) {
-          const message = err instanceof ApiError ? err.message : 'Erro ao criar conta';
-          set({ isLoading: false, error: message });
-          throw err;
+        } finally {
+          set({ isLoading: false });
         }
       },
 
       logout: () =>
-        set({ token: null, role: null, userName: null, userEmail: null, error: null }),
+        set({ token: null, role: null, userName: null, userEmail: null }),
     }),
     {
       name: 'resolve-mobile-auth',
@@ -98,6 +81,6 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-export function getPostLoginRoute(role: 'cidadao' | 'gestor'): '/denuncias' | '/gestor' {
+export function getPostLoginRoute(role: UserRole): '/denuncias' | '/gestor' {
   return role === 'gestor' ? '/gestor' : '/denuncias';
 }

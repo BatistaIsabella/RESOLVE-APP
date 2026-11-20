@@ -1,35 +1,21 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { GradientHeader } from '@/components/ui/GradientHeader';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { DemandCard } from '@/components/ui/DemandCard';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { useAuth } from '@/hooks/useAuth';
-import { useDemandStore } from '@/stores/useDemandStore';
+import { useDemandDetail } from '@/hooks/useDemandDetail';
 import { AppColors } from '@/constants/colors';
 
 export default function DenunciaDetalhesScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { userName, logout } = useAuth();
-  const fetchDemandById = useDemandStore((s) => s.fetchDemandById);
-  const isLoading = useDemandStore((s) => s.isLoading);
-  const error = useDemandStore((s) => s.error);
+  const { userName, signOut } = useAuth();
+  const { demand, isLoading, error, reload } = useDemandDetail(id);
 
-  // Lida do store: nada de copia local, para a tela nao divergir da lista.
-  const demand = useDemandStore((s) => s.demands.find((d) => d.id === id) ?? null);
-
-  useEffect(() => {
-    if (id) {
-      fetchDemandById(id);
-    }
-  }, [id, fetchDemandById]);
-
-  const handleLogout = () => {
-    logout();
-    router.replace('/');
-  };
 
   if (isLoading && !demand) {
     return <LoadingScreen message="Carregando detalhes..." />;
@@ -42,10 +28,14 @@ export default function DenunciaDetalhesScreen() {
           title="Detalhes"
           profileLabel={userName ?? 'Usuário'}
           onBack={() => router.back()}
-          onLogout={handleLogout}
+          onLogout={signOut}
         />
         <View style={styles.center}>
-          <Text style={styles.notFound}>{error ?? 'Denúncia não encontrada.'}</Text>
+          {error ? (
+            <ErrorState message={error} onRetry={reload} retrying={isLoading} />
+          ) : (
+            <Text style={styles.notFound}>Denúncia não encontrada.</Text>
+          )}
         </View>
       </View>
     );
@@ -57,7 +47,7 @@ export default function DenunciaDetalhesScreen() {
         title="Detalhes"
         profileLabel={userName ?? 'Usuário'}
         onBack={() => router.back()}
-        onLogout={handleLogout}
+        onLogout={signOut}
       />
       <OfflineBanner />
       <ScrollView contentContainerStyle={styles.content}>
@@ -78,7 +68,7 @@ export default function DenunciaDetalhesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: AppColors.background,
   },
   content: {
     padding: 16,

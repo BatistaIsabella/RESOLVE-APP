@@ -2,9 +2,11 @@ import React, { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { UserRole } from '@/types/auth';
+import { getPostLoginRoute } from '@/stores/useAuthStore';
 
 interface AuthGuardProps {
-  requiredRole?: 'cidadao' | 'gestor';
+  requiredRole?: UserRole;
   children: React.ReactNode;
 }
 
@@ -21,7 +23,7 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
     }
 
     if (requiredRole && role !== requiredRole) {
-      router.replace(role === 'gestor' ? '/gestor' : '/denuncias');
+      router.replace(getPostLoginRoute(role ?? 'cidadao'));
     }
   }, [hasHydrated, token, role, requiredRole, router]);
 

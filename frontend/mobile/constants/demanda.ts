@@ -25,6 +25,8 @@ export const REGIAO_ABREVIADA: Record<string, string> = {
   'Região Metropolitana do Recife': 'RMR',
 };
 
+// Rótulos de exibição (com acento). O valor de domínio é DemandPriority; a
+// conversão entre os dois fica em formatPriorityLabel/parsePriorityLabel.
 export const PRIORIDADES = ['Baixa', 'Média', 'Alta'] as const;
 
 export const PROBLEMAS_POR_CATEGORIA: Record<string, string[]> = {

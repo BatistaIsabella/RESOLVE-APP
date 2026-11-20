@@ -15,19 +15,38 @@ interface SelectFieldProps {
   options: string[];
   placeholder?: string;
   onChange: (value: string) => void;
+  /** Mensagem de validação, exibida abaixo do campo. */
+  error?: string;
+  disabled?: boolean;
 }
 
-export function SelectField({ label, value, options, placeholder, onChange }: SelectFieldProps) {
+export function SelectField({
+  label,
+  value,
+  options,
+  placeholder,
+  onChange,
+  error,
+  disabled,
+}: SelectFieldProps) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <Pressable style={styles.field} onPress={() => setOpen(true)}>
+      <Pressable
+        style={[styles.field, error && styles.fieldError, disabled && styles.fieldDisabled]}
+        onPress={() => setOpen(true)}
+        disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ disabled: !!disabled }}
+      >
         <Text style={styles.label}>{label}</Text>
         <Text style={[styles.value, !value && styles.placeholder]}>
           {value || placeholder || 'Selecionar'}
         </Text>
       </Pressable>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.overlay} onPress={() => setOpen(false)}>
@@ -66,6 +85,17 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.white,
     minHeight: 52,
     justifyContent: 'center',
+  },
+  fieldError: {
+    borderColor: AppColors.danger,
+  },
+  fieldDisabled: {
+    opacity: 0.6,
+  },
+  errorText: {
+    color: AppColors.danger,
+    fontSize: 12,
+    marginTop: 4,
   },
   label: {
     fontSize: 11,

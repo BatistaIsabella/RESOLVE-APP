@@ -5,10 +5,6 @@ import { Alert } from 'react-native';
 import 'react-native-reanimated';
 import { useOtaUpdate } from '@/hooks/useOtaUpdate';
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
-
 export default function RootLayout() {
   const { isUpdatePending, applyUpdate } = useOtaUpdate();
 
@@ -27,24 +23,11 @@ export default function RootLayout() {
   return (
     <>
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="index" />
         <Stack.Screen name="login" />
+        <Stack.Screen name="cadastro" />
         <Stack.Screen name="denuncias" />
         <Stack.Screen name="gestor" />
-        <Stack.Screen
-          name="cadastro"
-          options={{
-            headerShown: false,
-          }}
-        />
-
-        <Stack.Screen
-          name="modal"
-          options={{
-            presentation: 'modal',
-            title: 'Modal',
-          }}
-        />
       </Stack>
       <StatusBar style="light" />
     </>
