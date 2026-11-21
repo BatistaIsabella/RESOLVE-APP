@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { GradientHeader } from '@/components/ui/GradientHeader';
+import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { DemandCard } from '@/components/ui/DemandCard';
 import { DemandFiltersPanel } from '@/components/ui/DemandFilters';
@@ -30,6 +31,7 @@ export default function DenunciasScreen() {
         onLogout={vm.handleLogout}
         onProfile={vm.goToPerfil}
       />
+      <OfflineBanner />
 
       <View style={styles.content}>
         <PrimaryButton

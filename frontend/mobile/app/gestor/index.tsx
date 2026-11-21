@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { GradientHeader } from '@/components/ui/GradientHeader';
+import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { DemandCard } from '@/components/ui/DemandCard';
 import { DemandFiltersPanel } from '@/components/ui/DemandFilters';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
@@ -76,6 +77,7 @@ export default function GestorScreen() {
         onLogout={vm.handleLogout}
         onProfile={vm.goToPerfil}
       />
+      <OfflineBanner />
 
       <FlatList
         data={vm.filteredDemands}

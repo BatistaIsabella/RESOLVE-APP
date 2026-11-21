@@ -68,6 +68,18 @@ Requisitos para funcionar:
 - `extra.eas.projectId` no `app.json` (`eas init`). Sem ele o app só registra um aviso no log e segue sem notificações.
 - **Android**: credencial de envio do Firebase (FCM V1). Crie um projeto no Firebase, baixe a chave de conta de serviço e envie com `eas credentials` (Android → Google Service Account Key for FCM V1).
 
+### Atualizações OTA (EAS Update)
+
+Mudanças só de JavaScript chegam sem novo build: `eas update --channel preview` (ou `production`). Na abertura o app baixa a atualização em segundo plano; ao voltar para o app ele verifica de novo e, com uma versão baixada, pergunta se pode reiniciar (`hooks/useOtaUpdate.ts`). Não funciona no Expo Go nem no `npm start`.
+
+### Modo offline
+
+A sessão fica no `expo-secure-store` (`AuthContext`). A última lista de demandas e as métricas ficam no AsyncStorage (`lib/cacheStorage.ts`), gravadas pelo `DemandContext` a cada resposta da API:
+
+- ao abrir o app, a lista salva aparece enquanto a primeira busca não volta;
+- sem rede, as telas continuam com os dados salvos e mostram o aviso "Sem conexão — exibindo dados salvos em…"; erro do servidor continua aparecendo como erro;
+- o cache é de um usuário só: é apagado no logout e na sessão expirada, e não é gravado sem "Mantenha-me conectado".
+
 ## backend
 
 ```bash
