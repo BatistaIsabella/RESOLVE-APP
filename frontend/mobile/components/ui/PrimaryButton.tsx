@@ -1,6 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, ViewStyle } from 'react-native';
-import { AppColors } from '@/constants/colors';
+import { Pressable, Text, ViewStyle } from 'react-native';
 
 interface PrimaryButtonProps {
   label: string;
@@ -19,51 +18,20 @@ export function PrimaryButton({
   style,
   small,
 }: PrimaryButtonProps) {
+  const inativo = disabled || loading;
+
   return (
     <Pressable
-      style={({ pressed }) => [
-        styles.button,
-        small && styles.buttonSmall,
-        (disabled || loading) && styles.disabled,
-        pressed && styles.pressed,
-        style,
-      ]}
+      className={`items-center bg-primary active:opacity-[0.85] active:scale-[0.98] ${
+        small ? 'rounded-lg px-3.5 py-2' : 'rounded-xl px-5 py-3.5'
+      } ${inativo ? 'opacity-60' : ''}`}
+      style={style}
       onPress={onPress}
-      disabled={disabled || loading}
+      disabled={inativo}
     >
-      <Text style={[styles.text, small && styles.textSmall]}>
+      <Text className={`font-bold text-white ${small ? 'text-[13px]' : 'text-base'}`}>
         {loading ? 'Aguarde...' : label}
       </Text>
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  button: {
-    backgroundColor: AppColors.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-  },
-  buttonSmall: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-  },
-  text: {
-    color: AppColors.white,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  textSmall: {
-    fontSize: 13,
-  },
-  disabled: {
-    opacity: 0.6,
-  },
-  pressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
-  },
-});
