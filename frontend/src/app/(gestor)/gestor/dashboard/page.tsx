@@ -81,6 +81,16 @@ export default function Page() {
           <Link href="/gestor/dashboard" className="text-purple-600 font-bold mr-4 hover:text-purple-700">
             Painel de Gestão
           </Link>
+          
+          <a
+            href="https://metereoregion-pe.streamlit.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-purple-600 font-semibold hover:text-purple-800"
+          >
+            Clima e Risco Meteorológico
+          </a>
+          
           <button
             type="button"
             onClick={() => {
