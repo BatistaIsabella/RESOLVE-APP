@@ -2,13 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useDemandContext } from '@/contexts/DemandContext';
-
-function formatarData(iso: string): string {
-  const data = new Date(iso);
-  const dia = data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-  const hora = data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  return `${dia} às ${hora}`;
-}
+import { formatarDataSincronizacao } from '@/utils/dataSincronizacao';
 
 // Aviso de que a tela mostra a cópia salva no aparelho porque a API não respondeu.
 // Some sozinho na próxima busca que der certo.
@@ -18,12 +12,15 @@ export function OfflineBanner() {
 
   if (!isOffline) return null;
 
+  // Data inválida ou inconsistente cai na mensagem sem data.
+  const dataSalva = formatarDataSincronizacao(lastSyncedAt);
+
   return (
     <View style={styles.banner} accessibilityRole="alert">
       <Text style={styles.title}>Sem conexão</Text>
       <Text style={styles.text}>
-        {lastSyncedAt
-          ? `Exibindo dados salvos em ${formatarData(lastSyncedAt)}.`
+        {dataSalva
+          ? `Exibindo dados salvos em ${dataSalva}.`
           : 'Exibindo os últimos dados salvos.'}
       </Text>
     </View>
