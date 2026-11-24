@@ -8,9 +8,9 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles = {
-  primary: "bg-purple-600 text-white hover:bg-purple-700 disabled:bg-purple-400",
-  secondary: "bg-gray-200 text-gray-800 hover:bg-gray-300 disabled:bg-gray-100",
-  outline: "border border-purple-600 text-purple-600 hover:bg-purple-50 disabled:opacity-50",
+  primary: "bg-purple-600 text-white hover:bg-purple-700 disabled:bg-purple-400 focus-visible:ring-purple-500",
+  secondary: "bg-gray-200 text-gray-800 hover:bg-gray-300 disabled:bg-gray-100 focus-visible:ring-gray-500",
+  outline: "border border-purple-600 text-purple-600 hover:bg-purple-50 disabled:opacity-50 focus-visible:ring-purple-500",
 };
 
 const sizeStyles = {
@@ -27,8 +27,10 @@ export function Button({
   // asChild, 
   ...props
 }: ButtonProps) {
+  // focus-visible: o anel de foco aparece só na navegação por teclado, sem
+  // alterar o visual em cliques com mouse ou toque.
   const baseStyles =
-    "font-semibold rounded-md transition-colors duration-200 disabled:cursor-not-allowed";
+    "font-semibold rounded-md transition-colors duration-200 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
   const variantStyle = variantStyles[variant];
   const sizeStyle = sizeStyles[size];
 
