@@ -222,6 +222,30 @@ jobs:
           E2E_EXPO_MOCK_URL: http://127.0.0.1:4010
           CI: true
 
+      # Entregável 6 (item 6.6): verificação de vulnerabilidades conhecidas nas dependências.
+      # Informativa: não reprova o gate enquanto as vulnerabilidades atuais não forem tratadas.
+      - name: Auditoria de dependências (npm audit)
+        id: npm_audit
+        if: always()
+        continue-on-error: true
+        working-directory: resolve-app
+        run: |
+          status=0
+          {
+            echo "## Auditoria de dependências (npm audit, nível alto ou crítico)"
+            echo "| Projeto | Resultado |"
+            echo "|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          for dir in backend/auth-service backend/demand-service backend/api-gateway backend/metrics-service frontend e2e; do
+            if (cd "$dir" && npm ci --ignore-scripts --no-audit --no-fund >/dev/null 2>&1 && npm audit --omit=dev --audit-level=high); then
+              echo "| $dir | sem vulnerabilidades altas ou críticas |" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "| $dir | vulnerabilidades encontradas, ver log do passo |" >> "$GITHUB_STEP_SUMMARY"
+              status=1
+            fi
+          done
+          exit $status
+
       - name: Resumo das suites
         if: always()
         run: |
