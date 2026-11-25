@@ -19,25 +19,42 @@ interface SelectFieldProps {
 
 export function SelectField({ label, value, options, placeholder, onChange }: SelectFieldProps) {
   const [open, setOpen] = useState(false);
+  const displayValue = value || placeholder || 'Selecionar';
 
   return (
     <>
-      <Pressable style={styles.field} onPress={() => setOpen(true)}>
+      <Pressable
+        style={styles.field}
+        onPress={() => setOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}: ${displayValue}`}
+        accessibilityHint="Abre a lista de opções"
+        accessibilityState={{ expanded: open }}
+      >
         <Text style={styles.label}>{label}</Text>
         <Text style={[styles.value, !value && styles.placeholder]}>
-          {value || placeholder || 'Selecionar'}
+          {displayValue}
         </Text>
       </Pressable>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.overlay} onPress={() => setOpen(false)}>
-          <View style={styles.sheet}>
-            <Text style={styles.sheetTitle}>{label}</Text>
+        {/* accessible={false}: sem isso o leitor de tela trata o fundo inteiro como
+            um único elemento e as opções ficam inacessíveis no iOS. */}
+        <Pressable style={styles.overlay} onPress={() => setOpen(false)} accessible={false}>
+          <View
+            style={styles.sheet}
+            accessibilityViewIsModal
+            onAccessibilityEscape={() => setOpen(false)}
+          >
+            <Text style={styles.sheetTitle} accessibilityRole="header">{label}</Text>
             <ScrollView>
               {options.map((opt) => (
                 <Pressable
                   key={opt || 'all'}
                   style={styles.option}
+                  accessibilityRole="button"
+                  accessibilityLabel={opt || 'Todos'}
+                  accessibilityState={{ selected: value === opt }}
                   onPress={() => {
                     onChange(opt);
                     setOpen(false);

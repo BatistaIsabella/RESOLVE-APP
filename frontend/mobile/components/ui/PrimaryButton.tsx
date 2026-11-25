@@ -19,17 +19,24 @@ export function PrimaryButton({
   style,
   small,
 }: PrimaryButtonProps) {
+  const isDisabled = Boolean(disabled || loading);
+
   return (
     <Pressable
+      // Leitores de tela anunciam a ação (label) mesmo durante o carregamento,
+      // junto com os estados "ocupado" e "desativado".
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: isDisabled, busy: Boolean(loading) }}
       style={({ pressed }) => [
         styles.button,
         small && styles.buttonSmall,
-        (disabled || loading) && styles.disabled,
+        isDisabled && styles.disabled,
         pressed && styles.pressed,
         style,
       ]}
       onPress={onPress}
-      disabled={disabled || loading}
+      disabled={isDisabled}
     >
       <Text style={[styles.text, small && styles.textSmall]}>
         {loading ? 'Aguarde...' : label}

@@ -71,6 +71,65 @@ describe('parsePagination', () => {
   });
 });
 
+describe('parsePagination — casos de borda', () => {
+
+  it('trunca page e limit decimais para inteiros (o Prisma rejeita skip/take fracionários)', () => {
+    const resultado = parsePagination({ page: '2.9', limit: '10.7' });
+
+    expect(resultado).toEqual({ page: 2, limit: 10, skip: 10 });
+    expect(Number.isInteger(resultado.skip)).toBe(true);
+  });
+
+  it('trata page decimal entre 0 e 1 como page=1', () => {
+    expect(parsePagination({ page: '0.5' }).page).toBe(1);
+  });
+
+  it('trata limit decimal entre 0 e 1 como não informado (default 20)', () => {
+    expect(parsePagination({ limit: '0.5' }).limit).toBe(20);
+  });
+
+  it('usa os defaults quando page ou limit são Infinity', () => {
+    expect(parsePagination({ page: 'Infinity', limit: 'Infinity' })).toEqual({ page: 1, limit: 20, skip: 0 });
+    expect(parsePagination({ page: Number.POSITIVE_INFINITY })).toEqual({ page: 1, limit: 20, skip: 0 });
+  });
+
+  it('usa os defaults quando page ou limit são -Infinity', () => {
+    expect(parsePagination({ page: '-Infinity', limit: '-Infinity' })).toEqual({ page: 1, limit: 20, skip: 0 });
+  });
+
+  it('usa os defaults para entradas não numéricas de qualquer tipo', () => {
+    const esperado = { page: 1, limit: 20, skip: 0 };
+
+    expect(parsePagination({ page: 'abc', limit: 'xyz' })).toEqual(esperado);
+    expect(parsePagination({ page: '', limit: '' })).toEqual(esperado);
+    expect(parsePagination({ page: null, limit: undefined })).toEqual(esperado);
+    expect(parsePagination({ page: {}, limit: ['a', 'b'] })).toEqual(esperado);
+    expect(parsePagination({ page: NaN, limit: NaN })).toEqual(esperado);
+  });
+
+  it('garante limit mínimo de 1 para limit negativo', () => {
+    expect(parsePagination({ limit: '-10' }).limit).toBe(1);
+  });
+
+  it('aceita exatamente os limites extremos permitidos (1 e 100)', () => {
+    expect(parsePagination({ limit: '1' }).limit).toBe(1);
+    expect(parsePagination({ limit: '100' }).limit).toBe(100);
+    expect(parsePagination({ limit: '101' }).limit).toBe(100);
+  });
+
+  it('mantém skip como inteiro seguro mesmo com page muito grande', () => {
+    const resultado = parsePagination({ page: '1e300', limit: '100' });
+
+    expect(Number.isSafeInteger(resultado.page)).toBe(true);
+    expect(Number.isSafeInteger(resultado.skip)).toBe(true);
+    expect(resultado.skip).toBe((resultado.page - 1) * resultado.limit);
+  });
+
+  it('continua aceitando números (não apenas strings) vindos da query', () => {
+    expect(parsePagination({ page: 3, limit: 15 })).toEqual({ page: 3, limit: 15, skip: 30 });
+  });
+});
+
 describe('buildPaginatedResult', () => {
 
   it('monta o envelope de resposta com data e pagination corretos', () => {
