@@ -1,0 +1,39 @@
+# Entregável 6 (item 6.6/6.8): alertas e atualizações automáticas de dependências.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /backend/api-gateway
+    schedule: { interval: weekly }
+  - package-ecosystem: npm
+    directory: /backend/auth-service
+    schedule: { interval: weekly }
+  - package-ecosystem: npm
+    directory: /backend/demand-service
+    schedule: { interval: weekly }
+  - package-ecosystem: npm
+    directory: /backend/metrics-service
+    schedule: { interval: weekly }
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule: { interval: weekly }
+  - package-ecosystem: npm
+    directory: /frontend/mobile
+    schedule: { interval: weekly }
+  - package-ecosystem: npm
+    directory: /e2e
+    schedule: { interval: weekly }
+  - package-ecosystem: docker
+    directory: /backend/api-gateway
+    schedule: { interval: weekly }
+  - package-ecosystem: docker
+    directory: /backend/auth-service
+    schedule: { interval: weekly }
+  - package-ecosystem: docker
+    directory: /backend/demand-service
+    schedule: { interval: weekly }
+  - package-ecosystem: docker
+    directory: /backend/metrics-service
+    schedule: { interval: weekly }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
