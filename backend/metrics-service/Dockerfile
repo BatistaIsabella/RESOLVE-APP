@@ -1,10 +1,10 @@
-FROM node:20-alpine
+FROM node:20.19.6-alpine
 
 RUN apk add --no-cache openssl libc6-compat
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 COPY . .
 RUN npx prisma generate --schema=./prisma/schema.prisma
