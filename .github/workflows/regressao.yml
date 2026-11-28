@@ -223,11 +223,11 @@ jobs:
           CI: true
 
       # Entregável 6 (item 6.6): verificação de vulnerabilidades conhecidas nas dependências.
-      # Informativa: não reprova o gate enquanto as vulnerabilidades atuais não forem tratadas.
+      # Reprova o Quality Gate se houver vulnerabilidade alta ou crítica em dependências de produção.
       - name: Auditoria de dependências (npm audit)
         id: npm_audit
         if: always()
-        continue-on-error: true
+        continue-on-error: true  # o gate é reprovado no passo final, para os demais relatórios serem gerados
         working-directory: resolve-app
         run: |
           status=0
@@ -244,6 +244,16 @@ jobs:
               status=1
             fi
           done
+          # Aplicativo mobile: informativo, não reprova o gate. As vulnerabilidades altas restantes
+          # (expo-router -> query-string -> decode-uri-component) só se resolvem com a troca do
+          # Expo SDK, que o Dependabot propõe em grupo (dependabot.yml). Voltar a ser bloqueante
+          # depois dessa atualização.
+          if (cd frontend/mobile && npm ci --ignore-scripts --no-audit --no-fund >/dev/null 2>&1 && npm audit --omit=dev --audit-level=high); then
+            echo "| frontend/mobile | sem vulnerabilidades altas ou críticas |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "| frontend/mobile | vulnerabilidades encontradas (informativo, aguarda atualização do Expo SDK), ver log do passo |" >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::npm audit encontrou vulnerabilidades altas ou críticas no frontend/mobile (informativo)."
+          fi
           exit $status
 
       - name: Resumo das suites
@@ -259,6 +269,7 @@ jobs:
             echo "| API — demand-service | ${{ steps.api_demand.outcome }} |"
             echo "| Smoke E2E — pull request | ${{ steps.smoke_e2e.outcome }} |"
             echo "| Regressão E2E completa | ${{ steps.regressao_e2e.outcome }} |"
+            echo "| Auditoria de dependências (npm audit) | ${{ steps.npm_audit.outcome }} |"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Gerar métricas e relatórios de qualidade
@@ -399,9 +410,10 @@ jobs:
           API_DEMAND: ${{ steps.api_demand.outcome }}
           E2E_SMOKE: ${{ steps.smoke_e2e.outcome }}
           E2E_FULL: ${{ steps.regressao_e2e.outcome }}
+          NPM_AUDIT: ${{ steps.npm_audit.outcome }}
         run: |
           failed=0
-          for result in "$BACKEND_UNIT" "$MOBILE_UNIT" "$API_AUTH" "$API_DEMAND" "$E2E_SMOKE" "$E2E_FULL"; do
+          for result in "$BACKEND_UNIT" "$MOBILE_UNIT" "$API_AUTH" "$API_DEMAND" "$E2E_SMOKE" "$E2E_FULL" "$NPM_AUDIT"; do
             if [ "$result" = "failure" ]; then
               failed=1
             fi
