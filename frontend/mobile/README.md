@@ -152,3 +152,13 @@ frontend/mobile
 | `/gestor/[id]`      | `app/gestor/[id].tsx`      | Detalhe/atualização de uma demanda          | Gestor   |
 
 As rotas de `denuncias/` e `gestor/` são protegidas por `components/AuthGuard.tsx` conforme o perfil do usuário.
+
+## Screencast
+
+Assista ao vídeo completo do sistema:
+
+
+https://github.com/user-attachments/assets/9cc07b8a-123e-4fcf-a95e-8c3d818b527e
+
+
+
