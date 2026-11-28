@@ -27,5 +27,8 @@
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.3.2",
     "vitest": "^4.1.12"
+  },
+  "overrides": {
+    "qs": "^6.17.1"
   }
 }

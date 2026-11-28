@@ -19,6 +19,16 @@ updates:
   - package-ecosystem: npm
     directory: /frontend/mobile
     schedule: { interval: weekly }
+    # Os pacotes do Expo seguem a versão do SDK: atualizados um a um, quebram a compatibilidade.
+    # Em grupo, chegam num único PR, que deve ser testado inteiro (Entregável 6, item 6.6).
+    groups:
+      expo-sdk:
+        patterns:
+          - "expo"
+          - "expo-*"
+          - "@expo/*"
+          - "react-native"
+          - "react"
   - package-ecosystem: npm
     directory: /e2e
     schedule: { interval: weekly }
