@@ -247,13 +247,3 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 });
-
-  empty: {
-    paddingVertical: 40,
-    alignItems: 'center',
-  },
-  emptyText: {
-    color: AppColors.textMuted,
-    fontSize: 15,
-  },
-});
