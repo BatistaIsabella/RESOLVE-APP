@@ -4,6 +4,10 @@ Aplicativo mobile do **RESOLVE**, plataforma de demandas urbanas: o **cidadão**
 
 Feito com **React Native + Expo (SDK 57)**, **Expo Router**, **Context API** (`useState` + `useEffect`) e **axios**. O app é gerado **somente para Android e iOS** (sem versão web/PWA).
 
+## Screencast
+
+https://youtube.com/shorts/tM72jmnHTw8?feature=share
+
 ## Pré-requisitos
 
 - Node.js 20+ e npm
