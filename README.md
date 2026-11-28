@@ -91,7 +91,8 @@ Responsável por:
 - [x] Atualização manual de status e prioridade (exclusivo para gestores);
 - [x] Visualizações em formato de Lista;
 - [x] Painel administrativo para gestores (Métricas e KPIs);
-- [x] Aplicativo mobile (Android e iOS) com foto pela câmera e localização por GPS.
+- [x] Aplicativo mobile (Android e iOS) com foto pela câmera e localização por GPS;
+- [x] Acesso do gestor ao painel externo de [Clima e Risco Meteorológico](https://metereoregion-pe.streamlit.app/), no site e no app.
 
 ---
 
@@ -119,7 +120,7 @@ O painel administrativo acompanha, no mínimo:
 ### 🥈 Prioridade Secundária
 | Tela | Descrição |
 |---|---|
-| **Login e Cadastro** | Acesso segmentado (`Sou cidadão` ou `Sou gestor`) com email e senha. |
+| **Login e Cadastro** | Acesso com e-mail e senha; o cadastro de gestor exige código de acesso. No app, o papel da conta define a área aberta após o login. |
 
 ---
 
@@ -147,11 +148,28 @@ A plataforma RESOLVE utiliza um API Gateway como ponto central de entrada (Porta
 | **Monitoramento** | `GET` | `/warmup` | Acorda os microsserviços (evita *cold start*). |
 | **Autenticação** | `POST` | `/auth/register` | Cadastra cidadão ou gestor (gestor exige código de acesso). |
 | **Autenticação** | `POST` | `/auth/login` | Autentica o usuário e gera o token de acesso (JWT). |
+| **Autenticação** | `POST` | `/auth/login/mfa` | Conclui o login com o código da verificação em duas etapas. |
+| **Autenticação** | `POST` | `/auth/logout` | Encerra a sessão. |
+| **Autenticação** | `POST` | `/auth/forgot-password` | Pede a redefinição de senha. |
+| **Autenticação** | `POST` | `/auth/reset-password` | Define a nova senha. |
+| **Autenticação** | `POST` | `/auth/confirmar-email` | Confirma o e-mail do cadastro. |
+| **Autenticação** | `POST` | `/auth/reenviar-confirmacao` | Reenvia a confirmação de e-mail. |
+| **Conta** | `GET` | `/auth/me` | Consulta os dados da conta. |
+| **Conta** | `PATCH` | `/auth/me` | Atualiza os dados da conta. |
+| **Conta** | `DELETE` | `/auth/me` | Exclui a conta. |
+| **Conta** | `POST` | `/auth/me/senha` | Troca a senha. |
+| **Conta** | `POST` | `/auth/aceite-termos` | Registra o aceite dos termos. |
+| **Verificação em duas etapas** | `POST` | `/auth/mfa/configurar` | Inicia a configuração. |
+| **Verificação em duas etapas** | `POST` | `/auth/mfa/ativar` | Ativa a verificação. |
+| **Verificação em duas etapas** | `POST` | `/auth/mfa/desativar` | Desativa a verificação. |
 | **Demandas (cidadão)** | `GET` | `/demands/my-demands` | Lista as demandas do cidadão (paginação, filtros e `?q=` para busca). |
 | **Demandas (cidadão)** | `POST` | `/demands` | Registra uma nova ocorrência urbana. |
 | **Demandas (cidadão)** | `GET` | `/demands/:id` | Detalhe de uma demanda do próprio cidadão. |
 | **Demandas (cidadão)** | `PATCH` | `/demands/:id` | Edita a própria demanda enquanto está aberta. |
 | **Demandas (cidadão)** | `DELETE` | `/demands/:id` | Exclui a própria demanda enquanto está aberta. |
+| **Demandas (cidadão)** | `GET` | `/demands/feed` | Feed de demandas. |
+| **Dados pessoais** | `GET` | `/demands/me/export` | Exporta os próprios dados das demandas (cidadão ou gestor). |
+| **Dados pessoais** | `DELETE` | `/demands/me` | Elimina os próprios dados das demandas (cidadão ou gestor). |
 | **Demandas (gestor)** | `GET` | `/demands/gestor/demands` | Lista todas as demandas (paginação, filtros e `?q=`). |
 | **Demandas (gestor)** | `GET` | `/demands/gestor/:id` | Detalhe de qualquer demanda. |
 | **Demandas (gestor)** | `PATCH` | `/demands/gestor/:id/status` | Altera o status e registra no histórico. |
@@ -160,6 +178,9 @@ A plataforma RESOLVE utiliza um API Gateway como ponto central de entrada (Porta
 | **Notificações (cidadão)** | `POST` | `/demands/devices` | Registra o token de push (Expo) do aparelho. Corpo: `{ "token": "ExponentPushToken[...]" }`. |
 | **Notificações (cidadão)** | `DELETE` | `/demands/devices` | Remove o token do aparelho (ao sair). |
 | **Métricas** | `GET` | `/metrics` | Retorna KPIs para o gestor: total, por categoria, região e status, e `tempoMedioAtendimentoHoras`. |
+| **Métricas** | `POST` | `/metrics/refresh` | Atualiza os KPIs. |
+
+**Cadastro de gestor:** o campo `codigoAcesso` precisa bater com um código configurado no servidor, em `GESTOR_ACCESS_CODE` (um código, gestão geral) ou `GESTOR_ACCESS_CODES` (por órgão, no formato `ORGAO=codigo;ORGAO2=codigo2`). Em produção não há valor padrão: sem configuração, o cadastro de gestor fica fechado. Os códigos reais não são publicados no repositório; peça ao responsável pelo ambiente.
 
 Todas as rotas de demandas e métricas exigem o header `Authorization: Bearer <token>`. A documentação completa está no [Postman](https://documenter.getpostman.com/view/40719566/2sBXwtrADd).
 

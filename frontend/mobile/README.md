@@ -55,6 +55,10 @@ eas build -p android --profile preview    # APK de teste, apontando para o gatew
 
 Commite o `app.json` com o `projectId` gerado. O iOS (IPA) exige conta Apple Developer: `eas build -p ios --profile preview`.
 
+### Painel de Clima e Risco Meteorológico
+
+No topo da tela do gestor, o botão **Clima e Risco Meteorológico** abre <https://metereoregion-pe.streamlit.app/> no navegador do aparelho.
+
 ### Notificações push
 
 O cidadão recebe um aviso quando o gestor muda o status de uma denúncia dele (registrar → acompanhar → notificar):
@@ -66,7 +70,9 @@ Requisitos para funcionar:
 
 - **Aparelho físico** (emulador não recebe push) e **development build ou APK** (o Expo Go não recebe push remoto no Android).
 - `extra.eas.projectId` no `app.json` (`eas init`). Sem ele o app só registra um aviso no log e segue sem notificações.
-- **Android**: credencial de envio do Firebase (FCM V1). Crie um projeto no Firebase, baixe a chave de conta de serviço e envie com `eas credentials` (Android → Google Service Account Key for FCM V1).
+- **Android**: configuração do Firebase, em duas partes. Depois de mudar o app, gere um novo build.
+  1. No Firebase, adicione um app Android com o pacote `br.com.resolve.app`, baixe o `google-services.json`, salve em `frontend/mobile/` e aponte para ele no `app.json`, dentro de `expo.android`: `"googleServicesFile": "./google-services.json"`.
+  2. Gere a chave de conta de serviço (Configurações do projeto → Contas de serviço) e envie com `eas credentials -p android` (Google Service Account → Push Notifications FCM V1). Rode `npm install` antes. Essa chave é secreta: não a coloque no repositório.
 
 ### Atualizações OTA (EAS Update)
 
@@ -130,6 +136,7 @@ frontend/mobile
 | `/`                 | `app/index.tsx`            | Tela inicial ("Faça sua denúncia" / "Sou gestor") | Público |
 | `/login`            | `app/login.tsx`            | Login                                       | Público  |
 | `/cadastro`         | `app/cadastro.tsx`         | Cadastro (senha forte e aceite dos termos)  | Público  |
+| `/confirmar-email`  | `app/confirmar-email.tsx`  | Confirma o e-mail com o código recebido     | Público  |
 | `/esqueci-senha`    | `app/esqueci-senha.tsx`    | Pede o código de redefinição por e-mail     | Público  |
 | `/redefinir-senha`  | `app/redefinir-senha.tsx`  | Define a senha nova com o código recebido   | Público  |
 | `/privacidade`      | `app/privacidade.tsx`      | Política de Privacidade e Termos de Uso     | Público  |
@@ -140,7 +147,8 @@ frontend/mobile
 | `/denuncias`        | `app/denuncias/index.tsx`  | Lista das denúncias do cidadão              | Cidadão  |
 | `/denuncias/nova`   | `app/denuncias/nova.tsx`   | Nova denúncia (foto + GPS)                  | Cidadão  |
 | `/denuncias/[id]`   | `app/denuncias/[id].tsx`   | Detalhe da denúncia                         | Cidadão  |
-| `/gestor`           | `app/gestor/index.tsx`     | Painel do gestor (lista, filtros, indicadores) | Gestor |
+| `/denuncias/editar/[id]` | `app/denuncias/editar/[id].tsx` | Edita a denúncia enquanto está aberta | Cidadão |
+| `/gestor`           | `app/gestor/index.tsx`     | Painel do gestor (lista, filtros, indicadores, link de clima) | Gestor |
 | `/gestor/[id]`      | `app/gestor/[id].tsx`      | Detalhe/atualização de uma demanda          | Gestor   |
 
 As rotas de `denuncias/` e `gestor/` são protegidas por `components/AuthGuard.tsx` conforme o perfil do usuário.
