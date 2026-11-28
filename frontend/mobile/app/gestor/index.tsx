@@ -1,6 +1,9 @@
 import React from 'react';
 import {
+  Alert,
   FlatList,
+  Linking,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -25,12 +28,41 @@ export default function GestorScreen() {
 
   const chartWidth = width - 64;
 
+  const handleOpenWeather = async () => {
+    try {
+      await Linking.openURL('https://metereoregion-pe.streamlit.app/');
+    } catch {
+      Alert.alert(
+        'Erro',
+        'Não foi possível abrir o painel meteorológico.'
+      );
+    }
+  };
+
   if (vm.showLoadingScreen) {
     return <LoadingScreen message="Carregando painel..." />;
   }
 
   const header = (
     <View>
+      <Pressable
+        onPress={handleOpenWeather}
+        accessibilityRole="link"
+        accessibilityLabel="Clima e Risco Meteorológico"
+        accessibilityHint="Abre o painel meteorológico no navegador externo"
+        style={({ pressed }) => [
+          styles.weatherButton,
+          pressed && styles.weatherButtonPressed,
+        ]}
+      >
+        <Text style={styles.weatherButtonText}>
+          Clima e Risco Meteorológico
+        </Text>
+        <Text style={styles.weatherButtonHint}>
+          Abrir no navegador externo
+        </Text>
+      </Pressable>
+
       <View style={styles.heroCard}>
         <Text style={styles.heroLabel}>Demanda total</Text>
         <Text style={styles.heroValue}>{vm.total}</Text>
@@ -115,6 +147,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 32,
+  },
+  weatherButton: {
+    backgroundColor: AppColors.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    minHeight: 48,
+  },
+  weatherButtonPressed: {
+    backgroundColor: AppColors.primaryDark,
+  },
+  weatherButtonText: {
+    color: AppColors.white,
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+  },
+  weatherButtonHint: {
+    color: AppColors.white,
+    fontSize: 12,
+    marginTop: 4,
+    textAlign: 'center',
   },
   heroCard: {
     backgroundColor: AppColors.primary,
